@@ -1,0 +1,17 @@
+[
+  { "id": "r3_easy_1", "difficulty": "easy", "text": "Який колір має небо в ясний день?", "options": ["Сірий", "Синій", "Зелений", "Червоний"], "correctIndex": 1, "audioFile": "easy_1.mp3" },
+  { "id": "r3_easy_2", "difficulty": "easy", "text": "Який фрукт жовтий і кислий?", "options": ["Яблуко", "Лимон", "Виноград", "Банан"], "correctIndex": 1, "audioFile": "easy_2.mp3" },
+  { "id": "r3_easy_3", "difficulty": "easy", "text": "Скільки сторін у квадрата?", "options": ["3", "4", "5", "6"], "correctIndex": 1, "audioFile": "easy_3.mp3" },
+  { "id": "r3_easy_4", "difficulty": "easy", "text": "Який місяць йде після червня?", "options": ["Травень", "Липень", "Серпень", "Вересень"], "correctIndex": 1, "audioFile": "easy_4.mp3" },
+  { "id": "r3_easy_5", "difficulty": "easy", "text": "Що падає з неба під час дощу?", "options": ["Сніг", "Дощ", "Град", "Туман"], "correctIndex": 1, "audioFile": "easy_5.mp3" },
+  { "id": "r3_medium_1", "difficulty": "medium", "text": "Скільки континентів на Землі?", "options": ["5", "6", "7", "8"], "correctIndex": 2, "audioFile": "medium_1.mp3" },
+  { "id": "r3_medium_2", "difficulty": "medium", "text": "Яка столиця Франції?", "options": ["Ліон", "Марсель", "Париж", "Ніцца"], "correctIndex": 2, "audioFile": "medium_2.mp3" },
+  { "id": "r3_medium_3", "difficulty": "medium", "text": "Яка столиця Німеччини?", "options": ["Мюнхен", "Берлін", "Гамбург", "Франкфурт"], "correctIndex": 1, "audioFile": "medium_3.mp3" },
+  { "id": "r3_medium_4", "difficulty": "medium", "text": "Скільки кілограмів у тонні?", "options": ["100", "500", "1000", "10000"], "correctIndex": 2, "audioFile": "medium_4.mp3" },
+  { "id": "r3_medium_5", "difficulty": "medium", "text": "Яка найбільша планета Сонячної системи?", "options": ["Сатурн", "Юпітер", "Уран", "Нептун"], "correctIndex": 1, "audioFile": "medium_5.mp3" },
+  { "id": "r3_hard_1", "difficulty": "hard", "text": "Яка найдовша річка України?", "options": ["Дніпро", "Дністер", "Південний Буг", "Дунай"], "correctIndex": 0, "audioFile": "hard_1.mp3" },
+  { "id": "r3_hard_2", "difficulty": "hard", "text": "У якому океані знаходиться Маріанська западина?", "options": ["Атлантичний", "Індійський", "Тихий", "Північний Льодовитий"], "correctIndex": 2, "audioFile": "hard_2.mp3" },
+  { "id": "r3_hard_3", "difficulty": "hard", "text": "Яка країна має найбільшу площу у світі?", "options": ["Китай", "США", "Росія", "Канада"], "correctIndex": 2, "audioFile": "hard_3.mp3" },
+  { "id": "r3_hard_4", "difficulty": "hard", "text": "Скільки градусів у повному колі?", "options": ["180", "270", "360", "90"], "correctIndex": 2, "audioFile": "hard_4.mp3" },
+  { "id": "r3_hard_5", "difficulty": "hard", "text": "Який метал рідкісний при кімнатній температурі?", "options": ["Золото", "Срібло", "Ртуть", "Мідь"], "correctIndex": 2, "audioFile": "hard_5.mp3" }
+]

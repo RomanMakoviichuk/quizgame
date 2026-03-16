@@ -1,0 +1,17 @@
+[
+  { "id": "r6_easy_1", "difficulty": "easy", "text": "Який інструмент використовують для написання на папері?", "options": ["Молоток", "Ручка", "Відвертка", "Ножиці"], "correctIndex": 1, "audioFile": "easy_1.mp3" },
+  { "id": "r6_easy_2", "difficulty": "easy", "text": "Скільки ніг у павука?", "options": ["6", "8", "10", "12"], "correctIndex": 1, "audioFile": "easy_2.mp3" },
+  { "id": "r6_easy_3", "difficulty": "easy", "text": "Що ми одягаємо на ноги?", "options": ["Шапку", "Рукавиці", "Взуття", "Шарф"], "correctIndex": 2, "audioFile": "easy_3.mp3" },
+  { "id": "r6_easy_4", "difficulty": "easy", "text": "Який день йде після понеділка?", "options": ["Неділя", "Вівторок", "Середа", "Четвер"], "correctIndex": 1, "audioFile": "easy_4.mp3" },
+  { "id": "r6_easy_5", "difficulty": "easy", "text": "Що падає з дерева восени?", "options": ["Квіти", "Листя", "Сніг", "Дощ"], "correctIndex": 1, "audioFile": "easy_5.mp3" },
+  { "id": "r6_medium_1", "difficulty": "medium", "text": "Яка одиниця вимірювання сили струму?", "options": ["Вольт", "Ампер", "Ом", "Ват"], "correctIndex": 1, "audioFile": "medium_1.mp3" },
+  { "id": "r6_medium_2", "difficulty": "medium", "text": "Який метал позначається символом Ag?", "options": ["Золото", "Срібло", "Мідь", "Алюміній"], "correctIndex": 1, "audioFile": "medium_2.mp3" },
+  { "id": "r6_medium_3", "difficulty": "medium", "text": "Скільки градусів у прямому куті?", "options": ["45", "90", "180", "360"], "correctIndex": 1, "audioFile": "medium_3.mp3" },
+  { "id": "r6_medium_4", "difficulty": "medium", "text": "Яка столиця Польщі?", "options": ["Краків", "Варшава", "Гданськ", "Вроцлав"], "correctIndex": 1, "audioFile": "medium_4.mp3" },
+  { "id": "r6_medium_5", "difficulty": "medium", "text": "Який газ виділяють рослини під час фотосинтезу?", "options": ["Азот", "Вуглекислий газ", "Кисень", "Водень"], "correctIndex": 2, "audioFile": "medium_5.mp3" },
+  { "id": "r6_hard_1", "difficulty": "hard", "text": "Який хімічний елемент має атомний номер 79?", "options": ["Срібло", "Платина", "Золото", "Мідь"], "correctIndex": 2, "audioFile": "hard_1.mp3" },
+  { "id": "r6_hard_2", "difficulty": "hard", "text": "Яка одиниця вимірювання тиску в SI?", "options": ["Паскаль", "Бар", "Атмосфера", "Ньютон"], "correctIndex": 0, "audioFile": "hard_2.mp3" },
+  { "id": "r6_hard_3", "difficulty": "hard", "text": "Скільки електронів у зовнішній оболонці азоту?", "options": ["3", "5", "7", "8"], "correctIndex": 1, "audioFile": "hard_3.mp3" },
+  { "id": "r6_hard_4", "difficulty": "hard", "text": "Який pH має нейтральний розчин?", "options": ["0", "5", "7", "14"], "correctIndex": 2, "audioFile": "hard_4.mp3" },
+  { "id": "r6_hard_5", "difficulty": "hard", "text": "Хто сформулював закон всесвітнього тяжіння?", "options": ["Ейнштейн", "Ньютон", "Галілей", "Кеплер"], "correctIndex": 1, "audioFile": "hard_5.mp3" }
+]

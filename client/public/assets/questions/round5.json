@@ -1,0 +1,17 @@
+[
+  { "id": "r5_easy_1", "difficulty": "easy", "text": "Яка планета найближча до Сонця?", "options": ["Венера", "Меркурій", "Марс", "Земля"], "correctIndex": 1, "audioFile": "easy_1.mp3" },
+  { "id": "r5_easy_2", "difficulty": "easy", "text": "Який місяць перший у році?", "options": ["Лютий", "Січень", "Березень", "Квітень"], "correctIndex": 1, "audioFile": "easy_2.mp3" },
+  { "id": "r5_easy_3", "difficulty": "easy", "text": "Скільки лап у кішки?", "options": ["2", "3", "4", "5"], "correctIndex": 2, "audioFile": "easy_3.mp3" },
+  { "id": "r5_easy_4", "difficulty": "easy", "text": "Що росте в саду?", "options": ["Меблі", "Овочі", "Одяг", "Книги"], "correctIndex": 1, "audioFile": "easy_4.mp3" },
+  { "id": "r5_easy_5", "difficulty": "easy", "text": "Який колір має сонце на малюнку?", "options": ["Синій", "Зелений", "Жовтий", "Чорний"], "correctIndex": 2, "audioFile": "easy_5.mp3" },
+  { "id": "r5_medium_1", "difficulty": "medium", "text": "Скільки кольорів на прапорі України?", "options": ["Два", "Три", "Чотири", "П'ять"], "correctIndex": 0, "audioFile": "medium_1.mp3" },
+  { "id": "r5_medium_2", "difficulty": "medium", "text": "Яка найвища гора України?", "options": ["Піп Іван", "Говерла", "Петрос", "Бребенескул"], "correctIndex": 1, "audioFile": "medium_2.mp3" },
+  { "id": "r5_medium_3", "difficulty": "medium", "text": "Яка столиця Італії?", "options": ["Мілан", "Рим", "Неаполь", "Венеція"], "correctIndex": 1, "audioFile": "medium_3.mp3" },
+  { "id": "r5_medium_4", "difficulty": "medium", "text": "Скільки нулів у мільйоні?", "options": ["4", "5", "6", "7"], "correctIndex": 2, "audioFile": "medium_4.mp3" },
+  { "id": "r5_medium_5", "difficulty": "medium", "text": "Який орган відповідає за перекачування крові?", "options": ["Легені", "Серце", "Печінка", "Нирки"], "correctIndex": 1, "audioFile": "medium_5.mp3" },
+  { "id": "r5_hard_1", "difficulty": "hard", "text": "Яка столиця була у Українській Народній Республіці?", "options": ["Львів", "Київ", "Харків", "Одеса"], "correctIndex": 1, "audioFile": "hard_1.mp3" },
+  { "id": "r5_hard_2", "difficulty": "hard", "text": "У якому році була проголошена незалежність України?", "options": ["1989", "1990", "1991", "1992"], "correctIndex": 2, "audioFile": "hard_2.mp3" },
+  { "id": "r5_hard_3", "difficulty": "hard", "text": "Який орган людського тіла найбільший?", "options": ["Серце", "Печінка", "Шкіра", "Мозок"], "correctIndex": 2, "audioFile": "hard_3.mp3" },
+  { "id": "r5_hard_4", "difficulty": "hard", "text": "Скільки хромосом у здорової людини?", "options": ["44", "46", "48", "50"], "correctIndex": 1, "audioFile": "hard_4.mp3" },
+  { "id": "r5_hard_5", "difficulty": "hard", "text": "Яка кислота міститься в шлунковому соку?", "options": ["Нітратна", "Сірчана", "Соляна", "Оцтова"], "correctIndex": 2, "audioFile": "hard_5.mp3" }
+]

@@ -1,0 +1,23 @@
+.typewriter-subtitles {
+  font-family: "Bebas Neue", "Impact", sans-serif;
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  color: #f5e6d3;
+  text-shadow:
+    0 0 10px rgba(196, 30, 30, 0.6),
+    0 0 20px rgba(139, 0, 0, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1rem 1.5rem;
+  max-width: 90%;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.typewriter-cursor {
+  animation: typewriterBlink 0.8s step-end infinite;
+  color: #8b0000;
+}
+
+@keyframes typewriterBlink {
+  50% { opacity: 0; }
+}

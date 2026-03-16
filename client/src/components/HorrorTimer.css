@@ -1,0 +1,88 @@
+/* Horror Timer — хоррор-тематичний таймер */
+
+.horror-timer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 2rem;
+}
+
+.horror-timer-inner {
+  position: relative;
+  z-index: 1;
+  font-family: "Bebas Neue", "Impact", sans-serif;
+  font-weight: 900;
+  color: #fff;
+  text-shadow:
+    0 0 20px rgba(255, 255, 255, 0.5),
+    0 0 40px rgba(196, 30, 30, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.9);
+  letter-spacing: 0.05em;
+}
+
+.horror-seconds {
+  font-size: clamp(3rem, 8vw, 5rem);
+  line-height: 1;
+}
+
+.horror-sep {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  opacity: 0.9;
+  margin: 0 0.05em;
+}
+
+.horror-ms {
+  font-size: clamp(1rem, 3vw, 1.5rem);
+  opacity: 0.85;
+  vertical-align: super;
+}
+
+/* М’яке свічення навколо */
+.horror-timer-glow {
+  position: absolute;
+  inset: -20px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(139, 0, 0, 0.15) 0%,
+    rgba(139, 0, 0, 0.05) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+/* Останні 5 секунд — червоне свічення */
+.horror-timer.horror-urgent .horror-timer-inner {
+  color: #ffcccc;
+  text-shadow:
+    0 0 25px rgba(255, 100, 100, 0.8),
+    0 0 50px rgba(255, 50, 50, 0.5),
+    0 0 80px rgba(196, 30, 30, 0.3);
+}
+
+.horror-timer.horror-urgent .horror-timer-glow {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 0, 0, 0.25) 0%,
+    rgba(139, 0, 0, 0.1) 50%,
+    transparent 70%
+  );
+}
+
+/* Останні 3 секунди — пульсація */
+.horror-timer.horror-pulse .horror-timer-inner {
+  animation: horrorPulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes horrorPulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.06);
+    text-shadow:
+      0 0 35px rgba(255, 150, 150, 0.9),
+      0 0 70px rgba(255, 50, 50, 0.6);
+  }
+}

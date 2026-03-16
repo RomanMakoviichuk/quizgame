@@ -1,0 +1,51 @@
+.main-scene {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  padding: 1rem;
+}
+
+.main-scene-characters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.main-scene-char {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.main-scene-name {
+  font-family: "Playpen Sans", cursive;
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  font-weight: 600;
+  color: #f5e0e0;
+  text-shadow: 0 0 12px rgba(196, 30, 30, 0.8);
+}
+
+.main-scene-avatar img {
+  width: clamp(60px, 12vw, 100px);
+  height: auto;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+}
+
+.main-scene-hearts {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.main-scene-heart {
+  color: #8b0000;
+  font-size: 1.2rem;
+  text-shadow: 0 0 6px rgba(255, 50, 50, 0.6);
+}
+
+.main-scene-heart.lost {
+  color: #3a2020;
+  opacity: 0.4;
+}

@@ -1,0 +1,89 @@
+[
+  { 
+    "id": "r1_easy_1",
+    "difficulty": "easy",
+    "text": "Скільки планет у Сонячній системі?",
+    "options": ["7", "8", "5", "9"],
+    "correctIndex": 1,
+    "audioFile": "easy_1.mp3"
+  },
+  { 
+    "id": "r1_easy_2",
+    "difficulty": "easy",
+    "text": "Який хімічний елемент має символ O?",
+    "options": ["Золото", "Оксиген", "Осмій", "Олово"],
+    "correctIndex": 1,
+    "audioFile": "easy_2.mp3"
+  },
+
+  { 
+    "id": "r1_easy_3",
+    "difficulty": "easy",
+    "text": "Яка країна є батьківщиною пампушок?",
+    "options": ["Хорватія", "Молдавія", "Україна", "Польша"],
+    "correctIndex": 2,
+    "audioFile": "easy_3.mp3"
+  },
+  { 
+    "id": "r1_easy_4",
+    "difficulty": "easy",
+    "text": "Скільки струн має стандартна гітара?",
+    "options": ["4", "5", "6", "7"],
+    "correctIndex": 2,
+    "audioFile": "easy_4.mp3"
+  },
+  { 
+    "id": "r1_easy_5",
+    "difficulty": "easy",
+    "text": "Яке місто є столицею Канади?",
+    "options": ["Торонто", "Оттава", "Монреаль", "Ванкувер"],
+    "correctIndex": 1,
+    "audioFile": "easy_5.mp3"
+  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  { "id": "r1_medium_1", "difficulty": "medium", "text": "Скільки обласних центрів у Україні?", "options": ["24", "25", "26", "27"], "correctIndex": 1, "audioFile": "medium_1.mp3" },
+  { "id": "r1_medium_2", "difficulty": "medium", "text": "Яка найдовша річка в Україні?", "options": ["Дністер", "Дніпро", "Південний Буг", "Дунай"], "correctIndex": 1, "audioFile": "medium_2.mp3" },
+  { "id": "r1_medium_3", "difficulty": "medium", "text": "Хто написав поему «Кобзар»?", "options": ["Іван Франко", "Тарас Шевченко", "Леся Українка", "Василь Стус"], "correctIndex": 1, "audioFile": "medium_3.mp3" },
+  { "id": "r1_medium_4", "difficulty": "medium", "text": "Яка гора є найвищою точкою України?", "options": ["Петрос", "Говерла", "Піп Іван", "Бребенескул"], "correctIndex": 1, "audioFile": "medium_4.mp3" },
+  { "id": "r1_medium_5", "difficulty": "medium", "text": "Скільки кольорів на прапорі України?", "options": ["Два", "Три", "Чотири", "П'ять"], "correctIndex": 0, "audioFile": "medium_5.mp3" },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  { "id": "r1_hard_1", "difficulty": "hard", "text": "У якому році Київ був вперше згаданий у літописі?", "options": ["482", "882", "988", "1147"], "correctIndex": 0, "audioFile": "hard_1.mp3" },
+  { "id": "r1_hard_2", "difficulty": "hard", "text": "Яка столиця була у Галицько-Волинському князівстві?", "options": ["Київ", "Львів", "Володимир", "Галич"], "correctIndex": 3, "audioFile": "hard_2.mp3" },
+  { "id": "r1_hard_3", "difficulty": "hard", "text": "У якому столітті прийнято Християнство на Русі?", "options": ["IX", "X", "XI", "XII"], "correctIndex": 1, "audioFile": "hard_3.mp3" },
+  { "id": "r1_hard_4", "difficulty": "hard", "text": "Який князь заснував Київ за літописною легендою?", "options": ["Олег", "Ігор", "Кий", "Рюрик"], "correctIndex": 2, "audioFile": "hard_4.mp3" },
+  { "id": "r1_hard_5", "difficulty": "hard", "text": "Скільки областей у сучасній Україні?", "options": ["22", "24", "25", "27"], "correctIndex": 2, "audioFile": "hard_5.mp3" }
+]

@@ -1,0 +1,17 @@
+[
+  { "id": "r2_easy_1", "difficulty": "easy", "text": "Скільки планет у Сонячній системі?", "options": ["7", "8", "9", "10"], "correctIndex": 1, "audioFile": "easy_1.mp3" },
+  { "id": "r2_easy_2", "difficulty": "easy", "text": "Яка планета найближча до Сонця?", "options": ["Венера", "Меркурій", "Марс", "Земля"], "correctIndex": 1, "audioFile": "easy_2.mp3" },
+  { "id": "r2_easy_3", "difficulty": "easy", "text": "Що світить на небі вночі?", "options": ["Сонце", "Місяць", "Хмари", "Зірки"], "correctIndex": 1, "audioFile": "easy_3.mp3" },
+  { "id": "r2_easy_4", "difficulty": "easy", "text": "Скільки місяців у році?", "options": ["10", "11", "12", "13"], "correctIndex": 2, "audioFile": "easy_4.mp3" },
+  { "id": "r2_easy_5", "difficulty": "easy", "text": "Який інструмент використовують для написання?", "options": ["Молоток", "Ручка", "Пилка", "Ножиці"], "correctIndex": 1, "audioFile": "easy_5.mp3" },
+  { "id": "r2_medium_1", "difficulty": "medium", "text": "Який метал позначається символом Au?", "options": ["Срібло", "Мідь", "Золото", "Алюміній"], "correctIndex": 2, "audioFile": "medium_1.mp3" },
+  { "id": "r2_medium_2", "difficulty": "medium", "text": "Яка хімічна формула води?", "options": ["CO2", "H2O", "NaCl", "O2"], "correctIndex": 1, "audioFile": "medium_2.mp3" },
+  { "id": "r2_medium_3", "difficulty": "medium", "text": "Скільки континентів на Землі?", "options": ["5", "6", "7", "8"], "correctIndex": 2, "audioFile": "medium_3.mp3" },
+  { "id": "r2_medium_4", "difficulty": "medium", "text": "Яка одиниця вимірювання сили струму?", "options": ["Вольт", "Ампер", "Ом", "Ват"], "correctIndex": 1, "audioFile": "medium_4.mp3" },
+  { "id": "r2_medium_5", "difficulty": "medium", "text": "Який газ ми вдихаємо для дихання?", "options": ["Азот", "Кисень", "Вуглекислий газ", "Водень"], "correctIndex": 1, "audioFile": "medium_5.mp3" },
+  { "id": "r2_hard_1", "difficulty": "hard", "text": "Який хімічний елемент має атомний номер 79?", "options": ["Срібло", "Платина", "Золото", "Мідь"], "correctIndex": 2, "audioFile": "hard_1.mp3" },
+  { "id": "r2_hard_2", "difficulty": "hard", "text": "Яка швидкість світла у вакуумі (приблизно, км/с)?", "options": ["150 000", "200 000", "300 000", "400 000"], "correctIndex": 2, "audioFile": "hard_2.mp3" },
+  { "id": "r2_hard_3", "difficulty": "hard", "text": "Який газ займає найбільшу частку в повітрі?", "options": ["Кисень", "Азот", "Вуглекислий газ", "Аргон"], "correctIndex": 1, "audioFile": "hard_3.mp3" },
+  { "id": "r2_hard_4", "difficulty": "hard", "text": "Скільки електронів у нейтрального атома кисню?", "options": ["6", "8", "10", "16"], "correctIndex": 1, "audioFile": "hard_4.mp3" },
+  { "id": "r2_hard_5", "difficulty": "hard", "text": "Яка формула поварення солі?", "options": ["H2O", "NaCl", "CO2", "CaCO3"], "correctIndex": 1, "audioFile": "hard_5.mp3" }
+]

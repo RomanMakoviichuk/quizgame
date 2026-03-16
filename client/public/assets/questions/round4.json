@@ -1,0 +1,17 @@
+[
+  { "id": "r4_easy_1", "difficulty": "easy", "text": "Скільки днів у звичайному році?", "options": ["364", "365", "366", "367"], "correctIndex": 1, "audioFile": "easy_1.mp3" },
+  { "id": "r4_easy_2", "difficulty": "easy", "text": "Яка тварина каже «гав»?", "options": ["Кішка", "Собака", "Півень", "Корова"], "correctIndex": 1, "audioFile": "easy_2.mp3" },
+  { "id": "r4_easy_3", "difficulty": "easy", "text": "Скільки пальців на одній руці?", "options": ["4", "5", "6", "7"], "correctIndex": 1, "audioFile": "easy_3.mp3" },
+  { "id": "r4_easy_4", "difficulty": "easy", "text": "Який колір має трава?", "options": ["Синій", "Червоний", "Зелений", "Жовтий"], "correctIndex": 2, "audioFile": "easy_4.mp3" },
+  { "id": "r4_easy_5", "difficulty": "easy", "text": "Що ми п'ємо, коли хочемо пити?", "options": ["Їжу", "Воду", "Повітря", "Вогонь"], "correctIndex": 1, "audioFile": "easy_5.mp3" },
+  { "id": "r4_medium_1", "difficulty": "medium", "text": "Хто написав «Кобзар»?", "options": ["Іван Франко", "Тарас Шевченко", "Леся Українка", "Михайло Коцюбинський"], "correctIndex": 1, "audioFile": "medium_1.mp3" },
+  { "id": "r4_medium_2", "difficulty": "medium", "text": "Який інструмент використовує столяр?", "options": ["Голка", "Молоток", "Пилка", "Ножиці"], "correctIndex": 1, "audioFile": "medium_2.mp3" },
+  { "id": "r4_medium_3", "difficulty": "medium", "text": "Скільки сторін у шестикутника?", "options": ["5", "6", "7", "8"], "correctIndex": 1, "audioFile": "medium_3.mp3" },
+  { "id": "r4_medium_4", "difficulty": "medium", "text": "Яка столиця Великої Британії?", "options": ["Ліверпуль", "Лондон", "Манчестер", "Единбург"], "correctIndex": 1, "audioFile": "medium_4.mp3" },
+  { "id": "r4_medium_5", "difficulty": "medium", "text": "Яка планета називається червоною?", "options": ["Венера", "Юпітер", "Марс", "Сатурн"], "correctIndex": 2, "audioFile": "medium_5.mp3" },
+  { "id": "r4_hard_1", "difficulty": "hard", "text": "У якому столітті прийнято Християнство на Русі?", "options": ["IX", "X", "XI", "XII"], "correctIndex": 1, "audioFile": "hard_1.mp3" },
+  { "id": "r4_hard_2", "difficulty": "hard", "text": "У якому році була Хрещенська битва під Жовтими Водами?", "options": ["1647", "1648", "1649", "1650"], "correctIndex": 1, "audioFile": "hard_2.mp3" },
+  { "id": "r4_hard_3", "difficulty": "hard", "text": "Хто очолював козацьке повстання 1648 року?", "options": ["Іван Виговський", "Богдан Хмельницький", "Петро Дорошенко", "Іван Мазепа"], "correctIndex": 1, "audioFile": "hard_3.mp3" },
+  { "id": "r4_hard_4", "difficulty": "hard", "text": "Який рік вважають початком Великої французької революції?", "options": ["1776", "1789", "1799", "1815"], "correctIndex": 1, "audioFile": "hard_4.mp3" },
+  { "id": "r4_hard_5", "difficulty": "hard", "text": "Скільки книг у серії «Гаррі Поттер» (основних)?", "options": ["5", "6", "7", "8"], "correctIndex": 2, "audioFile": "hard_5.mp3" }
+]

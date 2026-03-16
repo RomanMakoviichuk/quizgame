@@ -1,0 +1,17 @@
+[
+  { "id": "r9_easy_1", "difficulty": "easy", "text": "Яка тварина каже «му»?", "options": ["Собака", "Корова", "Кішка", "Коза"], "correctIndex": 1, "audioFile": "easy_1.mp3" },
+  { "id": "r9_easy_2", "difficulty": "easy", "text": "Що ми вдягаємо, коли холодно?", "options": ["Купальник", "Шапку та куртку", "Шльопанці", "Нічого"], "correctIndex": 1, "audioFile": "easy_2.mp3" },
+  { "id": "r9_easy_3", "difficulty": "easy", "text": "Скільки очей у людини?", "options": ["1", "2", "3", "4"], "correctIndex": 1, "audioFile": "easy_3.mp3" },
+  { "id": "r9_easy_4", "difficulty": "easy", "text": "Який колір має морква?", "options": ["Синій", "Зелений", "Помаранчевий", "Червоний"], "correctIndex": 2, "audioFile": "easy_4.mp3" },
+  { "id": "r9_easy_5", "difficulty": "easy", "text": "Де живуть риби?", "options": ["На суші", "У воді", "В повітрі", "Під землею"], "correctIndex": 1, "audioFile": "easy_5.mp3" },
+  { "id": "r9_medium_1", "difficulty": "medium", "text": "Яка столиця Франції?", "options": ["Ліон", "Марсель", "Париж", "Ніцца"], "correctIndex": 2, "audioFile": "medium_1.mp3" },
+  { "id": "r9_medium_2", "difficulty": "medium", "text": "Скільки грам у кілограмі?", "options": ["100", "500", "1000", "10000"], "correctIndex": 2, "audioFile": "medium_2.mp3" },
+  { "id": "r9_medium_3", "difficulty": "medium", "text": "Який метал ртуть за агрегатним станом?", "options": ["Твердий", "Рідкий", "Газоподібний", "Плазма"], "correctIndex": 1, "audioFile": "medium_3.mp3" },
+  { "id": "r9_medium_4", "difficulty": "medium", "text": "Яка столиця Канади?", "options": ["Торонто", "Ванкувер", "Оттава", "Монреаль"], "correctIndex": 2, "audioFile": "medium_4.mp3" },
+  { "id": "r9_medium_5", "difficulty": "medium", "text": "Скільки сторін у восьмикутника?", "options": ["6", "7", "8", "9"], "correctIndex": 2, "audioFile": "medium_5.mp3" },
+  { "id": "r9_hard_1", "difficulty": "hard", "text": "Який орган людського тіла найбільший?", "options": ["Серце", "Печінка", "Шкіра", "Мозок"], "correctIndex": 2, "audioFile": "hard_1.mp3" },
+  { "id": "r9_hard_2", "difficulty": "hard", "text": "У якому році Колумб досяг Америки?", "options": ["1482", "1492", "1502", "1512"], "correctIndex": 1, "audioFile": "hard_2.mp3" },
+  { "id": "r9_hard_3", "difficulty": "hard", "text": "Який хімічний елемент має найменшу атомну масу?", "options": ["Гелій", "Водень", "Літій", "Дейтерій"], "correctIndex": 1, "audioFile": "hard_3.mp3" },
+  { "id": "r9_hard_4", "difficulty": "hard", "text": "Скільки камер у людського серця?", "options": ["2", "3", "4", "5"], "correctIndex": 2, "audioFile": "hard_4.mp3" },
+  { "id": "r9_hard_5", "difficulty": "hard", "text": "Яка довжина екватора Землі (приблизно, км)?", "options": ["20 000", "30 000", "40 000", "50 000"], "correctIndex": 2, "audioFile": "hard_5.mp3" }
+]

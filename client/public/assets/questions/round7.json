@@ -1,0 +1,17 @@
+[
+  { "id": "r7_easy_1", "difficulty": "easy", "text": "Скільки годин у добі?", "options": ["12", "24", "48", "36"], "correctIndex": 1, "audioFile": "easy_1.mp3" },
+  { "id": "r7_easy_2", "difficulty": "easy", "text": "Яка тварина дає молоко?", "options": ["Курка", "Корова", "Свиня", "Вівця"], "correctIndex": 1, "audioFile": "easy_2.mp3" },
+  { "id": "r7_easy_3", "difficulty": "easy", "text": "Скільки сезонів у році?", "options": ["2", "3", "4", "5"], "correctIndex": 2, "audioFile": "easy_3.mp3" },
+  { "id": "r7_easy_4", "difficulty": "easy", "text": "Що ми їмо на сніданок?", "options": ["Їжу", "Воду", "Повітря", "Кашу"], "correctIndex": 3, "audioFile": "easy_4.mp3" },
+  { "id": "r7_easy_5", "difficulty": "easy", "text": "Який колір має нічне небо?", "options": ["Білий", "Синій", "Чорний", "Зелений"], "correctIndex": 2, "audioFile": "easy_5.mp3" },
+  { "id": "r7_medium_1", "difficulty": "medium", "text": "Яка найвища гора України?", "options": ["Піп Іван", "Говерла", "Петрос", "Бребенескул"], "correctIndex": 1, "audioFile": "medium_1.mp3" },
+  { "id": "r7_medium_2", "difficulty": "medium", "text": "Яка столиця Іспанії?", "options": ["Барселона", "Мадрид", "Севілья", "Валенсія"], "correctIndex": 1, "audioFile": "medium_2.mp3" },
+  { "id": "r7_medium_3", "difficulty": "medium", "text": "Скільки кілометрів у милі (приблизно)?", "options": ["1", "1.6", "2", "3"], "correctIndex": 1, "audioFile": "medium_3.mp3" },
+  { "id": "r7_medium_4", "difficulty": "medium", "text": "Який метал рідко використовують для батарейок?", "options": ["Літій", "Золото", "Цинк", "Мідь"], "correctIndex": 1, "audioFile": "medium_4.mp3" },
+  { "id": "r7_medium_5", "difficulty": "medium", "text": "Скільки лап у комахи?", "options": ["4", "6", "8", "10"], "correctIndex": 1, "audioFile": "medium_5.mp3" },
+  { "id": "r7_hard_1", "difficulty": "hard", "text": "У якому році була проголошена незалежність України?", "options": ["1989", "1990", "1991", "1992"], "correctIndex": 2, "audioFile": "hard_1.mp3" },
+  { "id": "r7_hard_2", "difficulty": "hard", "text": "Який рік вважають початком Першої світової війни?", "options": ["1912", "1914", "1916", "1918"], "correctIndex": 1, "audioFile": "hard_2.mp3" },
+  { "id": "r7_hard_3", "difficulty": "hard", "text": "Хто написав «Майстер і Маргарита»?", "options": ["Толстой", "Достоєвський", "Булгаков", "Чехов"], "correctIndex": 2, "audioFile": "hard_3.mp3" },
+  { "id": "r7_hard_4", "difficulty": "hard", "text": "Яка температура кипіння води за нормального тиску (°C)?", "options": ["90", "100", "110", "120"], "correctIndex": 1, "audioFile": "hard_4.mp3" },
+  { "id": "r7_hard_5", "difficulty": "hard", "text": "Скільки планет відкрито за межами Сонячної системи (екзопланет) станом на початок 2020-х?", "options": ["Понад 1000", "Понад 3000", "Понад 5000", "Понад 10000"], "correctIndex": 2, "audioFile": "hard_5.mp3" }
+]

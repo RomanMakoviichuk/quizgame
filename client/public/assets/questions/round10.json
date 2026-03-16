@@ -1,0 +1,17 @@
+[
+  { "id": "r10_easy_1", "difficulty": "easy", "text": "Який місяць йде після червня?", "options": ["Травень", "Липень", "Серпень", "Вересень"], "correctIndex": 1, "audioFile": "easy_1.mp3" },
+  { "id": "r10_easy_2", "difficulty": "easy", "text": "Скільки кілограмів у тонні?", "options": ["100", "500", "1000", "10000"], "correctIndex": 2, "audioFile": "easy_2.mp3" },
+  { "id": "r10_easy_3", "difficulty": "easy", "text": "Що ми читаємо?", "options": ["Їжу", "Книги", "Музику", "Воду"], "correctIndex": 1, "audioFile": "easy_3.mp3" },
+  { "id": "r10_easy_4", "difficulty": "easy", "text": "Який колір має листя восени?", "options": ["Синій", "Зелений", "Жовтий або червоний", "Білий"], "correctIndex": 2, "audioFile": "easy_4.mp3" },
+  { "id": "r10_easy_5", "difficulty": "easy", "text": "Скільки разів на рік ми святкуємо Новий рік?", "options": ["0", "1", "2", "12"], "correctIndex": 1, "audioFile": "easy_5.mp3" },
+  { "id": "r10_medium_1", "difficulty": "medium", "text": "Який рік вважають початком Великої французької революції?", "options": ["1776", "1789", "1799", "1815"], "correctIndex": 1, "audioFile": "medium_1.mp3" },
+  { "id": "r10_medium_2", "difficulty": "medium", "text": "Яка столиця Австралії?", "options": ["Сідней", "Мельбурн", "Канберра", "Брисбен"], "correctIndex": 2, "audioFile": "medium_2.mp3" },
+  { "id": "r10_medium_3", "difficulty": "medium", "text": "Скільки сантиметрів у метрі?", "options": ["10", "50", "100", "1000"], "correctIndex": 2, "audioFile": "medium_3.mp3" },
+  { "id": "r10_medium_4", "difficulty": "medium", "text": "Який орган відповідає за нюх?", "options": ["Вуха", "Очі", "Ніс", "Язик"], "correctIndex": 2, "audioFile": "medium_4.mp3" },
+  { "id": "r10_medium_5", "difficulty": "medium", "text": "Яка планета має кільця?", "options": ["Юпітер", "Марс", "Сатурн", "Венера"], "correctIndex": 2, "audioFile": "medium_5.mp3" },
+  { "id": "r10_hard_1", "difficulty": "hard", "text": "Який рік вважають початком Великої французької революції?", "options": ["1776", "1789", "1799", "1815"], "correctIndex": 1, "audioFile": "hard_1.mp3" },
+  { "id": "r10_hard_2", "difficulty": "hard", "text": "У якому році відбулася Чорнобильська катастрофа?", "options": ["1984", "1986", "1988", "1990"], "correctIndex": 1, "audioFile": "hard_2.mp3" },
+  { "id": "r10_hard_3", "difficulty": "hard", "text": "Який математик сформулював теорему про прямокутний трикутник?", "options": ["Архімед", "Піфагор", "Евклід", "Ньютон"], "correctIndex": 1, "audioFile": "hard_3.mp3" },
+  { "id": "r10_hard_4", "difficulty": "hard", "text": "Скільки ребер у куба?", "options": ["6", "8", "12", "24"], "correctIndex": 2, "audioFile": "hard_4.mp3" },
+  { "id": "r10_hard_5", "difficulty": "hard", "text": "Яка частота серцебиття дорослої людини в спокої (уд/хв, приблизно)?", "options": ["30–50", "60–100", "120–150", "180–200"], "correctIndex": 1, "audioFile": "hard_5.mp3" }
+]

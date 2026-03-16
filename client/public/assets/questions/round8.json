@@ -1,0 +1,17 @@
+[
+  { "id": "r8_easy_1", "difficulty": "easy", "text": "Який фрукт жовтий і кислий?", "options": ["Яблуко", "Лимон", "Виноград", "Банан"], "correctIndex": 1, "audioFile": "easy_1.mp3" },
+  { "id": "r8_easy_2", "difficulty": "easy", "text": "Скільки сторін у шестикутника?", "options": ["5", "6", "7", "8"], "correctIndex": 1, "audioFile": "easy_2.mp3" },
+  { "id": "r8_easy_3", "difficulty": "easy", "text": "Що ми використовуємо для чищення зубів?", "options": ["Мило", "Щітка", "Губка", "Полотенце"], "correctIndex": 1, "audioFile": "easy_3.mp3" },
+  { "id": "r8_easy_4", "difficulty": "easy", "text": "Яка птиця не літає?", "options": ["Орел", "Страус", "Ластівка", "Голуб"], "correctIndex": 1, "audioFile": "easy_4.mp3" },
+  { "id": "r8_easy_5", "difficulty": "easy", "text": "Скільки разів на день зазвичай їдять?", "options": ["1", "2", "3", "5"], "correctIndex": 2, "audioFile": "easy_5.mp3" },
+  { "id": "r8_medium_1", "difficulty": "medium", "text": "Який газ займає найбільшу частку в повітрі?", "options": ["Кисень", "Азот", "Вуглекислий газ", "Аргон"], "correctIndex": 1, "audioFile": "medium_1.mp3" },
+  { "id": "r8_medium_2", "difficulty": "medium", "text": "Яка столиця Японії?", "options": ["Осака", "Кіото", "Токіо", "Нагоя"], "correctIndex": 2, "audioFile": "medium_2.mp3" },
+  { "id": "r8_medium_3", "difficulty": "medium", "text": "Скільки кілограмів у центнері?", "options": ["10", "50", "100", "1000"], "correctIndex": 2, "audioFile": "medium_3.mp3" },
+  { "id": "r8_medium_4", "difficulty": "medium", "text": "Який орган відповідає за зір?", "options": ["Вуха", "Ніс", "Очі", "Язик"], "correctIndex": 2, "audioFile": "medium_4.mp3" },
+  { "id": "r8_medium_5", "difficulty": "medium", "text": "Яка найменша планета Сонячної системи?", "options": ["Марс", "Меркурій", "Венера", "Плутон"], "correctIndex": 1, "audioFile": "medium_5.mp3" },
+  { "id": "r8_hard_1", "difficulty": "hard", "text": "Який газ займає найбільшу частку в повітрі?", "options": ["Кисень", "Азот", "Вуглекислий газ", "Аргон"], "correctIndex": 1, "audioFile": "hard_1.mp3" },
+  { "id": "r8_hard_2", "difficulty": "hard", "text": "У якому році Лютер опублікував 95 тез?", "options": ["1515", "1517", "1520", "1525"], "correctIndex": 1, "audioFile": "hard_2.mp3" },
+  { "id": "r8_hard_3", "difficulty": "hard", "text": "Яка молекула зберігає спадкову інформацію?", "options": ["РНК", "ДНК", "Білок", "Ліпід"], "correctIndex": 1, "audioFile": "hard_3.mp3" },
+  { "id": "r8_hard_4", "difficulty": "hard", "text": "Скільки кісток у дорослої людини (приблизно)?", "options": ["186", "206", "226", "246"], "correctIndex": 1, "audioFile": "hard_4.mp3" },
+  { "id": "r8_hard_5", "difficulty": "hard", "text": "Який елемент має символ Fe?", "options": ["Фтор", "Залізо", "Францій", "Фермій"], "correctIndex": 1, "audioFile": "hard_5.mp3" }
+]

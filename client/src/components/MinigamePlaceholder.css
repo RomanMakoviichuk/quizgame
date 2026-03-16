@@ -1,0 +1,15 @@
+.minigame-placeholder {
+  padding: 2rem;
+  text-align: center;
+}
+
+.minigame-title {
+  font-family: "Playpen Sans", cursive;
+  color: #8b0000;
+  text-shadow: 0 0 15px rgba(139, 0, 0, 0.6);
+}
+
+.minigame-hint {
+  color: #a08080;
+  font-size: 0.95rem;
+}
