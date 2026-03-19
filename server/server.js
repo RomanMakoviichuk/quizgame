@@ -299,6 +299,23 @@ io.on("connection", (socket) => {
     startMainScene(roomCode);
   });
 
+  socket.on("skipRules", () => {
+    const roomCode = socket.roomCode;
+    const room = rooms.get(roomCode);
+    if (!room || room.gameState !== GAME_STATE.WAITING) return;
+    const player = room.players.get(socket.id);
+    if (!player || !player.isAdmin) return;
+    io.to(roomCode).emit("skipRules");
+  });
+
+  socket.on("rulesStarted", () => {
+    const roomCode = socket.roomCode;
+    const room = rooms.get(roomCode);
+    if (!room || room.gameState !== GAME_STATE.WAITING) return;
+    if (!socket.isDisplay) return;
+    io.to(roomCode).emit("rulesStarted");
+  });
+
   socket.on("questionAnnounceDone", () => {
     const roomCode = socket.roomCode;
     const room = rooms.get(roomCode);

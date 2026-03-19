@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Playpen+Sans:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap");
 
 * {
   box-sizing: border-box;
@@ -9,6 +10,12 @@ body {
   font-family: "Playpen Sans", cursive;
   background: linear-gradient(180deg, #0a0a0a 0%, #1a0a0a 30%, #0d0505 70%, #000 100%);
   color: #e8e0e0;
+}
+
+@media (max-width: 768px) {
+  body {
+    background: url("../public/assets/images/background.png") center/cover no-repeat;
+  }
 }
 
 .app {
@@ -23,6 +30,10 @@ body {
 .app-inner {
   padding: 1rem;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
 }
 
 /* Відео-фон на екрані гри */
@@ -119,7 +130,7 @@ body {
 }
 
 .app-game-mobile .app-inner {
-  background: linear-gradient(180deg, #0a0a0a 0%, #1a0a0a 50%, #0d0505 100%);
+  background: transparent;
 }
 
 .app-inner-over-video {
@@ -169,7 +180,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 1rem;
+  padding: 0;
   z-index: 1;
 }
 
@@ -180,17 +191,20 @@ body {
   background: rgba(0, 0, 0, 0.6);
   z-index: 1;
   pointer-events: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .menu-logo-wrapper {
   position: relative;
   z-index: 2;
-  top: -200px;
   display: flex;
   flex-direction: column;
   align-items: center;
   animation: logo-drop 900ms ease-out forwards;
   transform-origin: top center;
+  margin-top: 0;
+  top: -150px;
 }
 
 
@@ -246,39 +260,49 @@ body {
 }
 
 .menu-nav {
-  position: relative;
-  top: -200px;
-  z-index: 1;
+  position: absolute;
   display: flex;
   flex-direction: column;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 3;
   gap: 1rem;
-  width: 100%;
-  max-width: 520px;
-  justify-content: center;
-  align-items: center;
 }
 
 .menu-btn {
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   outline: none;
+  user-select: none;
+  border-radius: 16px;
+  padding: 1.1rem 1.6rem;
+  width: 320px;
+  height: 90px;
+  font-family: "Playpen Sans", cursive;
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 
 .menu-btn-primary {
-  background: url("../public/assets/images/play.png") center/cover no-repeat;
-  width: 320px;
-  height: 150px;
   position: relative;
-  image-rendering: auto;
+  color: #f5fbff;
+  background:
+    radial-gradient(100% 120% at 50% 0%, rgba(60, 160, 255, 0.35) 0%, rgba(0, 0, 0, 0) 55%),
+    linear-gradient(180deg, rgba(0, 140, 255, 0.28) 0%, rgba(0, 0, 0, 0.55) 100%);
 }
 
 .menu-btn-primary:hover:not(:disabled) {
-  transform: scale(1.05);
-  filter: brightness(1.1);
+  transform: scale(1.03);
+  filter: brightness(1.12);
 }
 
 .menu-btn-secondary {
@@ -300,25 +324,30 @@ body {
 }
 
 .menu-btn-exit {
-  background: url("../public/assets/images/exit.png") center/contain no-repeat;
-  background-size: cover;
-  color: transparent;
-  font-size: 0;
-  padding: 0;
-  width: 320px;
-  height: 150px;
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(255, 60, 60, 0.28) 0%, rgba(0, 0, 0, 0) 58%),
+    linear-gradient(180deg, rgba(139, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.62) 100%);
+  color: #ffe9e9;
 }
 
 .menu-btn-exit:hover {
   transform: scale(1.03);
-  filter: brightness(1.05);
+  filter: brightness(1.08);
 }
 
 /* Sound toggle in main menu (top-right) */
-.sound-toggle {
+.menu-top-right {
   position: absolute;
   top: 1.5rem;
   right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  z-index: 2;
+}
+
+.sound-toggle,
+.fullscreen-toggle {
   width: 40px;
   height: 40px;
   border: none;
@@ -328,7 +357,6 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 2;
   padding: 0;
 }
 
@@ -349,6 +377,86 @@ body {
   height: 40px;
 }
 
+.fullscreen-toggle:hover {
+  filter: brightness(1.2);
+}
+
+.fullscreen-icon {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.fullscreen-icon::before,
+.fullscreen-icon::after {
+  content: "";
+  position: absolute;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  border-radius: 2px;
+  width: 14px;
+  height: 14px;
+}
+
+.fullscreen-icon::before {
+  top: 1px;
+  left: 1px;
+  opacity: 0.9;
+}
+
+.fullscreen-icon::after {
+  bottom: 1px;
+  right: 1px;
+}
+
+.rules-screen-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+/* Rules video before first round */
+.rules-video-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  overflow: hidden;
+}
+
+.rules-video-screen-skipfade {
+  animation: rulesFadeIn 1500ms ease-out both;
+}
+
+.rules-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: none;
+  filter: none;
+}
+
+.rules-video-screen-ending {
+  animation: rulesFadeOut 450ms ease-in both;
+}
+
+.rules-video-screen-needs-click {
+  cursor: pointer;
+}
+
+@keyframes rulesFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rulesFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 
 
 
@@ -358,7 +466,27 @@ body {
   transform: none;
 }
 
-/* Телефон — тільки форма приєднання */
+/* Mobile admin: skip rules button */
+.btn-skip-rules {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  background: rgba(10, 10, 10, 0.7);
+  color: #fff;
+  font-family: "Playpen Sans", system-ui, sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+}
+
+.btn-skip-rules:active {
+  transform: translateY(1px);
+  filter: brightness(1.05);
+}
+
+/* Телефон — тільки форма приєднання (базові стилі) */
 .join-screen-full {
   min-height: 100vh;
   padding: 2rem 1.5rem;
@@ -375,6 +503,15 @@ body {
   color: #8b0000;
   text-shadow: 0 0 15px rgba(139, 0, 0, 0.5);
   margin-bottom: 2rem;
+}
+
+.join-form-simple {
+  background: rgba(10, 10, 10, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 20px !important;
+  backdrop-filter: blur(2px);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45) !important;
+  padding: 1rem;
 }
 
 .join-form-simple input {
@@ -422,6 +559,168 @@ body {
   cursor: not-allowed;
 }
 
+/* Мобільні “геймпади”: фон і покращені стилі (тільки для мобільних) */
+@media (max-width: 768px) {
+  .app-mobile-bg {
+    min-height: 100vh;
+    background: transparent;
+  }
+
+  .app-mobile-bg::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(70% 60% at 50% 35%, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.45));
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app-mobile-bg > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .join-screen-full {
+    background: transparent;
+  }
+
+  .join-form-simple input {
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 16px;
+    background: rgba(10, 10, 10, 0.55);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+  }
+
+  .join-form-simple input::placeholder {
+    color: rgba(245, 224, 224, 0.75);
+  }
+
+  .join-form-simple input:focus {
+    outline: none;
+    border-color: rgba(0, 140, 255, 0.55);
+    box-shadow: 0 0 0 3px rgba(0, 140, 255, 0.2), 0 14px 34px rgba(0, 0, 0, 0.35);
+  }
+
+  .join-form-simple .code-input {
+    color: #ffffff;
+  }
+
+  .join-form-simple button {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 16px;
+    background: rgba(0, 140, 255, 0.22);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  }
+
+  .join-form-simple button:hover:not(:disabled) {
+    background: rgba(0, 140, 255, 0.22);
+    filter: brightness(1.08);
+  }
+
+  /* Mobile wait screen */
+  .mobile-wait-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+
+  .mobile-wait-card {
+    width: min(520px, 100%);
+    border-radius: 20px;
+    background: rgba(10, 10, 10, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+    padding: 1.2rem 1.1rem;
+    text-align: center;
+  }
+
+  .mobile-wait-title {
+    font-family: "Playpen Sans", system-ui, sans-serif;
+    font-size: 1.35rem;
+    color: #fff;
+    letter-spacing: 0.02em;
+  }
+
+  .mobile-wait-subtitle {
+    margin-top: 0.35rem;
+    font-family: "Playpen Sans", system-ui, sans-serif;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  /* Mobile lobby (“gamepad”) — make it match join screen */
+  .lobby-mobile,
+  .lobby-mobile-inner {
+    background: transparent;
+    align-items: center;
+    display: flex;
+    width: 100%;
+  }
+
+  .lobby-inner {
+    padding: 1.25rem 1rem 1.5rem;
+  }
+
+  .room-code-section,
+  .lobby-players-panel {
+    background: rgba(10, 10, 10, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 20px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  }
+
+  .room-code-section::before {
+    display: none;
+  }
+
+  .lobby-room-code {
+    position: relative;
+    top: auto;
+    left: auto;
+    rotate: 0deg;
+    margin-top: 0;
+  }
+
+  .room-code-value {
+    font-family: "Playpen Sans", cursive;
+    font-size: 2.6rem;
+    letter-spacing: 0.42em;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 0 10px rgba(0, 140, 255, 0.25);
+  }
+
+  .room-code-label,
+  .room-code-hint {
+    color: rgba(255, 255, 255, 0.78);
+  }
+
+  .lobby-wait-text-mobile {
+    rotate: 0deg;
+    text-shadow:
+      0 0 6px rgba(255, 255, 255, 0.65),
+      0 0 18px rgba(0, 140, 255, 0.35);
+  }
+
+  .btn-start,
+  .btn-exit-lobby {
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(0, 140, 255, 0.22);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  }
+
+  .btn-exit-lobby {
+    background: rgba(10, 10, 10, 0.55);
+  }
+}
+
 /* Модальне вікно категорій */
 .modal-overlay {
   position: fixed;
@@ -436,20 +735,53 @@ body {
 
 .modal-content {
   position: relative;
-  background: rgba(5, 5, 5, 0.7);
+  opacity: 0.95;
+  background: rgba(5, 5, 5, 0.95);
   padding: 2.5rem 2rem 2rem;
-  border-radius: 6px;
+  border-radius: 12px;
   max-width: 360px;
   width: 100%;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.85);
-  margin-top: 8rem; /* опустили блок вибору нижче, щоб залишити місце під логотип */
 }
 
 .modal-content h2 {
   font-family: "Playpen Sans", cursive;
   margin: 0 0 1.5rem 0;
-  color: #8b0000;
-  text-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.98);
+  text-shadow:
+    0 0 6px rgba(255, 255, 255, 0.65),
+    0 0 18px rgba(0, 140, 255, 0.35),
+    0 0 40px rgba(255, 61, 61, 0.18),
+    0 0 100px rgba(0, 140, 255, 0.08);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  animation: modalNeonFlicker 2.6s infinite steps(2, end);
+}
+
+@keyframes modalNeonFlicker {
+  0% {
+    opacity: 0.75;
+    filter: brightness(0.95);
+  }
+  10% {
+    opacity: 1;
+    filter: brightness(1.12);
+  }
+  22% {
+    opacity: 0.88;
+  }
+  35% {
+    opacity: 1;
+  }
+  52% {
+    opacity: 0.9;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.9;
+  }
 }
 
 .category-check {
@@ -505,6 +837,290 @@ body {
 .modal-btn-lobby:hover {
   transform: scale(1.02);
   filter: brightness(1.05);
+}
+
+/* Replace old image-based lobby button with spiderverse style */
+.modal-btn-lobby-btn {
+  width: 220px;
+  height: 60px;
+  --btn-font-size: 0.95rem;
+  --btn-text-color: rgb(221, 96, 23);
+  --btn-outline-color: hsla(90, 1%, 58%, 0.4);
+  --btn-front-bgc: hsla(96deg, 37.04%, 10.59%, 0.3);
+  --btn-front-bgc--hover: hsla(96deg, 37.04%, 10.59%, 0.75);
+}
+
+.spiderverse-play {
+  background: rgba(182, 113, 9, 0.92);
+  color: #000;
+  border: 2px solid rgba(0, 0, 0, 0.9);
+}
+
+.spiderverse-exit {
+  background: rgba(3, 169, 244, 0.92);
+  color: #000;
+  border: 2px solid rgba(0, 0, 0, 0.9);
+}
+
+/* Orbitron sci-fi button style (from provided sample) */
+.btn {
+  position: relative;
+  padding: 1rem 3rem;
+  color: var(--btn-text-color);
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  text-align: center;
+  font-family: Orbitron, sans-serif;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.btn::before,
+.btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  outline: 1px dashed var(--btn-outline-color);
+  width: 100%;
+  height: 100%;
+  transition: 250ms all ease;
+}
+
+.btn::before {
+  transform: translate(-1rem, -1rem);
+}
+
+.btn::after {
+  background-color: var(--btn-front-bgc);
+  outline-style: solid;
+}
+
+.btn .btn__inner::before,
+.btn .btn__inner::after {
+  content: "";
+  border: 1px dashed var(--btn-outline-color);
+  border-left: 0;
+  border-right: 0;
+  width: 1rem;
+  height: calc(100% + 2px);
+  position: absolute;
+  top: -0.5rem;
+  transform: translateX(var(--translateX, 0)) skewY(var(--skewY, 45deg));
+  transition: 250ms all;
+}
+
+.btn .btn__inner::before {
+  left: -1rem;
+}
+
+.btn .btn__inner::after {
+  left: calc(100% - 1rem);
+}
+
+.btn .btn__text {
+  z-index: 1;
+  position: relative;
+  display: inline-block;
+  transition: 250ms all ease;
+  font-size: var(--btn-font-size);
+  font-weight: 700;
+}
+
+.btn:hover::before {
+  transform: translate(1rem, -1rem);
+}
+
+.btn:hover::after {
+  background-color: var(--btn-front-bgc--hover);
+}
+
+.btn:hover .btn__inner::before,
+.btn:hover .btn__inner::after {
+  --translateX: 1rem;
+  --skewY: -45deg;
+}
+
+.btn:active::after {
+  transform: translate(0.5rem, -0.5rem);
+}
+
+.btn:active .btn__inner::before,
+.btn:active .btn__inner::after {
+  width: 0.5rem;
+  transform: translate(1.5rem, calc(-0.25rem - 2px)) skewY(-45deg);
+}
+
+.btn:active .btn__text {
+  transform: translate(0.5rem, -0.5rem);
+}
+
+/* ===== Intro scene (video + player reveal) ===== */
+
+.intro-root {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.intro-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.player-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.player-spotlight {
+  position: absolute;
+  width: 80%;
+  height: 90%;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.2) 25%,
+    transparent 60%
+  );
+  mix-blend-mode: screen;
+}
+
+.player-figure {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  transform: translateY(-20%);
+}
+
+.player-avatar-intro {
+  width: 260px;
+  max-width: 40vw;
+  height: auto;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 18px rgba(255, 255, 255, 0.6))
+    drop-shadow(0 0 28px rgba(0, 0, 0, 0.9));
+}
+
+.player-name {
+  font-family: system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.player-name-intro {
+  position: relative;
+  font-size: 3rem;
+  color: #ffffff;
+  margin-bottom: 0.75rem;
+  padding: 0.4rem 1.8rem 0.5rem;
+  border-radius: 10px;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  background: linear-gradient(180deg, rgba(20, 0, 0, 0.95), rgba(60, 0, 0, 0.98));
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.9),
+    0 0 18px rgba(255, 255, 255, 0.6),
+    0 0 32px rgba(255, 0, 0, 0.7);
+  text-shadow:
+    0 0 4px rgba(0, 0, 0, 1),
+    0 0 12px rgba(255, 255, 255, 0.9),
+    0 0 26px rgba(255, 0, 0, 0.9);
+}
+
+.player-name-topright {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  margin: 0;
+  font-size: 2.2rem;
+  padding: 0.35rem 1.4rem 0.45rem;
+  border-width: 2px;
+  border-radius: 12px;
+}
+
+/* ===== Intro reveal animations (name + sprite) ===== */
+/* animation duration comes from JS via --reveal-ms */
+.player-name-anim {
+  animation: introNameReveal var(--reveal-ms, 3000ms) ease-in-out both;
+}
+
+.player-avatar-anim {
+  animation:
+    introSpriteReveal var(--reveal-ms, 3000ms) ease-in-out both,
+    introSpriteIdle 1400ms ease-in-out infinite;
+  transform-origin: 50% 85%;
+}
+
+@keyframes introNameReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.95);
+    filter: blur(1px);
+  }
+  18% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  82% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+    filter: blur(1px);
+  }
+}
+
+@keyframes introSpriteReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.9);
+    filter: blur(1px) brightness(0.9);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0) brightness(1);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0) brightness(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.95);
+    filter: blur(1px) brightness(0.9);
+  }
+}
+
+@keyframes introSpriteIdle {
+  0% {
+    transform: translateY(0) rotate(-0.6deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(0.6deg);
+  }
+  100% {
+    transform: translateY(0) rotate(-0.6deg);
+  }
 }
 
 .modal-hint {
@@ -568,6 +1184,8 @@ body {
   background: rgba(0, 0, 0, 0.35);
   z-index: 1;
   pointer-events: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .lobby-characters {
@@ -778,7 +1396,6 @@ body {
 .lobby-inner {
   position: relative;
   z-index: 1;
-  max-width: 500px;
   margin: 0 auto;
 }
 
@@ -794,8 +1411,8 @@ body {
 
 .lobby-room-code {
   position: absolute;
-  top: 5%;
-  left: 55%;
+  top: 2%;
+  right: 10%;
   margin-top: 2rem;
   text-align: center;
   rotate: -20deg;
@@ -822,10 +1439,10 @@ body {
 
 .lobby-wait-text {
   position: absolute;
-  left: 30%;
-  top: 25%;
+  left: 20%;
+  top: 10%;
   margin: 0;
-  font-size: 1.6rem;
+  font-size: 2rem;
   text-align: center;
   rotate: 7deg;
   color: #ffffff;
@@ -863,8 +1480,21 @@ body {
   max-width: none;
 }
 
+/* Connected players count in lobby (desktop) */
+.lobby-connected-count {
+  font-family: "Playpen Sans", cursive;
+  font-size: 1.35rem;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow:
+    0 0 6px rgba(255, 255, 255, 0.2),
+    0 0 22px rgba(0, 140, 255, 0.25);
+  margin: 1rem 0 0.25rem 0;
+  text-align: center;
+}
+
 .lobby-players-panel {
   background: rgba(20, 8, 8, 0.85);
+  width: 100%;
   border: 2px solid #5c1010;
   box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 0, 0, 0.5);
 }
@@ -885,9 +1515,16 @@ body {
 
 .room-code-label {
   margin: 0 0 0.5rem 0;
-  font-size: 0.9rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(176, 216, 255, 0.96);
+  text-shadow:
+    0 0 6px rgba(255, 255, 255, 0.55),
+    0 0 18px rgba(0, 140, 255, 0.30),
+    0 0 36px rgba(255, 61, 61, 0.12);
+  animation: neonFlicker 2.6s infinite steps(2, end);
 }
 
 .room-code-value {
@@ -895,22 +1532,59 @@ body {
   font-weight: 700;
   letter-spacing: 0.5em;
   margin: 0.75rem 0;
-  color: #c41e1e;
   font-family: "Playpen Sans", cursive;
   color: #fff;
-  text-shadow:
-  0 0 5px #fff,
-  0 0 10px #ff0000,
-  0 0 20px #ff0000,
-  0 0 40px #ff0000,
-  0 0 80px #8b0000,
-  0 0 120px #8b0000;
+  text-shadow: none;
 }
 
 .room-code-hint {
   margin: 0.75rem 0 0 0;
   font-size: 0.85rem;
-  color: #806060;
+  color: rgba(176, 216, 255, 0.86);
+  text-shadow:
+    0 0 6px rgba(255, 255, 255, 0.25),
+    0 0 16px rgba(0, 140, 255, 0.22),
+    0 0 30px rgba(255, 61, 61, 0.12);
+  animation: neonHintPulse 3.4s infinite ease-in-out;
+}
+
+@keyframes neonFlicker {
+  0% {
+    opacity: 0.75;
+    filter: brightness(0.95);
+  }
+  10% {
+    opacity: 1;
+    filter: brightness(1.1);
+  }
+  22% {
+    opacity: 0.85;
+  }
+  35% {
+    opacity: 1;
+  }
+  52% {
+    opacity: 0.88;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.92;
+  }
+}
+
+@keyframes neonHintPulse {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 
 .room-code-badge {
@@ -1162,8 +1836,9 @@ body {
 }
 
 .player-item {
+  border-radius: 16px!important;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0.5rem;
   border-radius: 2px;
   background: rgba(30, 10, 10, 0.6);
@@ -1433,16 +2108,21 @@ body {
 @media (max-width: 480px) {
   .menu-nav {
     max-width: 320px;
+    right: 1rem;
+    bottom: 1rem;
   }
 
-  .menu-btn-primary {
-    width: 280px;
-    height: 110px;
+  .menu-btn {
+    width: 270px;
+    height: 80px;
+    font-size: 1.35rem;
   }
-
-  .menu-btn-exit {
+  .menu-3d-btn {
     width: 280px;
-    height: 110px;
+    height: 80px;
+  }
+  .menu-3d-btn span {
+    font-size: 1.25rem;
   }
   .app-header h1 {
     font-size: 1.25rem;
@@ -1454,5 +2134,739 @@ body {
 
   .option {
     padding: 0.875rem;
+  }
+}
+
+/* === Mobile “gamepad” lobby overrides (must be LAST) === */
+@media (max-width: 768px) {
+  /* Ensure background.png shows through */
+  .lobby-mobile,
+  .lobby-mobile-inner {
+    background: transparent !important;
+  }
+
+  .lobby-mobile .lobby-inner {
+    max-width: 520px;
+    padding: 1.25rem 1rem 1.5rem;
+  }
+
+  /* Remove desktop-style rotated/absolute overlay behavior */
+  .lobby-mobile .lobby-wait-text {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    rotate: 0deg !important;
+    max-width: none !important;
+    margin: 0.5rem 0 1rem !important;
+    text-align: center !important;
+    text-shadow:
+      0 0 6px rgba(255, 255, 255, 0.65),
+      0 0 18px rgba(0, 140, 255, 0.35) !important;
+  }
+
+  .lobby-mobile .lobby-room-code {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    rotate: 0deg !important;
+    margin-top: 0 !important;
+  }
+
+  .lobby-mobile .room-code-section::before {
+    display: none !important;
+  }
+
+  /* Glass cards like join screen */
+  .lobby-mobile .room-code-section,
+  .lobby-mobile .lobby-players-panel {
+    background: rgba(10, 10, 10, 0.55) !important;
+    display: flex;
+    flex-direction: column;
+    margin-top: 2rem;
+    gap: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border-radius: 20px !important;
+    backdrop-filter: blur(2px);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45) !important;
+  }
+
+  .lobby-mobile .room-code-value {
+    font-family: "Playpen Sans", cursive !important;
+    font-size: 2.6rem !important;
+    letter-spacing: 0.42em !important;
+    color: rgba(255, 255, 255, 0.95) !important;
+    text-shadow: none !important;
+    margin: 0.2rem 0 0.1rem !important;
+  }
+
+  .lobby-mobile .room-code-label,
+  .lobby-mobile .room-code-hint {
+    color: rgba(255, 255, 255, 0.78) !important;
+  }
+
+  /* Buttons match join screen */
+  .lobby-mobile .btn-start,
+  .lobby-mobile .btn-exit-lobby,
+  .lobby-mobile .btn-skip-rules {
+    border-radius: 16px !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    background: rgba(0, 140, 255, 0.22) !important;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35) !important;
+  }
+
+  .lobby-mobile .btn-exit-lobby {
+    background: rgba(10, 10, 10, 0.55) !important;
+  }
+}
+
+/* === Comic brutal buttons (CSS-only, no images) === */
+.menu-comic-btn {
+  --primary-color: #ff3d3d;
+  --secondary-color: #3d3dff;
+  --text-color: #000000;
+  --accent-color: #ffef00;
+  --panel-color: #ffffff;
+  --shadow-color: rgba(0, 0, 0, 0.75);
+}
+
+.menu-comic-btn.menu-comic-btn-exit {
+  --primary-color: #3d3dff;
+  --secondary-color: #ff3d3d;
+  --accent-color: #8fd3ff;
+}
+
+.comic-brutal-button {
+  position: relative;
+  font-size: 1.6em;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  transform: rotate(-2deg);
+  transform-origin: center;
+  transition: transform 0.15s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.comic-brutal-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.comic-brutal-button .button-inner {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  padding: 0.8em 1.4em;
+  z-index: 3;
+  overflow: hidden;
+  transform: skew(-3deg, 1deg);
+  transition: transform 0.15s cubic-bezier(0.22, 0.61, 0.36, 1);
+  clip-path: polygon(
+    0% 10%,
+    3% 0%,
+    97% 0%,
+    100% 10%,
+    100% 90%,
+    97% 100%,
+    3% 100%,
+    0% 90%
+  );
+}
+
+.comic-brutal-button .button-text {
+  position: relative;
+  font-weight: 900;
+  font-size: 1.05em;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  z-index: 5;
+  color: var(--text-color);
+  text-shadow:
+    0.05em 0.05em 0 var(--panel-color),
+    -0.05em -0.05em 0 var(--panel-color),
+    0.05em -0.05em 0 var(--panel-color),
+    -0.05em 0.05em 0 var(--panel-color);
+  transform: rotate(2deg);
+}
+
+.comic-brutal-button .button-frame {
+  position: absolute;
+  top: -0.3em;
+  left: -0.3em;
+  right: -0.3em;
+  bottom: -0.3em;
+  background-color: var(--accent-color);
+  border: 0.15em solid var(--text-color);
+  z-index: 1;
+  transition: transform 0.15s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.comic-brutal-button .button-shadow {
+  position: absolute;
+  top: 0.4em;
+  left: 0.4em;
+  right: -0.4em;
+  bottom: -0.4em;
+  background-color: var(--shadow-color);
+  z-index: 0;
+  transition: all 0.15s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.comic-brutal-button .halftone-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(
+    circle at 30% 30%,
+    rgba(0, 0, 0, 0.2) 0.1em,
+    transparent 0.1em
+  );
+  background-size: 0.5em 0.5em;
+  background-position: 0 0;
+  opacity: 0.3;
+  z-index: 2;
+  mix-blend-mode: multiply;
+}
+
+.comic-brutal-button .ink-splatter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  background: radial-gradient(
+      circle at 20% 30%,
+      rgba(0, 0, 0, 0.15) 0%,
+      rgba(0, 0, 0, 0.08) 20%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 70% 65%,
+      rgba(0, 0, 0, 0.15) 0%,
+      rgba(0, 0, 0, 0.08) 25%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 50%,
+      rgba(0, 0, 0, 0.15) 0%,
+      rgba(0, 0, 0, 0.08) 30%,
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at 85% 15%,
+      rgba(0, 0, 0, 0.15) 0%,
+      rgba(0, 0, 0, 0.08) 15%,
+      transparent 40%
+    );
+}
+
+.comic-brutal-button:hover {
+  transform: rotate(-1deg) scale(1.05);
+}
+
+.comic-brutal-button:hover .button-inner {
+  transform: skew(-5deg, 2deg);
+  background-color: var(--secondary-color);
+}
+
+.comic-brutal-button:hover .button-text {
+  color: var(--panel-color);
+  text-shadow:
+    0.05em 0.05em 0 var(--text-color),
+    -0.05em -0.05em 0 var(--text-color),
+    0.05em -0.05em 0 var(--text-color),
+    -0.05em 0.05em 0 var(--text-color);
+}
+
+.comic-brutal-button:hover .button-shadow {
+  transform: translate(0.2em, 0.2em);
+}
+
+.comic-brutal-button:hover .ink-splatter {
+  opacity: 1;
+}
+
+.comic-brutal-button:active {
+  transform: rotate(0) scale(0.98);
+}
+
+.comic-brutal-button:active .button-inner {
+  transform: skew(0, 0);
+}
+
+.comic-brutal-button:active .button-shadow {
+  transform: translate(0.1em, 0.1em);
+}
+
+/* === 3D flip buttons (like provided snippet) === */
+.menu-3d-btn {
+  position: relative;
+  width: 320px;
+  height: 90px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 18px;
+  transform-style: preserve-3d;
+  transform: perspective(1000px) rotateX(0deg);
+  transition: 4s;
+  will-change: transform;
+  overflow: hidden;
+  --base-bg: rgba(255, 255, 255, 0.92);
+  --base-text: #000;
+  --base-border: #000;
+  --hover-bg: rgba(3, 169, 244, 0.8);
+}
+
+.menu-3d-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.menu-3d-btn:hover {
+  transform: perspective(1000px) rotateX(360deg);
+}
+
+.menu-3d-btn span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--base-text);
+  background: var(--base-bg);
+  font-family: "Playpen Sans", system-ui, sans-serif;
+  text-transform: uppercase;
+  font-size: 1.45rem;
+  letter-spacing: 0.06em;
+  box-sizing: border-box;
+  border: 2px solid var(--base-border);
+  box-shadow: inset 0 20px 50px rgba(0, 0, 0, 0.2);
+  transition: 0.5s;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+.menu-3d-btn:hover span {
+  color: #fff;
+  background: var(--hover-bg);
+}
+
+.menu-3d-btn span:nth-child(1) {
+  transform: rotateX(360deg) translateZ(25px);
+}
+.menu-3d-btn span:nth-child(2) {
+  transform: rotateX(270deg) translateZ(25px);
+}
+.menu-3d-btn span:nth-child(3) {
+  transform: rotateX(180deg) translateZ(25px);
+}
+.menu-3d-btn span:nth-child(4) {
+  transform: rotateX(90deg) translateZ(25px);
+}
+
+.menu-3d-btn-play {
+  --hover-bg: rgba(255, 61, 61, 0.8);
+}
+
+.menu-3d-btn-exit {
+  --hover-bg: rgba(3, 169, 244, 0.8);
+}
+
+/* === Spiderverse glitch buttons (CSS-only, no images) === */
+.spiderverse-button {
+  position: relative;
+  padding: 0;
+  opacity: 0.5;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  width: 220px;
+  height: 60px;
+  border-radius: 18px;
+  background: #ffffff;
+  color: #000000;
+  font-family: "Playpen Sans", system-ui, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 1.55rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transition: 0.2s ease;
+  transform: translateZ(0);
+  box-shadow: inset 0 -10px 20px rgba(0, 0, 0, 0.08), 0 18px 45px rgba(0, 0, 0, 0.35);
+  padding: 0 1rem;
+}
+
+.spiderverse-button:hover {
+  opacity: 1;
+}
+
+.spiderverse-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.spiderverse-button .glitch-layers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.spiderverse-button .glitch-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  font-weight: 900;
+}
+
+.spiderverse-button .glitch-layer.layer-1 {
+  color: #ffffff;
+}
+
+.spiderverse-button .glitch-layer.layer-2 {
+  color: #e8f720;
+}
+
+.spiderverse-button .noise {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: repeating-radial-gradient(
+    circle at 50% 50%,
+    transparent 0,
+    rgba(0, 0, 0, 0.12) 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  animation: spiderNoise 0.2s steps(2) infinite;
+  mix-blend-mode: multiply;
+}
+
+.spiderverse-button .glitch-slice {
+  position: absolute;
+  width: 120%;
+  height: 6px;
+  left: -10%;
+  top: -10%;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  animation: spiderSlice 3s linear infinite;
+}
+
+.spiderverse-button:hover {
+  box-shadow:
+    0 0 22px rgba(255, 255, 255, 0.35),
+    0 0 35px var(--spider-glow);
+}
+
+.spiderverse-button:hover .glitch-layer {
+  opacity: 1;
+}
+
+.spiderverse-button:hover .glitch-layer.layer-1 {
+  animation: glitchLayer1 0.4s steps(2) infinite;
+}
+
+.spiderverse-button:hover .glitch-layer.layer-2 {
+  animation: glitchLayer2 0.4s steps(2) infinite;
+}
+
+.spiderverse-button:hover .noise {
+  opacity: 1;
+}
+
+.spiderverse-button:active {
+  transform: translateY(1px);
+}
+
+.spiderverse-button.spiderverse-play {
+  --spider-glow: rgba(0, 255, 255, 0.55);
+  border: 2px solid rgba(0, 0, 0, 0.9);
+  background: rgba(228, 102, 0, 0.92);
+}
+
+.spiderverse-button.spiderverse-exit {
+  --spider-glow: rgba(0, 140, 255, 0.65);
+  border: 2px solid rgba(0, 0, 0, 0.9);
+  background: rgba(3, 169, 244, 0.92);
+}
+
+.lobby-exit-spiderverse {
+  width: 100%;
+  height: 70px;
+  background: rgba(209, 200, 200, 0.205)!important;
+}
+
+@keyframes spiderNoise {
+  0% {
+    transform: translate(0, 0);
+  }
+  10% {
+    transform: translate(-5%, -5%);
+  }
+  20% {
+    transform: translate(10%, 5%);
+  }
+  30% {
+    transform: translate(-5%, 10%);
+  }
+  40% {
+    transform: translate(15%, -5%);
+  }
+  50% {
+    transform: translate(-10%, 15%);
+  }
+  60% {
+    transform: translate(5%, -10%);
+  }
+  70% {
+    transform: translate(-15%, 5%);
+  }
+  80% {
+    transform: translate(10%, 10%);
+  }
+  90% {
+    transform: translate(-5%, 15%);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes spiderSlice {
+  0% {
+    top: -10%;
+    opacity: 0;
+  }
+  1% {
+    opacity: 0.5;
+  }
+  3% {
+    opacity: 0;
+  }
+  50% {
+    top: 110%;
+  }
+  100% {
+    top: 110%;
+  }
+}
+
+@keyframes glitchLayer1 {
+  0% {
+    transform: translate(-20px, -10px) scale(1.1) skew(-10deg);
+    clip-path: polygon(0 20%, 100% 20%, 100% 50%, 0 50%);
+  }
+  25% {
+    transform: translate(20px, 10px) scale(1.2) skew(10deg);
+    clip-path: polygon(0 30%, 100% 30%, 100% 60%, 0 60%);
+  }
+  50% {
+    transform: translate(-15px, 5px) scale(0.9) skew(-5deg);
+    clip-path: polygon(0 10%, 100% 10%, 100% 40%, 0 40%);
+  }
+  75% {
+    transform: translate(15px, -5px) scale(1.3) skew(5deg);
+    clip-path: polygon(0 40%, 100% 40%, 100% 70%, 0 70%);
+  }
+  100% {
+    transform: translate(-20px, -10px) scale(1.1) skew(-10deg);
+    clip-path: polygon(0 20%, 100% 20%, 100% 50%, 0 50%);
+  }
+}
+
+@keyframes glitchLayer2 {
+  0% {
+    transform: translate(20px, 10px) scale(1.1) skew(10deg);
+    clip-path: polygon(0 50%, 100% 50%, 100% 80%, 0 80%);
+  }
+  25% {
+    transform: translate(-20px, -10px) scale(1.2) skew(-10deg);
+    clip-path: polygon(0 60%, 100% 60%, 100% 90%, 0 90%);
+  }
+  50% {
+    transform: translate(15px, -5px) scale(0.9) skew(5deg);
+    clip-path: polygon(0 40%, 100% 40%, 100% 70%, 0 70%);
+  }
+  75% {
+    transform: translate(-15px, 5px) scale(1.3) skew(-5deg);
+    clip-path: polygon(0 70%, 100% 70%, 100% 100%, 0 100%);
+  }
+  100% {
+    transform: translate(20px, 10px) scale(1.1) skew(10deg);
+    clip-path: polygon(0 50%, 100% 50%, 100% 80%, 0 80%);
+  }
+}
+
+/* Round intro/question videos (display only) */
+.round-video-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: #000;
+}
+
+.round-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* === Glowing buttons from provided snippet (menu only) === */
+.menu-glowing-btn {
+  --glow-color: hsl(186 100% 69%);
+  position: relative;
+  color: var(--glow-color);
+  cursor: pointer;
+  width: 230px;
+  min-height: 70px;
+  padding: 0.35em 1em;
+  border: 0.15em solid var(--glow-color);
+  border-radius: 0.45em;
+  background-color: rgba(0, 0, 0, 0.651);
+  perspective: 2em;
+  font-family: "Playpen Sans", sans-serif;
+  font-size: 1.5em;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  box-shadow:
+    inset 0 0 0.5em 0 var(--glow-color),
+    0 0 0.5em 0 var(--glow-color);
+  animation: border-flicker 2s linear infinite;
+}
+
+.menu-glowing-btn .glowing-txt {
+  margin-right: -0.3em;
+  text-shadow:
+    0 0 0.125em hsl(0 0% 100% / 0.3),
+    0 0 0.45em var(--glow-color);
+  animation: text-flicker 3s linear infinite;
+}
+
+.menu-glowing-btn .faulty-letter {
+  opacity: 0.5;
+  animation: faulty-flicker 2s linear infinite;
+}
+
+
+.menu-glowing-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  z-index: -1;
+  background-color: var(--glow-color);
+  box-shadow: 0 0 2em 0.2em var(--glow-color);
+  transition: opacity 100ms linear;
+}
+
+.menu-glowing-btn:hover {
+  color: rgba(0, 0, 0, 0.8);
+  text-shadow: none;
+  animation: none;
+}
+
+.menu-glowing-btn:hover .glowing-txt {
+  animation: none;
+}
+
+.menu-glowing-btn:hover .faulty-letter {
+  animation: none;
+  text-shadow: none;
+  opacity: 1;
+}
+
+.menu-glowing-btn:hover::before {
+  filter: blur(1.5em);
+  opacity: 1;
+}
+
+.menu-glowing-btn:hover::after {
+  opacity: 1;
+}
+
+.menu-glowing-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.menu-glowing-btn-play {
+  --glow-color: hsl(0, 0%, 100%);
+}
+
+.menu-glowing-btn-exit {
+  --glow-color: hsl(355, 99%, 45%);
+}
+
+@keyframes faulty-flicker {
+  0% { opacity: 0.1; }
+  2% { opacity: 0.1; }
+  4% { opacity: 0.5; }
+  19% { opacity: 0.5; }
+  21% { opacity: 0.1; }
+  23% { opacity: 1; }
+  80% { opacity: 0.5; }
+  83% { opacity: 0.4; }
+  87% { opacity: 1; }
+}
+
+@keyframes text-flicker {
+  0% { opacity: 0.1; }
+  2% { opacity: 1; }
+  8% { opacity: 0.1; }
+  9% { opacity: 1; }
+  12% { opacity: 0.1; }
+  20% { opacity: 1; }
+  25% { opacity: 0.3; }
+  30% { opacity: 1; }
+  70% { opacity: 0.7; }
+  72% { opacity: 0.2; }
+  77% { opacity: 0.9; }
+  100% { opacity: 0.9; }
+}
+
+@keyframes border-flicker {
+  0% { opacity: 0.1; }
+  2% { opacity: 1; }
+  4% { opacity: 0.1; }
+  8% { opacity: 1; }
+  70% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+@media only screen and (max-width: 600px) {
+  .menu-glowing-btn {
+    font-size: 1em;
   }
 }

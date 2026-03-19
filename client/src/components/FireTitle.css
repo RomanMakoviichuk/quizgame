@@ -1,0 +1,101 @@
+.fire-text {
+  display: inline-block;
+  font: inherit;
+  line-height: 1;
+
+  --shadow-color: #ff9e9e;
+  --shadow-color-light: #ffffff;
+
+  color: transparent;
+
+  /* Неоновий градієнт по тексту */
+  background: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #ff6b6b 30%,
+    #ffff66 60%,
+    #ffffff 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: fireNeonMove 2.6s linear infinite, neon 2.6s infinite;
+
+  text-shadow:
+    -1px -1px 1px var(--shadow-color-light),
+    -1px 1px 1px var(--shadow-color-light),
+    1px -1px 1px var(--shadow-color-light),
+    1px 1px 1px var(--shadow-color-light),
+    0 0 3px var(--shadow-color-light),
+    0 0 10px var(--shadow-color-light),
+    0 0 20px var(--shadow-color-light),
+    0 0 30px var(--shadow-color),
+    0 0 50px var(--shadow-color),
+    0 0 80px var(--shadow-color),
+    0 0 110px var(--shadow-color);
+}
+
+@keyframes fireNeonMove {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Мерехтіння неону */
+@keyframes neon {
+  0% {
+    text-shadow:
+      -1px -1px 1px var(--shadow-color-light),
+      -1px 1px 1px var(--shadow-color-light),
+      1px -1px 1px var(--shadow-color-light),
+      1px 1px 1px var(--shadow-color-light),
+      0 0 3px var(--shadow-color-light),
+      0 0 10px var(--shadow-color-light),
+      0 0 20px var(--shadow-color-light),
+      0 0 30px var(--shadow-color),
+      0 0 40px var(--shadow-color),
+      0 0 50px var(--shadow-color),
+      0 0 70px var(--shadow-color),
+      0 0 100px var(--shadow-color),
+      0 0 200px var(--shadow-color);
+  }
+  50% {
+    text-shadow:
+      -1px -1px 1px var(--shadow-color-light),
+      -1px 1px 1px var(--shadow-color-light),
+      1px -1px 1px var(--shadow-color-light),
+      1px 1px 1px var(--shadow-color-light),
+      0 0 5px var(--shadow-color-light),
+      0 0 15px var(--shadow-color-light),
+      0 0 25px var(--shadow-color-light),
+      0 0 40px var(--shadow-color),
+      0 0 50px var(--shadow-color),
+      0 0 60px var(--shadow-color),
+      0 0 80px var(--shadow-color),
+      0 0 110px var(--shadow-color),
+      0 0 210px var(--shadow-color);
+  }
+  100% {
+    text-shadow:
+      -1px -1px 1px var(--shadow-color-light),
+      -1px 1px 1px var(--shadow-color-light),
+      1px -1px 1px var(--shadow-color-light),
+      1px 1px 1px var(--shadow-color-light),
+      0 0 3px var(--shadow-color-light),
+      0 0 10px var(--shadow-color-light),
+      0 0 20px var(--shadow-color-light),
+      0 0 30px var(--shadow-color),
+      0 0 40px var(--shadow-color),
+      0 0 50px var(--shadow-color),
+      0 0 70px var(--shadow-color),
+      0 0 100px var(--shadow-color),
+      0 0 200px var(--shadow-color);
+  }
+}
+

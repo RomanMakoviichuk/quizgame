@@ -5,6 +5,8 @@ import MainScene from "./components/MainScene";
 import TypewriterSubtitles from "./components/TypewriterSubtitles";
 import MinigamePlaceholder from "./components/MinigamePlaceholder";
 import { GAME_PHASE } from "./game/constants";
+import IntroScene from "./components/IntroScene";
+import FireTitle from "./components/FireTitle";
 import "./App.css";
 
 const SOCKET_URL =
@@ -60,22 +62,36 @@ function App() {
   const [showMenuDifficulty, setShowMenuDifficulty] = useState(false);
   const [musicStarted, setMusicStarted] = useState(true);
   const [musicMuted, setMusicMuted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showIntroFade, setShowIntroFade] = useState(false);
   const [countdownNum, setCountdownNum] = useState(null);
   const [answerTimeLeft, setAnswerTimeLeft] = useState(15);
   const [roundIndex, setRoundIndex] = useState(1);
+  const [hasPlayedRulesVideo, setHasPlayedRulesVideo] = useState(false);
+  const [rulesNeedsClick, setRulesNeedsClick] = useState(false);
+  const [rulesEnding, setRulesEnding] = useState(false);
+  const [rulesFadeOutMs, setRulesFadeOutMs] = useState(450);
+  const [rulesSkipFadeIn, setRulesSkipFadeIn] = useState(false);
+  const [rulesActiveMobile, setRulesActiveMobile] = useState(false);
+  const [roundIntroVideo, setRoundIntroVideo] = useState(null); // null | "round1_intro" | "round1_question"
   const [questionPlayData, setQuestionPlayData] = useState(null);
   const questionAudioRef = useRef(null);
   const questionPlayDoneRef = useRef(false);
+  const rulesVideoRef = useRef(null);
+  const roundIntroVideoRef = useRef(null);
+  const round1IntroDoneRef = useRef(false);
   const menuAudioRef = useRef(null);
   const chainAudioRef = useRef(null);
-  const introVideoRef = useRef(null);
   const clickAudioRef = useRef(null);
   const knifeSliceRef = useRef(null);
   const bellRef = useRef(null);
   const notificationRef = useRef(null);
   const isAdminRef = useRef(isAdmin);
   isAdminRef.current = isAdmin;
+  const isDisplayRef = useRef(isDisplay);
+  isDisplayRef.current = isDisplay;
+  const pendingRulesSeekRef = useRef(null);
+  const rulesSkipFadeRafRef = useRef(null);
 
   const playClickSound = () => {
     if (isMobile()) return;
@@ -90,6 +106,21 @@ function App() {
   const withClick = (fn) => (e) => {
     playClickSound();
     fn?.(e);
+  };
+
+  const requestFullscreen = async () => {
+    try {
+      const el = document.documentElement;
+      if (document.fullscreenElement) return;
+      await el.requestFullscreen?.();
+    } catch {}
+  };
+
+  const exitFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) return;
+      await document.exitFullscreen?.();
+    } catch {}
   };
 
 
@@ -111,7 +142,10 @@ function App() {
       GAME_PHASE.MINIGAME,
       GAME_PHASE.FINISHED,
     ];
-    if (gamePhases.includes(gameState) && (screen === "lobby" || screen === "intro" || screen === "countdown")) {
+    if (
+      gamePhases.includes(gameState) &&
+      (screen === "lobby" || screen === "countdown" || screen === "mobileWait")
+    ) {
       setScreen("game");
     }
   }, [gameState, screen]);
@@ -130,6 +164,15 @@ function App() {
     }
     return () => audio.pause();
   }, [screen, musicStarted, musicMuted]);
+
+  useEffect(() => {
+    const onFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    onFsChange();
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
 
   // Logo chain sound on menu enter
   useEffect(() => {
@@ -159,13 +202,14 @@ function App() {
       showIntro: () => {
         if (!isMobile() && !isAdminRef.current) knifeSliceRef.current?.play().catch(() => {});
         setShowIntroFade(true);
-        const startCountdown = () => {
-          setScreen("countdown");
-          setCountdownNum(3);
-        };
         if (isMobile()) {
-          startCountdown();
+          setCountdownNum(null);
+          setScreen("mobileWait");
         } else {
+          const startCountdown = () => {
+            setScreen("countdown");
+            setCountdownNum(3);
+          };
           setTimeout(startCountdown, 800);
         }
       },
@@ -175,11 +219,54 @@ function App() {
     socket.on("adminChanged", handlers.adminChanged);
     socket.on("playersUpdate", handlers.playersUpdate);
     socket.on("showIntro", handlers.showIntro);
+    socket.on("skipRules", () => {
+      // Admin pressed "skip rules" on mobile:
+      // jump rulesmovie to 49s on the display.
+      if (!isDisplayRef.current) return;
+      const seekTo = 51;
+      pendingRulesSeekRef.current = seekTo;
+      const v = rulesVideoRef.current;
+      try {
+        if (!v) return;
+        setRulesSkipFadeIn(true);
+        if (rulesSkipFadeRafRef.current) cancelAnimationFrame(rulesSkipFadeRafRef.current);
+
+        const safeSeek = Number.isFinite(v.duration)
+          ? Math.min(seekTo, Math.max(0, v.duration - 0.05))
+          : seekTo;
+        v.volume = 0;
+        v.currentTime = safeSeek;
+        v.play().catch(() => {});
+
+        const clamp01 = (x) => Math.min(1, Math.max(0, x));
+        const start = performance.now();
+        const fadeMs = 1500;
+        const tick = (now) => {
+          const t = Math.min(1, (now - start) / Math.max(1, fadeMs));
+          try {
+            v.volume = clamp01(t);
+          } catch {}
+          if (t < 1) rulesSkipFadeRafRef.current = requestAnimationFrame(tick);
+        };
+        rulesSkipFadeRafRef.current = requestAnimationFrame(tick);
+
+        window.setTimeout(() => {
+          setRulesSkipFadeIn(false);
+        }, fadeMs);
+
+        pendingRulesSeekRef.current = null;
+      } catch {}
+    });
+    socket.on("rulesStarted", () => {
+      setRulesActiveMobile(true);
+    });
     socket.on("mainScene", (d) => {
       setPlayers(d.players || []);
       setRoundIndex(d.roundIndex || 1);
       setGameState(GAME_PHASE.MAIN_SCENE);
-      setScreen("game");
+      setRulesActiveMobile(false);
+      // Екран ведучого переходить у гру тільки після кастомного інтро (handleIntroEnded).
+      // Для телефонів перехід у 'game' відбувається через effect по gameState.
     });
     socket.on("questionAnnounce", (d) => {
       setRoundIndex(d.roundIndex || 1);
@@ -221,6 +308,8 @@ function App() {
       socket.off("adminChanged", handlers.adminChanged);
       socket.off("playersUpdate", handlers.playersUpdate);
       socket.off("showIntro", handlers.showIntro);
+      socket.off("skipRules");
+      socket.off("rulesStarted");
     };
   }, [socket]);
 
@@ -234,9 +323,76 @@ function App() {
 
   useEffect(() => {
     if (gameState !== GAME_PHASE.QUESTION_ANNOUNCE || !isDisplay) return;
+    // Блок: раунд 1 не можна стартувати, поки не завершилось rulesmovie (на дисплеї).
+    if (roundIndex === 1 && !hasPlayedRulesVideo) return;
+    // Round 1: show presentation video -> question video, then start question
+    if (roundIndex === 1 && !round1IntroDoneRef.current) {
+      setRoundIntroVideo("round1_intro");
+      return;
+    }
     const t = setTimeout(() => socket?.emit("questionAnnounceDone"), 2000);
     return () => clearTimeout(t);
-  }, [gameState, isDisplay, socket]);
+  }, [gameState, isDisplay, socket, roundIndex, hasPlayedRulesVideo]);
+
+  useEffect(() => {
+    if (!isDisplay) return;
+    if (gameState !== GAME_PHASE.QUESTION_ANNOUNCE) {
+      setRoundIntroVideo(null);
+      return;
+    }
+    if (roundIndex !== 1) return;
+    if (!hasPlayedRulesVideo) return;
+    if (round1IntroDoneRef.current) return;
+    if (!roundIntroVideo) return;
+
+    const v = roundIntroVideoRef.current;
+    if (!v) return;
+
+    const startQuestion = () => {
+      if (round1IntroDoneRef.current) return;
+      round1IntroDoneRef.current = true;
+      window.setTimeout(() => {
+        setRoundIntroVideo(null);
+        socket?.emit("questionAnnounceDone");
+      }, 50);
+    };
+
+    const onEnded = () => {
+      if (roundIntroVideo === "round1_intro") {
+        setRoundIntroVideo("round1_question");
+        return;
+      }
+      // If "question.mp4" ends quickly, still start the question.
+      startQuestion();
+    };
+
+    const tryPlay = () => {
+      v.play().catch(() => {});
+      if (roundIntroVideo === "round1_question") {
+        // As soon as question video starts, begin question.
+        startQuestion();
+      }
+    };
+
+    v.onended = onEnded;
+    v.onloadedmetadata = tryPlay;
+    tryPlay();
+
+    return () => {
+      if (v) {
+        v.onended = null;
+        v.onloadedmetadata = null;
+      }
+    };
+  }, [roundIntroVideo, isDisplay, gameState, roundIndex, hasPlayedRulesVideo, socket]);
+
+  useEffect(() => {
+    // Reset per-game/round intro when leaving round 1
+    if (roundIndex !== 1) {
+      round1IntroDoneRef.current = false;
+      setRoundIntroVideo(null);
+    }
+  }, [roundIndex]);
 
   useEffect(() => {
     if (gameState !== GAME_PHASE.QUESTION_PLAY || !questionPlayData || !isDisplay) return;
@@ -271,6 +427,65 @@ function App() {
     }
   };
 
+  const completeRules = () => {
+    setHasPlayedRulesVideo(true);
+    setRulesEnding(false);
+    setRulesNeedsClick(false);
+    setRulesActiveMobile(false);
+    // Тільки після rulesmovie запускаємо гру на сервері
+    if (socket && isDisplay) socket.emit("introEnded");
+    setScreen("game");
+  };
+
+  const finishRules = (fadeMs = 450) => {
+    setRulesFadeOutMs(fadeMs);
+    setRulesEnding(true);
+    window.setTimeout(() => {
+      completeRules();
+    }, fadeMs);
+  };
+
+  const handleRulesVideoEnded = () => {
+    finishRules(450);
+  };
+
+
+  const tryStartRulesVideo = async () => {
+    const v = rulesVideoRef.current;
+    if (!v) return;
+    try {
+      // Some browsers will block unmuted autoplay; fall back to user click.
+      await v.play();
+      setRulesNeedsClick(false);
+    } catch {
+      setRulesNeedsClick(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!(screen === "rules" && isDisplay && roundIndex === 1 && !hasPlayedRulesVideo)) return;
+    setRulesEnding(false);
+    setRulesNeedsClick(false);
+    setRulesFadeOutMs(450);
+    setRulesSkipFadeIn(false);
+    // Wait a tick so ref is attached.
+    const id = window.setTimeout(() => {
+      tryStartRulesVideo();
+    }, 50);
+    return () => {
+      window.clearTimeout(id);
+      if (rulesSkipFadeRafRef.current) cancelAnimationFrame(rulesSkipFadeRafRef.current);
+      rulesSkipFadeRafRef.current = null;
+    };
+  }, [screen, isDisplay, roundIndex, hasPlayedRulesVideo]);
+
+  useEffect(() => {
+    if (!(screen === "rules" && isDisplay && roundIndex === 1 && !hasPlayedRulesVideo)) return;
+    socket?.emit("rulesStarted");
+  }, [screen, isDisplay, roundIndex, hasPlayedRulesVideo, socket]);
+
+  // No "finish on skip" anymore: skip seeks to 49s.
+
   useEffect(() => {
     if (screen !== "countdown") return;
     const playBell = () => {
@@ -288,7 +503,11 @@ function App() {
       n--;
       if (n <= 0) {
         clearInterval(id);
-        setScreen("intro");
+        if (isDisplay) {
+          setScreen("introScene");
+        } else {
+          setScreen("lobby");
+        }
         setCountdownNum(null);
         return;
       }
@@ -296,12 +515,6 @@ function App() {
       playBell();
     }, 1000);
     return () => clearInterval(id);
-  }, [screen]);
-
-  useEffect(() => {
-    if (screen === "intro" && !isMobile() && introVideoRef.current) {
-      introVideoRef.current.play().catch(() => {});
-    }
   }, [screen]);
 
   const handleCreateRoom = () => {
@@ -366,8 +579,15 @@ function App() {
 
   const handleIntroEnded = () => {
     if (!socket) return;
-    if (isDisplay) socket.emit("introEnded");
-    else if (isAdmin) socket.emit("startGame");
+    // Дисплей: спочатку rulesmovie, і тільки потім запускаємо 1-й раунд
+    if (isDisplay) {
+      setScreen("rules");
+      socket.emit("rulesStarted");
+      return;
+    }
+    // Телефони: rules не показуємо
+    if (isAdmin) socket.emit("startGame");
+    setScreen("game");
   };
 
   const handleMobileIntroSkip = () => {
@@ -392,6 +612,8 @@ function App() {
     setPlayerId(null);
     setIsDisplay(false);
     setIsAdmin(false);
+    setRulesActiveMobile(false);
+    setShowIntroFade(false);
   };
 
 
@@ -410,11 +632,9 @@ function App() {
       <audio ref={bellRef} src="/assets/sounds/bell.mp3" preload="auto" />
       <audio ref={notificationRef} src="/assets/sounds/notification.mp3" preload="auto" />
       <audio ref={questionAudioRef} preload="auto" />
-      <audio ref={chainAudioRef} src="/assets/sounds/chain.mp3" preload="auto" />
   {isMobile() && screen === "join" && (
-      <div className="app">
+      <div className="app app-mobile-bg">
         <div className="join-screen-full">
-          <h1>Відріжу по цю риску!</h1>
           <form onSubmit={handleJoinRoom} className="join-form-simple">
             <input
               type="text"
@@ -453,35 +673,51 @@ function App() {
             playsInline
           />
         )}
-        {!isMobile() && <div className="menu-overlay" />}
+        {/* Без overlay затемнення для головного меню */}
         <div className="main-menu">
-          <div className="menu-logo-wrapper">
-            <img
-              src="/assets/images/logo.png"
-              alt="Відріжу по цю риску!"
-              className="menu-logo"
-            />
-          </div>
+
           {!connected && <p className="menu-hint">Очікування з&apos;єднання з сервером...</p>}
           {!isMobile() && (
-            <button
-              type="button"
-              className={`sound-toggle ${musicMuted ? "sound-toggle-off" : "sound-toggle-on"}`}
-              onClick={withClick(() => setMusicMuted((prev) => !prev))}
-            >
-              <span className="sound-icon" />
-            </button>
+            <div className="menu-top-right">
+              <button
+                type="button"
+                className={`sound-toggle ${musicMuted ? "sound-toggle-off" : "sound-toggle-on"}`}
+                onClick={withClick(() => setMusicMuted((prev) => !prev))}
+                aria-label={musicMuted ? "Увімкнути звук" : "Вимкнути звук"}
+              >
+                <span className="sound-icon" />
+              </button>
+              <button
+                type="button"
+                className={`fullscreen-toggle ${isFullscreen ? "fullscreen-toggle-on" : ""}`}
+                onClick={withClick(() => (isFullscreen ? exitFullscreen() : requestFullscreen()))}
+                aria-label={isFullscreen ? "Вийти з повного екрана" : "Повний екран"}
+              >
+                <span className="fullscreen-icon" />
+              </button>
+            </div>
           )}
           {!showMenuDifficulty && (
             <nav className="menu-nav">
               <button
-                className="menu-btn menu-btn-primary"
+                className="glowing-btn menu-glowing-btn menu-glowing-btn-play"
                 onClick={withClick(handleMenuStartClick)}
                 disabled={!connected}
                 aria-label="Грати"
-              />
-              <button className="menu-btn menu-btn-exit" onClick={withClick(() => window.close())}>
-                Вийти з гри
+                type="button"
+              >
+                <span className="glowing-txt">
+                  Г<span className="faulty-letter">Р</span>АТИ
+                </span>
+              </button>
+              <button
+                className="glowing-btn menu-glowing-btn menu-glowing-btn-exit"
+                onClick={withClick(() => window.close())}
+                type="button"
+              >
+                <span className="glowing-txt">
+                  ВИ<span className="faulty-letter">Й</span>ТИ
+                </span>
               </button>
             </nav>
           )}
@@ -513,10 +749,14 @@ function App() {
               <div className="modal-buttons modal-buttons-single">
                 <button
                   type="button"
-                  className="modal-btn-lobby"
+                  className="btn modal-btn-lobby-btn"
                   onClick={withClick(handleCreateRoom)}
-                  aria-label="Перейти в лобі"
-                />
+                  aria-label="В лобі"
+                >
+                  <span className="btn__inner">
+                    <span className="btn__text">В лоббі</span>
+                  </span>
+                </button>
               </div>
             </div>
           </div>
@@ -525,7 +765,7 @@ function App() {
   )}
 
   {screen === "lobby" && (
-      <div className={`app lobby-screen ${!isMobile() ? "lobby-with-video" : "lobby-mobile"} ${showIntroFade ? "lobby-fade-out" : ""}`}>
+      <div className={`app lobby-screen ${!isMobile() ? "lobby-with-video" : "lobby-mobile app-mobile-bg"} ${showIntroFade ? "lobby-fade-out" : ""}`}>
         {!isMobile() ? (
           <>
             <video
@@ -537,44 +777,6 @@ function App() {
               playsInline
             />
             <div className="lobby-overlay" />
-            <div className="lobby-characters">
-              {LOBBY_CHAR_CONFIG.map((cfg, idx) => {
-                const slotNum = idx + 1;
-                const player = players.find((p) => p.characterSlot === slotNum) || null;
-                const imgSrc = player
-                  ? `/assets/images/Characters/alivecharacters/${slotNum}.png`
-                  : `/assets/images/Characters/deathcharacters/${slotNum}.png`;
-                return (
-                  <div
-                    key={idx}
-                    className="lobby-char-slot"
-                    style={{ top: cfg.top, left: cfg.left }}
-                  >
-                    <div className="lobby-char-inner" style={{ transform: `rotate(${cfg.rotate}deg)` }}>
-                      {player && (
-                        <span className="lobby-char-name">{player.name}{player.isAdmin ? " ★" : ""}</span>
-                      )}
-                      {player ? (
-                        <div className="lobby-char-alive-wrap">
-                          <div className="lobby-char-spotlight" />
-                          <img
-                            src={imgSrc}
-                            alt=""
-                            className={`lobby-char-img lobby-char-alive lobby-char-alive-anim-${cfg.anim}`}
-                          />
-                        </div>
-                      ) : (
-                        <img
-                          src={imgSrc}
-                          alt=""
-                          className={`lobby-char-img lobby-char-death lobby-char-anim-${cfg.anim}`}
-                        />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
             <div className="lobby-ui-overlay">
               <p className="lobby-wait-text">
                 Переходьте на{" "}
@@ -584,44 +786,44 @@ function App() {
               </p>
               <section className="lobby-room-code">
                 <p className="room-code-label">Код кімнати:</p>
-                <p className="room-code-value">{roomCode}</p>
+                <p className="room-code-value">
+                  <FireTitle text={roomCode} />
+                </p>
                 <p className="room-code-hint">Введіть код на телефоні</p>
               </section>
+              <p className="lobby-connected-count">
+                Підключилось гравців {players.length}/8
+              </p>
               <section className="lobby-actions">
                 {gameState === "waiting" && isAdmin && (
                   <button className="btn-start" onClick={withClick(handleStartGame)}>
                     Розпочати гру
                   </button>
                 )}
-                <button className="btn-exit-lobby" onClick={withClick(handleExit)}>
+                <button
+                  className="spiderverse-button spiderverse-exit lobby-exit-spiderverse"
+                  onClick={withClick(handleExit)}
+                  type="button"
+                >
                   Вийти
+                  <div className="glitch-layers" aria-hidden="true">
+                    <div className="glitch-layer layer-1">Вийти</div>
+                    <div className="glitch-layer layer-2">Вийти</div>
+                  </div>
+                  <div className="noise" aria-hidden="true" />
+                  <div className="glitch-slice" aria-hidden="true" />
                 </button>
               </section>
             </div>
           </>
         ) : (
           <div className="app-inner lobby-inner lobby-mobile-inner">
-            <header className="app-header lobby-header">
-              <h1>Відріжу по цю риску!</h1>
-            </header>
-            <p className="lobby-wait-text lobby-wait-text-mobile">
-              Переходьте на{" "}
-              <span className="lobby-wait-highlight">site.fun</span>
-              <br />
-              якщо не боїтесь!
-            </p>
-            <section className="room-code-section lobby-room-code">
-              <p className="room-code-label">Код кімнати:</p>
-              <p className="room-code-value">{roomCode}</p>
-              <p className="room-code-hint">Введіть код на телефоні для підключення</p>
-            </section>
             <section className="players-panel lobby-players-panel">
               <h3>Гравці ({players.length}/7)</h3>
               <ul className="players-list">
                 {players.map((p) => (
                   <li key={p.id} className="player-item">
                     <span className="player-name">{p.name}{p.isAdmin ? " ★" : ""}</span>
-                    <span className="player-score">{p.score}</span>
                   </li>
                 ))}
               </ul>
@@ -630,8 +832,18 @@ function App() {
                   Розпочати гру
                 </button>
               )}
-              <button className="btn-exit-lobby" onClick={withClick(handleExit)}>
+              <button
+                className="spiderverse-button spiderverse-exit lobby-exit-spiderverse"
+                onClick={withClick(handleExit)}
+                type="button"
+              >
                 Вийти
+                <div className="glitch-layers" aria-hidden="true">
+                  <div className="glitch-layer layer-1">Вийти</div>
+                  <div className="glitch-layer layer-2">Вийти</div>
+                </div>
+                <div className="noise" aria-hidden="true" />
+                <div className="glitch-slice" aria-hidden="true" />
               </button>
             </section>
           </div>
@@ -640,39 +852,78 @@ function App() {
   )}
 
   {screen === "countdown" && countdownNum > 0 && (
-    <div className="app countdown-screen">
+    <div className={`app countdown-screen ${isMobile() ? "app-mobile-bg" : ""}`}>
       <div className="countdown-number countdown-paper" key={countdownNum}>
         {countdownNum}
       </div>
     </div>
   )}
 
-  {screen === "intro" && (
-    <div className={`app intro-screen ${showIntroFade ? "intro-visible" : ""}`}>
-      {!isMobile() ? (
+  {isMobile() && screen === "mobileWait" && (
+    <div className="app app-mobile-bg mobile-wait-screen">
+      <div className="mobile-wait-card">
+        <div className="mobile-wait-title">Зачекайте…</div>
+        <div className="mobile-wait-subtitle">
+          Гра запускається на телевізорі / основному екрані
+        </div>
+        {isAdmin && rulesActiveMobile && (
+          <button
+            type="button"
+            className="btn-skip-rules"
+            onClick={withClick(() => {
+              setRulesActiveMobile(false);
+              socket?.emit("skipRules");
+            })}
+          >
+            Пропустити правила
+          </button>
+        )}
+      </div>
+    </div>
+  )}
+
+  {screen === "introScene" && (
+    <IntroScene players={players} onFinished={handleIntroEnded} />
+  )}
+
+  {screen === "rules" && (
+    <div className="rules-screen-root">
+      <section
+        className={`rules-video-screen ${rulesSkipFadeIn ? "rules-video-screen-skipfade" : ""} ${rulesEnding ? "rules-video-screen-ending" : ""} ${rulesNeedsClick ? "rules-video-screen-needs-click" : ""}`}
+        onClick={() => {
+          if (rulesNeedsClick) tryStartRulesVideo();
+        }}
+        style={rulesEnding ? { animationDuration: `${rulesFadeOutMs}ms` } : undefined}
+      >
         <video
-          ref={introVideoRef}
-          className="intro-video"
-          src="/assets/videos/intro.mp4"
+          ref={rulesVideoRef}
+          className="rules-video"
+          src="/assets/videos/rulesmovie.mp4"
           autoPlay
           playsInline
-          muted={false}
-          onEnded={handleIntroEnded}
-          onError={handleIntroEnded}
+          preload="auto"
+          onCanPlay={() => {
+            if (!rulesNeedsClick) tryStartRulesVideo();
+          }}
+          onLoadedMetadata={() => {
+            const seekTo = pendingRulesSeekRef.current;
+            const v = rulesVideoRef.current;
+            if (v && typeof seekTo === "number" && Number.isFinite(v.duration)) {
+              try {
+                v.currentTime = Math.min(seekTo, Math.max(0, v.duration - 0.05));
+                v.play().catch(() => {});
+                pendingRulesSeekRef.current = null;
+              } catch {}
+            }
+          }}
+          onEnded={handleRulesVideoEnded}
         />
-      ) : (
-        <div className="intro-mobile-wait">
-          <p>Очікування початку гри...</p>
-          {isAdmin && (
-            <button className="btn-start" onClick={withClick(handleMobileIntroSkip)}>Пропустити</button>
-          )}
-        </div>
-      )}
+      </section>
     </div>
   )}
 
   {screen === "game" && (
-    <div className={`app ${!isMobile() ? "app-game-with-video" : "app-game-mobile"}`}>
+    <div className={`app ${!isMobile() ? "app-game-with-video" : "app-game-mobile app-mobile-bg"}`}>
       {!isMobile() && (
         <video
           className="game-background-video"
@@ -683,10 +934,25 @@ function App() {
           onLoadedMetadata={(e) => { e.target.volume = 0.1; }}
         />
       )}
+      {!isMobile() && isDisplay && gameState === GAME_PHASE.QUESTION_ANNOUNCE && roundIndex === 1 && roundIntroVideo && (
+        <div className="round-video-overlay">
+          <video
+            ref={roundIntroVideoRef}
+            className="round-video"
+            src={
+              roundIntroVideo === "round1_intro"
+                ? "/assets/questions/video/introround1.mp4"
+                : "/assets/questions/video/question.mp4"
+            }
+            autoPlay
+            playsInline
+            preload="auto"
+          />
+        </div>
+      )}
       <div className={`app-inner ${!isMobile() ? "app-inner-over-video" : ""}`}>
       <header className="app-header">
-        <h1>Відріжу по цю риску!</h1>
-        <span className="room-code-badge">{roomCode}</span>
+        {!isMobile() && <span className="room-code-badge">{roomCode}</span>}
       </header>
       <section className={`players-panel compact ${!isDisplay ? "players-panel-player" : ""}`}>
         <ul className="players-list">
