@@ -927,7 +927,7 @@ function App() {
       {!isMobile() && (
         <video
           className="game-background-video"
-          src="/assets/videos/main.mov"
+          src="/assets/videos/main.mp4"
           autoPlay
           loop
           playsInline
