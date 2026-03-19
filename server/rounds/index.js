@@ -31,23 +31,51 @@ function normalizeDifficulty(d) {
   return VALID_DIFFICULTIES.includes(s) ? s : "easy";
 }
 
-/** Повертає один випадковий елемент з масиву (crypto для сильного рандому, без упереджень). */
-function pickRandom(questions) {
-  if (!questions.length) return null;
-  if (questions.length === 1) return questions[0];
-  const idx = crypto.randomInt(0, questions.length);
-  return questions[idx];
+// Deck (bag) of questions to avoid repeating the same question across games.
+// Key: `${roundIndex}-${difficulty}`
+const questionDecks = new Map();
+
+function shuffleWithCrypto(arr) {
+  // Fisher-Yates shuffle with crypto-based randomInt
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(0, i + 1);
+    const tmp = a[i];
+    a[i] = a[j];
+    a[j] = tmp;
+  }
+  return a;
+}
+
+function getQuestionDeck(roundIndex, difficulty) {
+  const key = `${roundIndex}-${difficulty}`;
+  let deck = questionDecks.get(key);
+  if (!deck || deck.length === 0) {
+    const allQuestions = loadRoundQuestions(roundIndex);
+    const filtered = allQuestions.filter(
+      (q) => normalizeDifficulty(q.difficulty) === difficulty
+    );
+    deck = shuffleWithCrypto(filtered);
+    questionDecks.set(key, deck);
+  }
+  return deck;
+}
+
+function pickFromDeck(roundIndex, difficulty) {
+  if (!difficulty) difficulty = "easy";
+  const deck = getQuestionDeck(roundIndex, difficulty);
+  const q = deck.pop() || null;
+  questionDecks.set(`${roundIndex}-${difficulty}`, deck);
+  return q;
 }
 
 function getRounds(selectedDifficulty = "") {
   const difficulty = normalizeDifficulty(selectedDifficulty);
   const rounds = [];
   for (let i = 1; i <= TOTAL_ROUNDS; i++) {
-    const roundQuestions = loadRoundQuestions(i);
-    const filtered = roundQuestions.filter(
-      (q) => normalizeDifficulty(q.difficulty) === difficulty
-    );
-    const q = pickRandom(filtered);
+    // Smart random: take next question from the shuffled deck
+    // to avoid showing the same question in consecutive games.
+    const q = pickFromDeck(i, difficulty);
     rounds.push({
       roundIndex: i,
       question: q

@@ -19,6 +19,30 @@ const isMobile = () =>
   typeof window !== "undefined" &&
   (window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent));
 
+const ROUND_DEBUG_STORAGE_KEY = "quizgame_round_debug";
+
+const isDevEnvironment = () => {
+  if (typeof window === "undefined") return false;
+  if (process.env.NODE_ENV === "development") return true;
+  const host = window.location.hostname;
+  return host === "localhost" || host === "127.0.0.1";
+};
+
+const readRoundDebugFlag = () => {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  const q = params.get("roundDebug");
+  if (q === "1") {
+    window.localStorage.setItem(ROUND_DEBUG_STORAGE_KEY, "1");
+    return true;
+  }
+  if (q === "0") {
+    window.localStorage.removeItem(ROUND_DEBUG_STORAGE_KEY);
+    return false;
+  }
+  return window.localStorage.getItem(ROUND_DEBUG_STORAGE_KEY) === "1";
+};
+
 /**
  * Конфіг персонажів у лобі — можна змінювати позиції, нахил і тип анімації.
  * top, left — позиція в %
@@ -66,6 +90,7 @@ function App() {
   const [showIntroFade, setShowIntroFade] = useState(false);
   const [countdownNum, setCountdownNum] = useState(null);
   const [answerTimeLeft, setAnswerTimeLeft] = useState(15);
+  const [round1SubtitleActive, setRound1SubtitleActive] = useState(false);
   const [roundIndex, setRoundIndex] = useState(1);
   const [hasPlayedRulesVideo, setHasPlayedRulesVideo] = useState(false);
   const [rulesNeedsClick, setRulesNeedsClick] = useState(false);
@@ -92,6 +117,7 @@ function App() {
   isDisplayRef.current = isDisplay;
   const pendingRulesSeekRef = useRef(null);
   const rulesSkipFadeRafRef = useRef(null);
+  const roundDebugEnabledRef = useRef(false);
 
   const playClickSound = () => {
     if (isMobile()) return;
@@ -130,6 +156,48 @@ function App() {
     s.on("connect", () => setConnected(true));
     s.on("disconnect", () => setConnected(false));
     return () => s.close();
+  }, []);
+
+  useEffect(() => {
+    // Dev helper: jump directly to scene after rulesmovie.
+    // Enable:  ?roundDebug=1
+    // Disable: ?roundDebug=0
+    if (!isDevEnvironment()) return;
+    if (!readRoundDebugFlag()) return;
+
+    roundDebugEnabledRef.current = true;
+    setConnected(true);
+    setScreen("game");
+    setIsDisplay(true);
+    setIsAdmin(false);
+    setRoomCode("9999");
+    setSelectedDifficulty("easy");
+    setLobbyDifficulty("easy");
+    setRoundIndex(1);
+    setHasPlayedRulesVideo(true);
+    setRulesNeedsClick(false);
+    setRulesEnding(false);
+    setRulesActiveMobile(false);
+    setGameState(GAME_PHASE.QUESTION_ANNOUNCE);
+    setQuestion(null);
+    setQuestionPlayData(null);
+    setSelectedAnswer(null);
+    setAnswerResult(null);
+    setPlayers([
+      { id: "dbg-1", name: "Гравець 1", score: 0, characterSlot: 1 },
+      { id: "dbg-2", name: "Гравець 2", score: 0, characterSlot: 2 },
+      { id: "dbg-3", name: "Гравець 3", score: 0, characterSlot: 3 },
+      { id: "dbg-4", name: "Гравець 4", score: 0, characterSlot: 4 },
+      { id: "dbg-5", name: "Гравець 5", score: 0, characterSlot: 5 },
+      { id: "dbg-6", name: "Гравець 6", score: 0, characterSlot: 6 },
+      { id: "dbg-7", name: "Гравець 7", score: 0, characterSlot: 7 },
+      { id: "dbg-8", name: "Гравець 8", score: 0, characterSlot: 8 },
+    ]);
+
+    // eslint-disable-next-line no-console
+    console.info(
+      "[RoundDebug] Enabled: post-rules Round 1 scene with 8 mocked players. Disable via ?roundDebug=0"
+    );
   }, []);
 
   useEffect(() => {
@@ -223,7 +291,7 @@ function App() {
       // Admin pressed "skip rules" on mobile:
       // jump rulesmovie to 49s on the display.
       if (!isDisplayRef.current) return;
-      const seekTo = 51;
+      const seekTo = 49.5;
       pendingRulesSeekRef.current = seekTo;
       const v = rulesVideoRef.current;
       try {
@@ -314,6 +382,20 @@ function App() {
   }, [socket]);
 
   useEffect(() => {
+    if (!isDisplay || roundIndex !== 1) {
+      setRound1SubtitleActive(false);
+      return;
+    }
+    if (gameState !== GAME_PHASE.QUESTION_PLAY) {
+      setRound1SubtitleActive(false);
+      return;
+    }
+    setRound1SubtitleActive(false);
+    const id = window.setTimeout(() => setRound1SubtitleActive(true), 3000);
+    return () => window.clearTimeout(id);
+  }, [gameState, isDisplay, roundIndex, questionPlayData?.question?.id]);
+
+  useEffect(() => {
     if (gameState !== GAME_PHASE.ANSWER_PHASE || !question) return;
     const t = setInterval(() => {
       setAnswerTimeLeft((prev) => Math.max(0, prev - 1));
@@ -353,6 +435,28 @@ function App() {
       round1IntroDoneRef.current = true;
       window.setTimeout(() => {
         setRoundIntroVideo(null);
+        // In local round debug mode we can be outside normal server flow,
+        // so force local transition to QUESTION_PLAY.
+        if (roundDebugEnabledRef.current) {
+          const debugQuestion = {
+            id: "dbg-r1-q1",
+            text: "DEBUG: Раунд 1 запущено. Тут буде текст питання з round1.",
+            options: ["A", "B", "C", "D"],
+            correctIndex: 0,
+          };
+          setQuestion({
+            ...debugQuestion,
+            index: 1,
+            total: 10,
+          });
+          setQuestionPlayData({
+            roundIndex: 1,
+            question: debugQuestion,
+            audioSrc: null,
+          });
+          setGameState(GAME_PHASE.QUESTION_PLAY);
+          return;
+        }
         socket?.emit("questionAnnounceDone");
       }, 50);
     };
@@ -367,6 +471,12 @@ function App() {
     };
 
     const tryPlay = () => {
+      try {
+        // Ensure playback starts from the beginning.
+        // Some browsers may keep `currentTime` when swapping `src`.
+        v.pause();
+        v.currentTime = 0;
+      } catch {}
       v.play().catch(() => {});
       if (roundIntroVideo === "round1_question") {
         // As soon as question video starts, begin question.
@@ -923,22 +1033,45 @@ function App() {
   )}
 
   {screen === "game" && (
-    <div className={`app ${!isMobile() ? "app-game-with-video" : "app-game-mobile app-mobile-bg"}`}>
+    <div
+      className={`app ${!isMobile() ? "app-game-with-video" : "app-game-mobile app-mobile-bg"} ${
+        !isMobile() &&
+        isDisplay &&
+        roundIndex === 1 &&
+        (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE)
+          ? "question-scene-fadein"
+          : ""
+      }`}
+    >
       {!isMobile() && (
         <video
           className="game-background-video"
-          src="/assets/videos/main.mp4"
+          src={
+            isDisplay &&
+            roundIndex === 1 &&
+            (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE)
+              ? "/assets/questions/video/question.mp4"
+              : "/assets/videos/main.mp4"
+          }
           autoPlay
           loop
           playsInline
-          onLoadedMetadata={(e) => { e.target.volume = 0.1; }}
+          muted={false}
+          onLoadedMetadata={(e) => {
+            e.target.volume =
+              isDisplay &&
+              roundIndex === 1 &&
+              (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE)
+                ? 0.35
+                : 0.1;
+          }}
         />
       )}
       {!isMobile() && isDisplay && gameState === GAME_PHASE.QUESTION_ANNOUNCE && roundIndex === 1 && roundIntroVideo && (
         <div className="round-video-overlay">
           <video
             ref={roundIntroVideoRef}
-            className="round-video"
+            className={`round-video ${roundIntroVideo === "round1_intro" ? "round-video-contain" : ""}`}
             src={
               roundIntroVideo === "round1_intro"
                 ? "/assets/questions/video/introround1.mp4"
@@ -951,15 +1084,27 @@ function App() {
         </div>
       )}
       <div className={`app-inner ${!isMobile() ? "app-inner-over-video" : ""}`}>
-      <header className="app-header">
-        {!isMobile() && <span className="room-code-badge">{roomCode}</span>}
-      </header>
-      <section className={`players-panel compact ${!isDisplay ? "players-panel-player" : ""}`}>
+
+      <section
+        className={`players-panel compact ${!isDisplay ? "players-panel-player" : ""}`}
+        style={!isMobile() ? { ["--players-count"]: Math.max(1, players.length) } : undefined}
+      >
         <ul className="players-list">
-          {players.map((p) => (
+          {players.map((p, idx) => (
             <li key={p.id} className="player-item">
               <span className="player-name">{p.name}</span>
-              <span className="player-score">{p.score}</span>
+              <img
+                className="player-sprite"
+                src={`/assets/images/Characters/alivecharacters/${
+                  p.characterSlot && p.characterSlot >= 1 && p.characterSlot <= 8
+                    ? p.characterSlot
+                    : (idx % 8) + 1
+                }.png`}
+                alt={`Персонаж ${p.name}`}
+              />
+              <span className="player-lives" aria-label={`Життів: ${Number.isFinite(Number(p.lives)) ? Math.max(0, Number(p.lives)) : 3}`}>
+                {"❤".repeat(Math.max(0, Math.min(10, Number.isFinite(Number(p.lives)) ? Number(p.lives) : 3)))}
+              </span>
             </li>
           ))}
         </ul>
@@ -969,26 +1114,41 @@ function App() {
         <MainScene players={players} />
       )}
 
-      {gameState === GAME_PHASE.QUESTION_ANNOUNCE && (
-        <section className="question-announce">
-          <h2 className="question-announce-text">Раунд {roundIndex}</h2>
-        </section>
-      )}
 
-      {gameState === GAME_PHASE.QUESTION_PLAY && questionPlayData?.question && (
-        <section className="question-play-screen">
-          <TypewriterSubtitles
-            key={questionPlayData.question.id ?? `round-${questionPlayData.roundIndex}`}
-            text={questionPlayData.question.text}
-            active={true}
-            speed={60}
-            onComplete={handleSubtitlesComplete}
-          />
-        </section>
-      )}
+      {isDisplay &&
+        (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE) &&
+        (questionPlayData?.question || question) && (
+          <section className="question-play-screen question-play-screen-round1 question-hold-round1">
+            {gameState === GAME_PHASE.QUESTION_PLAY ? (
+              <TypewriterSubtitles
+                key={questionPlayData?.question?.id ?? `round-${questionPlayData?.roundIndex ?? roundIndex}`}
+                text={questionPlayData?.question?.text}
+                active={roundIndex === 1 ? round1SubtitleActive : true}
+                speed={60}
+                onComplete={handleSubtitlesComplete}
+              />
+            ) : (
+              <div className="typewriter-subtitles typewriter-subtitles-static">
+                <span className="typewriter-text">{question?.text}</span>
+              </div>
+            )}
+            {gameState === GAME_PHASE.ANSWER_PHASE && (
+              <>
+                <p className="host-waiting host-waiting-round1">Очікування відповідей на телефонах...</p>
+                <div className="bomb-timer-wrap">
+                  <HorrorTimer
+                    timeLeft={answerTimeLeft}
+                    questionId={question?.id}
+                    totalSeconds={15}
+                  />
+                </div>
+              </>
+            )}
+          </section>
+        )}
 
-      {gameState === GAME_PHASE.ANSWER_PHASE && question && (
-        <section className={`question-screen ${isDisplay ? "question-screen-host" : ""}`}>
+      {gameState === GAME_PHASE.ANSWER_PHASE && question && !isDisplay && (
+        <section className="question-screen">
           <div className="question-header">Раунд {question.index} з 10</div>
           <h2 className="question-text">{question.text}</h2>
           <div className="bomb-timer-wrap">
@@ -998,28 +1158,22 @@ function App() {
               totalSeconds={15}
             />
           </div>
-          {isDisplay ? (
-            <p className="host-waiting">Очікування відповідей на телефонах...</p>
-          ) : (
-            <>
-              <div className="options">
-                {question.options.map((opt, idx) => (
-                  <button
-                    key={idx}
-                    className={getOptionClass(idx)}
-                    onClick={() => { playClickSound(); handleAnswer(idx); }}
-                    disabled={selectedAnswer !== null}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-              {answerResult && (
-                <div className={`result-message ${answerResult.correct ? "correct" : "wrong"}`}>
-                  {answerResult.correct ? "Правильно! +10 балів" : "Неправильно"}
-                </div>
-              )}
-            </>
+          <div className="options">
+            {question.options.map((opt, idx) => (
+              <button
+                key={idx}
+                className={getOptionClass(idx)}
+                onClick={() => { playClickSound(); handleAnswer(idx); }}
+                disabled={selectedAnswer !== null}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+          {answerResult && (
+            <div className={`result-message ${answerResult.correct ? "correct" : "wrong"}`}>
+              {answerResult.correct ? "Правильно! +10 балів" : "Неправильно"}
+            </div>
           )}
         </section>
       )}

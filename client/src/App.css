@@ -1718,6 +1718,86 @@ body {
   margin-bottom: 0;
 }
 
+/* Bottom scoreboard bar for display */
+.app-game-with-video .players-panel.compact {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: min(calc((var(--players-count, 1) * 122px) + 26px), calc(100vw - 28px));
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 18px;
+  border: 1px solid rgba(130, 205, 255, 0.38);
+  background: linear-gradient(160deg, rgba(6, 12, 22, 0.82) 0%, rgba(18, 8, 34, 0.78) 100%);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    0 16px 44px rgba(0, 0, 0, 0.45),
+    0 0 26px rgba(62, 173, 255, 0.22),
+    inset 0 0 14px rgba(255, 255, 255, 0.06);
+  z-index: 1200;
+}
+
+.app-game-with-video .players-panel.compact .players-list {
+  display: grid;
+  grid-template-columns: repeat(var(--players-count, 1), minmax(104px, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.app-game-with-video .players-panel.compact .player-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.32rem;
+  padding: 0.45rem 0.45rem 0.5rem;
+  border-radius: 12px !important;
+  border: 1px solid rgba(120, 190, 255, 0.24);
+  background: rgba(8, 20, 32, 0.62);
+  margin-bottom: 0;
+}
+
+.app-game-with-video .players-panel.compact .player-name {
+  color: #f0f7ff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.app-game-with-video .players-panel.compact .player-sprite {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+}
+
+.app-game-with-video .players-panel.compact .player-lives {
+  font-size: 0.86rem;
+  font-weight: 900;
+  color: #ff355e;
+  letter-spacing: 0.08em;
+  text-shadow:
+    0 0 10px rgba(255, 53, 94, 0.65),
+    0 0 2px rgba(0, 0, 0, 0.9);
+}
+
+.app-game-with-video .players-panel.compact .player-score {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .app-game-with-video .players-panel.compact .players-list {
+    grid-template-columns: repeat(2, minmax(110px, 1fr));
+  }
+}
+
 .app-header {
   display: flex;
   justify-content: center;
@@ -1905,6 +1985,50 @@ body {
   align-items: center;
 }
 
+/* Round 1 on display: styled question panel at left-center */
+.question-play-screen-round1 {
+  min-height: calc(100vh - 230px);
+  justify-content: center;
+  align-items: center;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-bottom: 130px;
+}
+
+.question-play-screen-round1 .typewriter-subtitles {
+  margin: 0 auto;
+  max-width: min(64vw, 980px);
+  background: linear-gradient(145deg, rgba(8, 14, 25, 0.8) 0%, rgba(20, 10, 35, 0.75) 100%);
+  border: 1px solid rgba(120, 200, 255, 0.45);
+  border-radius: 18px;
+  padding: 1.25rem 1.5rem;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 28px rgba(57, 181, 255, 0.26),
+    inset 0 0 18px rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(5px);
+  font-size: clamp(1.2rem, 2vw, 2rem);
+  text-align: center;
+}
+
+.question-play-screen-round1 .typewriter-text {
+  color: #ecf7ff;
+  letter-spacing: 0.02em;
+}
+
+.question-play-screen-round1 .typewriter-cursor {
+  color: #8dd9ff;
+}
+
+/* Smooth entry for round 1 question scene */
+.question-scene-fadein .game-background-video {
+  animation: questionSceneBgFadeIn 700ms ease-out both;
+}
+
+.question-scene-fadein .question-play-screen-round1 {
+  animation: questionSceneContentFadeIn 700ms ease-out both;
+}
+
 .question-header {
   font-size: 0.9rem;
   color: #a04040;
@@ -1919,10 +2043,80 @@ body {
   color: #e8e0e0;
 }
 
-/* Екран ведучого (ПК) - тільки питання, без варіантів відповідей */
-.question-screen-host .question-text {
-  font-size: 1.75rem;
-  margin-bottom: 2rem;
+.question-hold-round1 {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.question-hold-round1 .bomb-timer-wrap {
+  position: fixed;
+  top: 108px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  min-height: 110px;
+  z-index: 1400;
+}
+
+.answer-clock-gif {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(76px, 9vw, 132px);
+  height: auto;
+  z-index: 1450;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.5));
+  animation: clockFadeIn 650ms ease-out both;
+}
+
+@keyframes clockFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes questionSceneBgFadeIn {
+  from {
+    opacity: 0.25;
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes questionSceneContentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.question-hold-round1 .host-waiting-round1 {
+  margin-top: 0.7rem;
+  margin-bottom: 0.2rem;
+  color: rgba(212, 236, 255, 0.85);
+  text-align: center;
+  text-shadow: 0 0 10px rgba(120, 190, 255, 0.28);
+}
+
+.typewriter-subtitles-static {
+  animation: none !important;
 }
 
 /* Таймер відповіді на мобільному */
@@ -2738,6 +2932,11 @@ body {
   height: 100%;
   object-fit: cover;
   object-position: center;
+}
+
+.round-video-contain {
+  object-fit: contain;
+  background: #000;
 }
 
 /* === Glowing buttons from provided snippet (menu only) === */

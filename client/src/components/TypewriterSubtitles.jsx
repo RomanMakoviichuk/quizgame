@@ -10,27 +10,34 @@ import "./TypewriterSubtitles.css";
  */
 export default function TypewriterSubtitles({ text, speed = 80, active, onComplete }) {
   const [displayed, setDisplayed] = useState("");
+  const safeText = String(text ?? "").replace(/\s*\.?\s*undefined\s*$/i, "").trimEnd();
 
   useEffect(() => {
-    if (!active || !text) {
+    if (!active || !safeText) {
       setDisplayed("");
       return;
     }
     setDisplayed("");
     let i = 0;
     const id = setInterval(() => {
-      if (i >= text.length) {
+      if (i >= safeText.length) {
         clearInterval(id);
         onComplete?.();
         return;
       }
-      setDisplayed((prev) => prev + text[i]);
+      const nextChar = safeText[i];
+      if (typeof nextChar !== "string") {
+        clearInterval(id);
+        onComplete?.();
+        return;
+      }
+      setDisplayed((prev) => prev + nextChar);
       i++;
     }, speed);
     return () => clearInterval(id);
-  }, [text, active, speed]);
+  }, [safeText, active, speed]);
 
-  if (!text) return null;
+  if (!safeText) return null;
 
   return (
     <div className="typewriter-subtitles">

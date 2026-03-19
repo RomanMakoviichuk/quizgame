@@ -20,6 +20,7 @@ const io = new Server(server, {
 const MAX_PLAYERS = 8;
 const CHARACTER_SLOTS = 8;
 const INTRO_DURATION_MS = 180000;
+const ROUND1_ANSWER_DELAY_MS = 6000;
 
 function generateRoomCode() {
   return Math.floor(Math.random() * 10000).toString().padStart(4, "0");
@@ -75,16 +76,12 @@ function getRoomRounds(roomCode) {
 function startMainScene(roomCode) {
   const room = rooms.get(roomCode);
   if (!room) return;
-  room.gameState = GAME_STATE.MAIN_SCENE;
   room.currentRoundIndex = 0;
   const difficulty = normalizeDifficulty(room.selectedDifficulty);
   room.selectedDifficulty = difficulty;
   room.rounds = getRounds(difficulty);
-  io.to(roomCode).emit("mainScene", {
-    players: getPlayersList(roomCode),
-    roundIndex: 1,
-  });
-  setTimeout(() => emitQuestionAnnounce(roomCode), 2000);
+  // Skip transitional MAIN_SCENE after rulesmovie and start round 1 immediately.
+  emitQuestionAnnounce(roomCode);
 }
 
 function emitQuestionAnnounce(roomCode) {
@@ -110,11 +107,25 @@ function emitQuestionPlay(roomCode) {
     question: roundData.question,
     audioSrc: roundData.audioSrc,
   });
+  // Round 1: start answer phase at 7s from question video start.
+  if (room.currentRoundIndex === 0) {
+    if (room.preAnswerTimer) clearTimeout(room.preAnswerTimer);
+    room.preAnswerTimer = setTimeout(() => {
+      const r = rooms.get(roomCode);
+      if (!r || r.gameState !== GAME_STATE.QUESTION_PLAY) return;
+      r.preAnswerTimer = null;
+      startAnswerPhase(roomCode);
+    }, ROUND1_ANSWER_DELAY_MS);
+  }
 }
 
 function startAnswerPhase(roomCode) {
   const room = rooms.get(roomCode);
   if (!room) return;
+  if (room.preAnswerTimer) {
+    clearTimeout(room.preAnswerTimer);
+    room.preAnswerTimer = null;
+  }
   room.gameState = GAME_STATE.ANSWER_PHASE;
   resetPlayersAnswered(roomCode);
   const roundData = room.rounds[room.currentRoundIndex];
@@ -202,6 +213,7 @@ io.on("connection", (socket) => {
       rounds: [],
       gameState: GAME_STATE.WAITING,
       questionTimer: null,
+      preAnswerTimer: null,
       selectedDifficulty,
     });
     socket.join(roomCode);
@@ -330,6 +342,8 @@ io.on("connection", (socket) => {
     const room = rooms.get(roomCode);
     if (!room || !socket.isDisplay) return;
     if (room.gameState === GAME_STATE.QUESTION_PLAY) {
+      // Round 1 transitions by fixed timer from question start.
+      if (room.currentRoundIndex === 0) return;
       startAnswerPhase(roomCode);
     }
   });
@@ -377,6 +391,7 @@ io.on("connection", (socket) => {
       socket.leave(roomCode);
       socket.roomCode = null;
       if (room.questionTimer) clearTimeout(room.questionTimer);
+      if (room.preAnswerTimer) clearTimeout(room.preAnswerTimer);
       rooms.delete(roomCode);
       return;
     }
@@ -393,6 +408,7 @@ io.on("connection", (socket) => {
     }
     if (room.players.size === 0) {
       if (room.questionTimer) clearTimeout(room.questionTimer);
+      if (room.preAnswerTimer) clearTimeout(room.preAnswerTimer);
       rooms.delete(roomCode);
     }
   });
@@ -404,6 +420,7 @@ io.on("connection", (socket) => {
     if (!room) return;
     if (socket.isDisplay) {
       if (room.questionTimer) clearTimeout(room.questionTimer);
+      if (room.preAnswerTimer) clearTimeout(room.preAnswerTimer);
       rooms.delete(roomCode);
       return;
     }
@@ -419,6 +436,7 @@ io.on("connection", (socket) => {
     }
     if (room.players.size === 0) {
       if (room.questionTimer) clearTimeout(room.questionTimer);
+      if (room.preAnswerTimer) clearTimeout(room.preAnswerTimer);
       rooms.delete(roomCode);
     }
   });
