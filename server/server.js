@@ -147,58 +147,33 @@ function checkAnswers(roomCode) {
     clearTimeout(room.questionTimer);
     room.questionTimer = null;
   }
-
-  const roundData = room.rounds[room.currentRoundIndex];
-  const correctIndex = roundData?.question?.correctIndex ?? 0;
-
-  const allCorrect = Array.from(room.players.values()).every((p) => {
-    if (!p.hasAnswered) return false;
-    return p.lastAnswerIndex === correctIndex;
-  });
-
-  if (allCorrect) {
-    room.players.forEach((p) => {
-      if (p.lastAnswerIndex === correctIndex) p.score += SCORE_CORRECT;
-    });
-    emitScores(roomCode);
-  } else {
-    room.gameState = GAME_STATE.MINIGAME;
-    io.to(roomCode).emit("minigame", {
-      players: getPlayersList(roomCode),
-      roundIndex: room.currentRoundIndex + 1,
-    });
-  }
+  // Завжди переходимо до екрану підрахунку балів після кожного раунду
+  emitScores(roomCode);
 }
 
 function emitScores(roomCode) {
   const room = rooms.get(roomCode);
   if (!room) return;
   room.gameState = GAME_STATE.SCORES;
-  const playersList = getPlayersList(roomCode).sort((a, b) => b.score - a.score);
+  const roundData = room.rounds[room.currentRoundIndex];
+  const correctIndex = roundData?.question?.correctIndex ?? 0;
+  const playersList = Array.from(room.players.entries())
+    .map(([socketId, p]) => ({
+      id: p.id,
+      name: p.name,
+      score: p.score,
+      lives: p.lives ?? LIVES_PER_PLAYER,
+      hasAnswered: p.hasAnswered || false,
+      isAdmin: p.isAdmin || false,
+      characterSlot: p.characterSlot ?? 1,
+      lastCorrect: p.hasAnswered && p.lastAnswerIndex === correctIndex,
+    }))
+    .sort((a, b) => b.score - a.score);
   io.to(roomCode).emit("scores", {
     players: playersList,
     roundIndex: room.currentRoundIndex + 1,
   });
-
-  setTimeout(() => {
-    const r = rooms.get(roomCode);
-    if (!r) return;
-    r.currentRoundIndex++;
-    if (r.currentRoundIndex >= TOTAL_ROUNDS) {
-      r.gameState = GAME_STATE.FINISHED;
-      io.to(roomCode).emit("gameFinished", {
-        players: getPlayersList(roomCode).sort((a, b) => b.score - a.score),
-      });
-    } else {
-      emitQuestionAnnounce(roomCode);
-    }
-  }, 3000);
-}
-
-function finishMinigame(roomCode) {
-  const room = rooms.get(roomCode);
-  if (!room) return;
-  emitScores(roomCode);
+  // Transition happens when display emits scoresDone (after score/score2 video ends)
 }
 
 io.on("connection", (socket) => {
@@ -348,12 +323,19 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("minigameDone", () => {
+  socket.on("scoresDone", () => {
     const roomCode = socket.roomCode;
     const room = rooms.get(roomCode);
     if (!room || !socket.isDisplay) return;
-    if (room.gameState === GAME_STATE.MINIGAME) {
-      finishMinigame(roomCode);
+    if (room.gameState !== GAME_STATE.SCORES) return;
+    room.currentRoundIndex++;
+    if (room.currentRoundIndex >= TOTAL_ROUNDS) {
+      room.gameState = GAME_STATE.FINISHED;
+      io.to(roomCode).emit("gameFinished", {
+        players: getPlayersList(roomCode).sort((a, b) => b.score - a.score),
+      });
+    } else {
+      emitQuestionAnnounce(roomCode);
     }
   });
 

@@ -3,7 +3,6 @@ import { io } from "socket.io-client";
 import HorrorTimer from "./components/HorrorTimer";
 import MainScene from "./components/MainScene";
 import TypewriterSubtitles from "./components/TypewriterSubtitles";
-import MinigamePlaceholder from "./components/MinigamePlaceholder";
 import { GAME_PHASE } from "./game/constants";
 import IntroScene from "./components/IntroScene";
 import FireTitle from "./components/FireTitle";
@@ -20,6 +19,7 @@ const isMobile = () =>
   (window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent));
 
 const ROUND_DEBUG_STORAGE_KEY = "quizgame_round_debug";
+const SCORES_DEBUG_STORAGE_KEY = "quizgame_scores_debug";
 
 const isDevEnvironment = () => {
   if (typeof window === "undefined") return false;
@@ -42,6 +42,40 @@ const readRoundDebugFlag = () => {
   }
   return window.localStorage.getItem(ROUND_DEBUG_STORAGE_KEY) === "1";
 };
+
+/** roundDebug=scores → екран підрахунку балів після 1 раунду */
+const readRoundDebugScoresVariant = () => {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  const q = params.get("roundDebug");
+  if (q === "scores") {
+    window.localStorage.setItem(ROUND_DEBUG_STORAGE_KEY + "_scores", "1");
+    return true;
+  }
+  if (q === "0" || q === "1") {
+    window.localStorage.removeItem(ROUND_DEBUG_STORAGE_KEY + "_scores");
+    return false;
+  }
+  return window.localStorage.getItem(ROUND_DEBUG_STORAGE_KEY + "_scores") === "1";
+};
+
+const readScoresDebugFlag = () => {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  const q = params.get("scoresDebug");
+  if (q === "1") {
+    window.localStorage.setItem(SCORES_DEBUG_STORAGE_KEY, "1");
+    return true;
+  }
+  if (q === "0") {
+    window.localStorage.removeItem(SCORES_DEBUG_STORAGE_KEY);
+    return false;
+  }
+  return window.localStorage.getItem(SCORES_DEBUG_STORAGE_KEY) === "1";
+};
+
+/** Екран підрахунку балів: ?scoresDebug=1 або ?roundDebug=scores */
+const isScoresDebugActive = () => readScoresDebugFlag() || readRoundDebugScoresVariant();
 
 /**
  * Конфіг персонажів у лобі — можна змінювати позиції, нахил і тип анімації.
@@ -91,6 +125,8 @@ function App() {
   const [countdownNum, setCountdownNum] = useState(null);
   const [answerTimeLeft, setAnswerTimeLeft] = useState(15);
   const [round1SubtitleActive, setRound1SubtitleActive] = useState(false);
+  const [showRoundResultIcons, setShowRoundResultIcons] = useState(false);
+  const [scoresTransitioning, setScoresTransitioning] = useState(false);
   const [roundIndex, setRoundIndex] = useState(1);
   const [hasPlayedRulesVideo, setHasPlayedRulesVideo] = useState(false);
   const [rulesNeedsClick, setRulesNeedsClick] = useState(false);
@@ -118,6 +154,9 @@ function App() {
   const pendingRulesSeekRef = useRef(null);
   const rulesSkipFadeRafRef = useRef(null);
   const roundDebugEnabledRef = useRef(false);
+  const gameBackgroundVideoRef = useRef(null);
+  const scoresVideoRef = useRef(null);
+  const scoresDoneEmittedRef = useRef(false);
 
   const playClickSound = () => {
     if (isMobile()) return;
@@ -159,10 +198,41 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Dev helper: jump directly to scene after rulesmovie.
-    // Enable:  ?roundDebug=1
-    // Disable: ?roundDebug=0
     if (!isDevEnvironment()) return;
+
+    if (isScoresDebugActive()) {
+      setConnected(true);
+      setScreen("game");
+      setIsDisplay(true);
+      setIsAdmin(false);
+      setRoomCode("9999");
+      setSelectedDifficulty("easy");
+      setLobbyDifficulty("easy");
+      setRoundIndex(1);
+      setHasPlayedRulesVideo(true);
+      setGameState(GAME_PHASE.SCORES);
+      setQuestion(null);
+      setQuestionPlayData(null);
+      setSelectedAnswer(null);
+      setAnswerResult(null);
+      setShowRoundResultIcons(false);
+      setPlayers([
+        { id: "dbg-1", name: "Гравець 1", score: 10, characterSlot: 1, lives: 3, lastCorrect: true },
+        { id: "dbg-3", name: "Гравець 3", score: 10, characterSlot: 3, lives: 3, lastCorrect: true },
+        { id: "dbg-5", name: "Гравець 5", score: 10, characterSlot: 5, lives: 2, lastCorrect: true },
+        { id: "dbg-7", name: "Гравець 7", score: 10, characterSlot: 7, lives: 3, lastCorrect: true },
+        { id: "dbg-2", name: "Гравець 2", score: 0, characterSlot: 2, lives: 2, lastCorrect: false },
+        { id: "dbg-4", name: "Гравець 4", score: 0, characterSlot: 4, lives: 3, lastCorrect: false },
+        { id: "dbg-6", name: "Гравець 6", score: 0, characterSlot: 6, lives: 3, lastCorrect: false },
+        { id: "dbg-8", name: "Гравець 8", score: 0, characterSlot: 8, lives: 1, lastCorrect: false },
+      ]);
+      // eslint-disable-next-line no-console
+      console.info(
+        "[ScoresDebug] Екран підрахунку балів після 1 раунду. Використовуйте ?scoresDebug=1 або ?roundDebug=scores. Вимкн.: ?scoresDebug=0 або ?roundDebug=0"
+      );
+      return;
+    }
+
     if (!readRoundDebugFlag()) return;
 
     roundDebugEnabledRef.current = true;
@@ -207,7 +277,6 @@ function App() {
       GAME_PHASE.QUESTION_PLAY,
       GAME_PHASE.ANSWER_PHASE,
       GAME_PHASE.SCORES,
-      GAME_PHASE.MINIGAME,
       GAME_PHASE.FINISHED,
     ];
     if (
@@ -356,13 +425,14 @@ function App() {
     });
     socket.on("answerResult", (d) => setAnswerResult(d));
     socket.on("scores", (d) => {
-      setPlayers(d.players || []);
-      setGameState(GAME_PHASE.SCORES);
-    });
-    socket.on("minigame", (d) => {
-      setPlayers(d.players || []);
-      setRoundIndex(d.roundIndex || 1);
-      setGameState(GAME_PHASE.MINIGAME);
+      setScoresTransitioning(true);
+      setTimeout(() => {
+        setPlayers(d.players || []);
+        setRoundIndex(d.roundIndex ?? 1);
+        setGameState(GAME_PHASE.SCORES);
+        setShowRoundResultIcons(false);
+        setScoresTransitioning(false);
+      }, 450);
     });
     socket.on("gameFinished", (d) => {
       setPlayers(d.players || []);
@@ -380,6 +450,24 @@ function App() {
       socket.off("rulesStarted");
     };
   }, [socket]);
+
+  useEffect(() => {
+    if (gameState !== GAME_PHASE.SCORES) {
+      setShowRoundResultIcons(false);
+      return;
+    }
+    const allCorrect =
+      players.length > 0 && players.every((p) => p.lastCorrect === true);
+    const delayMs = allCorrect ? 2000 : 5000;
+    const id = window.setTimeout(() => setShowRoundResultIcons(true), delayMs);
+    return () => window.clearTimeout(id);
+  }, [gameState, players]);
+
+  useEffect(() => {
+    if (gameState === GAME_PHASE.SCORES) {
+      scoresDoneEmittedRef.current = false;
+    }
+  }, [gameState]);
 
   useEffect(() => {
     if (!isDisplay || roundIndex !== 1) {
@@ -507,7 +595,7 @@ function App() {
   useEffect(() => {
     if (gameState !== GAME_PHASE.QUESTION_PLAY || !questionPlayData || !isDisplay) return;
     questionPlayDoneRef.current = false;
-    const audio = questionPlayData.audioSrc;
+    const audio = questionPlayData.question?.audioSrc ?? questionPlayData.audioSrc;
     const checkDone = () => {
       if (questionPlayDoneRef.current) return;
       questionPlayDoneRef.current = true;
@@ -525,7 +613,8 @@ function App() {
 
   const handleSubtitlesComplete = () => {
     if (!isDisplay || gameState !== GAME_PHASE.QUESTION_PLAY) return;
-    if (!questionPlayData?.audioSrc) {
+    const audioSrc = questionPlayData?.question?.audioSrc ?? questionPlayData?.audioSrc;
+    if (!audioSrc) {
       questionPlayDoneRef.current = true;
       socket?.emit("questionPlayDone");
     } else {
@@ -1037,7 +1126,6 @@ function App() {
       className={`app ${!isMobile() ? "app-game-with-video" : "app-game-mobile app-mobile-bg"} ${
         !isMobile() &&
         isDisplay &&
-        roundIndex === 1 &&
         (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE)
           ? "question-scene-fadein"
           : ""
@@ -1045,27 +1133,52 @@ function App() {
     >
       {!isMobile() && (
         <video
+          ref={gameBackgroundVideoRef}
           className="game-background-video"
           src={
-            isDisplay &&
-            roundIndex === 1 &&
-            (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE)
-              ? "/assets/questions/video/question.mp4"
-              : "/assets/videos/main.mp4"
+            isDisplay && gameState === GAME_PHASE.SCORES
+              ? "/assets/videos/main.mp4"
+              : isDisplay &&
+                (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE)
+                ? "/assets/questions/video/question.mp4"
+                : "/assets/videos/main.mp4"
           }
           autoPlay
           loop
           playsInline
           muted={false}
           onLoadedMetadata={(e) => {
-            e.target.volume =
+            const isQuestionPhase =
               isDisplay &&
-              roundIndex === 1 &&
-              (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE)
-                ? 0.35
-                : 0.1;
+              (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE);
+            e.target.volume = isQuestionPhase ? 0.35 : 0.1;
           }}
         />
+      )}
+      {!isMobile() && isDisplay && gameState === GAME_PHASE.SCORES && (
+        <div className="scores-video-overlay">
+          <video
+            ref={scoresVideoRef}
+            className="round-video"
+            src={
+              players.length > 0 && players.every((p) => p.lastCorrect === true)
+                ? "/assets/questions/video/score2.mp4"
+                : "/assets/questions/video/score.mp4"
+            }
+            autoPlay
+            playsInline
+            preload="auto"
+            onLoadedMetadata={(e) => {
+              e.target.volume = 0.35;
+            }}
+            onEnded={() => {
+              if (scoresDoneEmittedRef.current || !socket) return;
+              if (isScoresDebugActive() || !roomCode) return;
+              scoresDoneEmittedRef.current = true;
+              socket.emit("scoresDone");
+            }}
+          />
+        </div>
       )}
       {!isMobile() && isDisplay && gameState === GAME_PHASE.QUESTION_ANNOUNCE && roundIndex === 1 && roundIntroVideo && (
         <div className="round-video-overlay">
@@ -1086,9 +1199,14 @@ function App() {
       <div className={`app-inner ${!isMobile() ? "app-inner-over-video" : ""}`}>
 
       <section
-        className={`players-panel compact ${!isDisplay ? "players-panel-player" : ""}`}
+        className={`players-panel compact ${!isDisplay ? "players-panel-player" : ""} ${
+          gameState === GAME_PHASE.SCORES && !isMobile() ? "players-panel-scores" : ""
+        }`}
         style={!isMobile() ? { ["--players-count"]: Math.max(1, players.length) } : undefined}
       >
+        {gameState === GAME_PHASE.SCORES && !isMobile() && (
+          <h2 className="scores-panel-title">Перевірка результатів</h2>
+        )}
         <ul className="players-list">
           {players.map((p, idx) => (
             <li key={p.id} className="player-item">
@@ -1105,6 +1223,11 @@ function App() {
               <span className="player-lives" aria-label={`Життів: ${Number.isFinite(Number(p.lives)) ? Math.max(0, Number(p.lives)) : 3}`}>
                 {"❤".repeat(Math.max(0, Math.min(10, Number.isFinite(Number(p.lives)) ? Number(p.lives) : 3)))}
               </span>
+              {gameState === GAME_PHASE.SCORES && showRoundResultIcons && (
+                <span className={`player-result-icon ${p.lastCorrect ? "result-correct" : "result-wrong"}`} aria-hidden>
+                  {p.lastCorrect ? "✓" : "✕"}
+                </span>
+              )}
             </li>
           ))}
         </ul>
@@ -1118,7 +1241,11 @@ function App() {
       {isDisplay &&
         (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE) &&
         (questionPlayData?.question || question) && (
-          <section className="question-play-screen question-play-screen-round1 question-hold-round1">
+          <section
+            className={`question-play-screen question-play-screen-round1 question-hold-round1 ${
+              scoresTransitioning ? "question-fade-out" : ""
+            }`}
+          >
             {gameState === GAME_PHASE.QUESTION_PLAY ? (
               <TypewriterSubtitles
                 key={questionPlayData?.question?.id ?? `round-${questionPlayData?.roundIndex ?? roundIndex}`}
@@ -1178,15 +1305,7 @@ function App() {
         </section>
       )}
 
-      {gameState === GAME_PHASE.MINIGAME && (
-        <MinigamePlaceholder
-          roundIndex={roundIndex}
-          isDisplay={isDisplay}
-          onDone={() => socket?.emit("minigameDone")}
-        />
-      )}
-
-      {gameState === GAME_PHASE.SCORES && (
+      {gameState === GAME_PHASE.SCORES && isMobile() && (
         <section className="scores-screen">
           <h2>Бали після раунду</h2>
           <ol className="scores-list">

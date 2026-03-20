@@ -46,7 +46,7 @@
     "text": "Яка частина клітини відповідає за вироблення енергії?",
     "options": ["Ядро", "Рибосома", "Мітохондрія", "Лізосома"],
     "correctIndex": 2,
-    "audioFile": "easy_5.mp3"
+    "audioFile": "easy_6.mp3"
   },
   { 
     "id": "r1_easy_7",
@@ -54,7 +54,7 @@
     "text": "Який океан є найбільшим на Землі?",
     "options": ["Атлантичний", "Індійський", "Північний Льодовитий", "Тихий"],
     "correctIndex": 3,
-    "audioFile": "easy_5.mp3"
+    "audioFile": "easy_7.mp3"
   },
   { 
     "id": "r1_easy_8",
@@ -62,7 +62,7 @@
     "text": "Яка столиця Австралії?",
     "options": ["Сідней", "Мельбурн", "Канберра", "Перт"],
     "correctIndex": 2,
-    "audioFile": "easy_5.mp3"
+    "audioFile": "easy_8.mp3"
   },
   { 
     "id": "r1_easy_9",
@@ -70,7 +70,7 @@
     "text": "Хто відкрив пеніцилін?",
     "options": ["Луї Пастер", "Александр Флемінг", "Марія Кюрі", "Ісаак Ньютон"],
     "correctIndex": 1,
-    "audioFile": "easy_5.mp3"
+    "audioFile": "easy_9.mp3"
   },
   { 
     "id": "r1_easy_10",
@@ -78,7 +78,7 @@
     "text": "Яка валюта використовується в Японії?",
     "options": ["Юань", "Вон", "Єна", "Долар"],
     "correctIndex": 2,
-    "audioFile": "easy_5.mp3"
+    "audioFile": "easy_10.mp3"
   },
   
 

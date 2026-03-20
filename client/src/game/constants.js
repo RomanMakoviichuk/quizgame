@@ -5,6 +5,5 @@ export const GAME_PHASE = {
   QUESTION_PLAY: "question_play",
   ANSWER_PHASE: "answer_phase",
   SCORES: "scores",
-  MINIGAME: "minigame",
   FINISHED: "finished",
 };

@@ -76,6 +76,10 @@ function getRounds(selectedDifficulty = "") {
     // Smart random: take next question from the shuffled deck
     // to avoid showing the same question in consecutive games.
     const q = pickFromDeck(i, difficulty);
+    const audioSrc =
+      q && q.audioFile
+        ? `/assets/questions/audio/round${i}/${q.audioFile}`
+        : null;
     rounds.push({
       roundIndex: i,
       question: q
@@ -84,12 +88,10 @@ function getRounds(selectedDifficulty = "") {
             text: q.text,
             options: q.options || [],
             correctIndex: q.correctIndex ?? 0,
+            audioSrc,
           }
         : null,
-      audioSrc:
-        q && q.audioFile
-          ? `/assets/questions/audio/round${i}/${q.audioFile}`
-          : null,
+      audioSrc,
     });
   }
   return rounds;

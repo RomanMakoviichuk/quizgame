@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-const INTRO_BASE = "/assets/videos/intro1";
+const INTRO_BASE = "/assets/videos/intro";
 
 export default function IntroScene({ players, onFinished }) {
   const videoRef = useRef(null);
