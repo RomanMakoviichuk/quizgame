@@ -1,0 +1,57 @@
+.round-intro-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.9) 100%
+  );
+  animation: round-intro-fade 320ms ease-out both;
+}
+
+.round-intro-inner {
+  text-align: center;
+  transform: translateY(-4vh);
+}
+
+.round-intro-kicker {
+  margin: 0 0 0.2em;
+  font-family: "Playpen Sans", cursive;
+  font-size: clamp(1.4rem, 4vw, 2.6rem);
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: #d8c9b0;
+  opacity: 0.85;
+}
+
+.round-intro-number {
+  font-size: clamp(6rem, 22vw, 16rem);
+  line-height: 1;
+  font-weight: 800;
+}
+
+.round-intro-title {
+  font-size: clamp(2.5rem, 9vw, 7rem);
+  line-height: 1.05;
+  font-weight: 800;
+}
+
+.round-intro-label {
+  margin: 0.4em 0 0;
+  font-family: "Playpen Sans", cursive;
+  font-size: clamp(1.1rem, 3vw, 2rem);
+  color: #e7dcc7;
+}
+
+@keyframes round-intro-fade {
+  from { opacity: 0; transform: scale(1.04); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .round-intro-overlay { animation-duration: 0.001ms; }
+}

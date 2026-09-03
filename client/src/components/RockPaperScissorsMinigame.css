@@ -1,0 +1,113 @@
+.rps-root {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  padding: 1.4rem;
+  background: radial-gradient(ellipse at center, #14101c 0%, #070510 100%);
+  color: #ece3f2;
+  font-family: "Playpen Sans", cursive;
+  text-align: center;
+}
+
+.rps-title {
+  margin: 0;
+  font-size: clamp(1.3rem, 4vw, 2.2rem);
+  letter-spacing: 0.12em;
+  color: #b98be0;
+}
+.rps-wait { font-size: clamp(1rem, 3vw, 1.5rem); opacity: 0.82; max-width: 26rem; }
+
+.rps-instruction { max-width: 34rem; }
+.rps-instruction h3 {
+  margin: 0 0 0.5rem;
+  color: #b98be0;
+  letter-spacing: 0.16em;
+  font-size: clamp(1.2rem, 4vw, 1.9rem);
+}
+.rps-instruction p { margin: 0.3rem 0; font-size: clamp(0.9rem, 2.6vw, 1.15rem); opacity: 0.9; }
+
+.rps-countdown {
+  font-size: clamp(5rem, 18vw, 11rem);
+  line-height: 1;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(185, 139, 224, 0.7);
+}
+.rps-getready {
+  font-size: clamp(1.1rem, 3.4vw, 1.7rem);
+  color: #b98be0;
+  letter-spacing: 0.06em;
+}
+
+.rps-round-line { margin: 0; font-size: clamp(1rem, 3vw, 1.5rem); }
+.rps-progress { margin: 0; font-size: clamp(1.4rem, 5vw, 2.4rem); font-weight: 800; color: #b98be0; }
+.rps-timer { margin: 0; font-size: clamp(1rem, 3vw, 1.5rem); color: #b98be0; font-weight: 700; }
+
+.rps-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  width: min(92vw, 24rem);
+}
+.rps-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 1.1rem;
+  font-family: inherit;
+  background: rgba(255, 255, 255, 0.07);
+  border: 2px solid rgba(185, 139, 224, 0.4);
+  border-radius: 16px;
+  color: #ece3f2;
+  cursor: pointer;
+  transition: transform 60ms ease, background 60ms ease;
+}
+.rps-choice:active { transform: scale(0.96); background: rgba(185, 139, 224, 0.25); }
+.rps-choice-emoji { font-size: clamp(2.6rem, 11vw, 4rem); }
+.rps-choice-label { font-size: clamp(1rem, 3.4vw, 1.4rem); letter-spacing: 0.08em; }
+
+.rps-locked { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
+.rps-locked-emoji { font-size: clamp(4rem, 16vw, 7rem); }
+
+.rps-reveal { width: min(94vw, 44rem); display: flex; flex-direction: column; gap: 0.9rem; align-items: center; }
+.rps-reveal-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  justify-content: center;
+}
+.rps-reveal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.7rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  min-width: 5.5rem;
+}
+.rps-reveal-card.rps-out { opacity: 0.4; outline: 1px solid #c0392b; }
+.rps-reveal-card.rps-in { outline: 1px solid #6fa368; }
+.rps-reveal-emoji { font-size: clamp(2.2rem, 9vw, 3.4rem); }
+.rps-reveal-name { font-size: clamp(0.8rem, 2.4vw, 1.05rem); }
+
+.rps-outcome { margin: 0; font-size: clamp(1.3rem, 4vw, 2rem); font-weight: 800; color: #b98be0; }
+.rps-outcome-sub { margin: 0; font-size: clamp(0.85rem, 2.4vw, 1.1rem); opacity: 0.85; }
+
+.rps-status { margin: 0.6rem 0 0; font-size: clamp(1.4rem, 5vw, 2.2rem); font-weight: 800; letter-spacing: 0.1em; }
+.rps-status-out { color: #c0392b; }
+.rps-status-in { color: #6fa368; }
+
+.rps-end { width: min(92vw, 32rem); }
+.rps-winner { font-size: clamp(1.3rem, 4vw, 2rem); font-weight: 800; color: #d9b44a; margin: 0.8rem 0 0; }
+.rps-verdict { font-size: clamp(1.1rem, 3.4vw, 1.8rem); font-weight: 800; color: #c0392b; margin: 0.6rem 0 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rps-choice { transition: none; }
+}

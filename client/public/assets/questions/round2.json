@@ -1,9 +1,91 @@
 [
-  { "id": "r2_easy_1", "difficulty": "easy", "text": "Скільки планет у Сонячній системі?", "options": ["7", "8", "9", "10"], "correctIndex": 1, "audioFile": "easy_1.mp3" },
-  { "id": "r2_easy_2", "difficulty": "easy", "text": "Яка планета найближча до Сонця?", "options": ["Венера", "Меркурій", "Марс", "Земля"], "correctIndex": 1, "audioFile": "easy_2.mp3" },
-  { "id": "r2_easy_3", "difficulty": "easy", "text": "Що світить на небі вночі?", "options": ["Сонце", "Місяць", "Хмари", "Зірки"], "correctIndex": 1, "audioFile": "easy_3.mp3" },
-  { "id": "r2_easy_4", "difficulty": "easy", "text": "Скільки місяців у році?", "options": ["10", "11", "12", "13"], "correctIndex": 2, "audioFile": "easy_4.mp3" },
-  { "id": "r2_easy_5", "difficulty": "easy", "text": "Який інструмент використовують для написання?", "options": ["Молоток", "Ручка", "Пилка", "Ножиці"], "correctIndex": 1, "audioFile": "easy_5.mp3" },
+  { 
+    "id": "r2_easy_1",
+    "difficulty": "easy",
+    "text": "Який напій найпопулярніший у світі після води?",
+    "options": ["Кава", "Чай", "Кола", "Пиво"],
+    "correctIndex": 1,
+    "audioFile": "r2_easy_1.mp3"
+  },
+  { 
+    "id": "r2_easy_2",
+    "difficulty": "easy",
+    "text": "Скільки разів можна відняти 1 від числа 10?",
+    "options": ["10", "9", "1", "Безкінечно"],
+    "correctIndex": 2,
+    "audioFile": "r2_easy_2.mp3"
+  },
+  { 
+    "id": "r2_easy_3",
+    "difficulty": "easy",
+    "text": "Хто є автором теорії відносності?",
+    "options": ["Ньютон", "Ейнштейн", "Галілей", "Кеплер"],
+    "correctIndex": 1,
+    "audioFile": "r2_easy_3.mp3"
+  },
+  { 
+    "id": "r2_easy_4",
+    "difficulty": "easy",
+    "text": "Яка країна подарувала світу статую Свободи?",
+    "options": ["Велика Британія", "Франція", "Іспанія", "Італія"],
+    "correctIndex": 1,
+    "audioFile": "r2_easy_4.mp3"
+  },
+  { 
+    "id": "r2_easy_5",
+    "difficulty": "easy",
+    "text": "Який художник написав картину «Розп'яття Христа»?",
+    "options": ["Ван Гог", "Пікассо", "Леонардо да Вінчі", "Сальвадор Далі"],
+    "correctIndex": 3,
+    "audioFile": "r2_easy_5.mp3"
+  },
+  { 
+    "id": "r2_easy_6",
+    "difficulty": "easy",
+    "text": "Хто встановив рекорд Гіннеса як найшвидша людина у світі?",
+    "options": ["Карл Льюїс", "Усейн Болт", "Майкл Джонсон", "Мо Фара"],
+    "correctIndex": 1,
+    "audioFile": "r2_easy_6.mp3"
+  },
+  { 
+    "id": "r2_easy_7",
+    "difficulty": "easy",
+    "text": "Яка країна виграла чемпіонат світу з футболу 2018 року?",
+    "options": ["Німеччина", "Бразилія", "Франція", "Аргентина"],
+    "correctIndex": 2,
+    "audioFile": "r2_easy_7.mp3"
+  },
+  { 
+    "id": "r2_easy_8",
+    "difficulty": "easy",
+    "text": "Який хімічний елемент позначається символом P ?",
+    "options": ["Паладій", "Плутоній", "Платина", "Фосфор"],
+    "correctIndex": 3,
+    "audioFile": "r2_easy_8.mp3"
+  },
+  { 
+    "id": "r2_easy_9",
+    "difficulty": "easy",
+    "text": "Яка країна відома як «країна ранішнього сонця»?",
+    "options": ["Китай", "Корея", "Японія", "Таїланд"],
+    "correctIndex": 2,
+    "audioFile": "r2_easy_9.mp3"
+  },
+  { 
+    "id": "r2_easy_10",
+    "difficulty": "easy",
+    "text": "Яка країна є найбільшим виробником кави у світі?",
+    "options": ["Колумбія", "Бразилія", "В'єтнам", "Ефіопія"],
+    "correctIndex": 1,
+    "audioFile": "r2_easy_10.mp3"
+  },
+
+
+
+
+
+
+
   { "id": "r2_medium_1", "difficulty": "medium", "text": "Який метал позначається символом Au?", "options": ["Срібло", "Мідь", "Золото", "Алюміній"], "correctIndex": 2, "audioFile": "medium_1.mp3" },
   { "id": "r2_medium_2", "difficulty": "medium", "text": "Яка хімічна формула води?", "options": ["CO2", "H2O", "NaCl", "O2"], "correctIndex": 1, "audioFile": "medium_2.mp3" },
   { "id": "r2_medium_3", "difficulty": "medium", "text": "Скільки континентів на Землі?", "options": ["5", "6", "7", "8"], "correctIndex": 2, "audioFile": "medium_3.mp3" },

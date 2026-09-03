@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import HorrorTimer from "./components/HorrorTimer";
-import MainScene from "./components/MainScene";
 import TypewriterSubtitles from "./components/TypewriterSubtitles";
-import { GAME_PHASE } from "./game/constants";
+import { GAME_PHASE, TOTAL_ROUNDS } from "./game/constants";
 import IntroScene from "./components/IntroScene";
 import FireTitle from "./components/FireTitle";
+import RoundIntro from "./components/RoundIntro";
+import MinigameHost from "./components/MinigameHost";
+import TrueFalseAftermath from "./components/TrueFalseAftermath";
 import "./App.css";
 
 const SOCKET_URL =
@@ -20,6 +22,9 @@ const isMobile = () =>
 
 const ROUND_DEBUG_STORAGE_KEY = "quizgame_round_debug";
 const SCORES_DEBUG_STORAGE_KEY = "quizgame_scores_debug";
+
+/** Максимум гравців у кімнаті (узгоджено з server/server.js MAX_PLAYERS) */
+const MAX_ROOM_PLAYERS = 8;
 
 const isDevEnvironment = () => {
   if (typeof window === "undefined") return false;
@@ -76,6 +81,126 @@ const readScoresDebugFlag = () => {
 
 /** Екран підрахунку балів: ?scoresDebug=1 або ?roundDebug=scores */
 const isScoresDebugActive = () => readScoresDebugFlag() || readRoundDebugScoresVariant();
+
+/** Сцена після міні-гри (aftermg + таблиця), лише дисплей: ?aftermathDebug=1 — відео зациклено, без переходу далі */
+const AFTERMATH_DEBUG_STORAGE_KEY = "quizgame_aftermath_debug";
+const readAftermathDebugFlag = () => {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  const q = params.get("aftermathDebug");
+  if (q === "1") {
+    window.localStorage.setItem(AFTERMATH_DEBUG_STORAGE_KEY, "1");
+    return true;
+  }
+  if (q === "0") {
+    window.localStorage.removeItem(AFTERMATH_DEBUG_STORAGE_KEY);
+    return false;
+  }
+  return window.localStorage.getItem(AFTERMATH_DEBUG_STORAGE_KEY) === "1";
+};
+
+const AFTERMATH_DEBUG_MOCK = {
+  minigameScores: {
+    "dbg-1": 7,
+    "dbg-3": 5,
+    "dbg-2": 4,
+    "dbg-4": 2,
+  },
+  namesById: {
+    "dbg-1": "Гравець 1",
+    "dbg-2": "Гравець 2",
+    "dbg-3": "Гравець 3",
+    "dbg-4": "Гравець 4",
+  },
+  livesById: {
+    "dbg-1": 3,
+    "dbg-2": 2,
+    "dbg-3": 3,
+    "dbg-4": 1,
+  },
+  contestantIds: ["dbg-1", "dbg-2", "dbg-3", "dbg-4"],
+  loserIds: ["dbg-2", "dbg-4"],
+  mode: "multi_wrong_compete",
+  roundIndex: 1,
+};
+
+/** Міні-гра «Правда/Брехня» на мобільному: ?minigameDebug=1 (міні-гра відкриється одразу, без очікування) */
+const MINIGAME_DEBUG_KEY = "quizgame_minigame_debug";
+const readMinigameDebugFlag = () => {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  const q = params.get("minigameDebug");
+  if (q === "1") {
+    window.localStorage.setItem(MINIGAME_DEBUG_KEY, "1");
+    return true;
+  }
+  if (q === "0") {
+    window.localStorage.removeItem(MINIGAME_DEBUG_KEY);
+    return false;
+  }
+  return window.localStorage.getItem(MINIGAME_DEBUG_KEY) === "1";
+};
+
+/**
+ * Styling preview for a minigame end screen (display only, dev/localhost):
+ *   ?mgPreview=mathRush   ?mgPreview=rps   ?mgPreview=trueFalse
+ * Mounts the minigame with a mock results payload so you can tune the visuals
+ * without playing a full game. Does not talk to the server.
+ */
+const readMgPreview = () => {
+  if (typeof window === "undefined") return null;
+  const id = new URLSearchParams(window.location.search).get("mgPreview");
+  return ["mathRush", "rps", "trueFalse"].includes(id) ? id : null;
+};
+
+const MG_PREVIEW_PLAYERS = [
+  { id: "pv-1", name: "Гравець 1", score: 10, characterSlot: 1, lives: 3 },
+  { id: "pv-2", name: "Гравець 2", score: 0, characterSlot: 2, lives: 2 },
+  { id: "pv-3", name: "Гравець 3", score: 10, characterSlot: 3, lives: 3 },
+  { id: "pv-4", name: "Гравець 4", score: 0, characterSlot: 4, lives: 1 },
+];
+
+const buildMgPreviewResults = (id) => {
+  const names = Object.fromEntries(MG_PREVIEW_PLAYERS.map((p) => [p.id, p.name]));
+  const lives = Object.fromEntries(MG_PREVIEW_PLAYERS.map((p) => [p.id, p.lives]));
+  if (id === "mathRush") {
+    return {
+      minigameId: "mathRush",
+      roundIndex: 2,
+      namesById: names,
+      livesById: lives,
+      contestantIds: ["pv-1", "pv-2", "pv-3", "pv-4"],
+      minigameScores: { "pv-1": 12, "pv-2": 7, "pv-3": 9, "pv-4": 5 },
+      ranked: ["pv-1", "pv-3", "pv-2", "pv-4"],
+      loserIds: ["pv-4"],
+      quizFailerIds: ["pv-2"],
+      savedFailerIds: ["pv-2"],
+    };
+  }
+  if (id === "rps") {
+    return {
+      minigameId: "rps",
+      roundIndex: 3,
+      namesById: names,
+      livesById: lives,
+      contestantIds: ["pv-2", "pv-4"],
+      loserIds: ["pv-4"],
+      winnerId: "pv-2",
+      lifeLoserId: "pv-4",
+      finalEliminated: ["pv-4"],
+    };
+  }
+  return {
+    minigameId: "trueFalse",
+    roundIndex: 1,
+    namesById: names,
+    livesById: lives,
+    contestantIds: ["pv-2", "pv-4"],
+    minigameScores: { "pv-2": 6, "pv-4": 3 },
+    loserIds: ["pv-4"],
+    mode: "multi_wrong_compete",
+  };
+};
 
 /**
  * Конфіг персонажів у лобі — можна змінювати позиції, нахил і тип анімації.
@@ -134,19 +259,24 @@ function App() {
   const [rulesFadeOutMs, setRulesFadeOutMs] = useState(450);
   const [rulesSkipFadeIn, setRulesSkipFadeIn] = useState(false);
   const [rulesActiveMobile, setRulesActiveMobile] = useState(false);
-  const [roundIntroVideo, setRoundIntroVideo] = useState(null); // null | "round1_intro" | "round1_question"
+  const [roundIntroVideo, setRoundIntroVideo] = useState(null); // null | "round1_intro" | "round1_question" | "round2_intro"
   const [questionPlayData, setQuestionPlayData] = useState(null);
   const questionAudioRef = useRef(null);
   const questionPlayDoneRef = useRef(false);
   const rulesVideoRef = useRef(null);
   const roundIntroVideoRef = useRef(null);
+  const roundIntroQuestionVideoRef = useRef(null); // preloads question.mp4 during introround1
+  const round2IntroVideoRef = useRef(null);
   const round1IntroDoneRef = useRef(false);
+  const round2IntroDoneRef = useRef(false);
   const menuAudioRef = useRef(null);
   const chainAudioRef = useRef(null);
   const clickAudioRef = useRef(null);
   const knifeSliceRef = useRef(null);
   const bellRef = useRef(null);
   const notificationRef = useRef(null);
+  const answerBeepRef = useRef(null);
+  const resultAudioRef = useRef(null);
   const isAdminRef = useRef(isAdmin);
   isAdminRef.current = isAdmin;
   const isDisplayRef = useRef(isDisplay);
@@ -157,6 +287,66 @@ function App() {
   const gameBackgroundVideoRef = useRef(null);
   const scoresVideoRef = useRef(null);
   const scoresDoneEmittedRef = useRef(false);
+  const trueFalseSubmittedRef = useRef(false);
+  const resultSoundPlayedRef = useRef(false);
+
+  const myPlayerId = playerId ?? players?.[0]?.id ?? null;
+  const playerNamesById = Object.fromEntries(players.map((p) => [p.id, p.name]));
+
+  // Minigame runs after every round (server/minigames/ decides which one).
+  const [minigameId, setMinigameId] = useState("trueFalse");
+  const [trueFalseStart, setTrueFalseStart] = useState(false);
+  const [trueFalseContestantIds, setTrueFalseContestantIds] = useState([]);
+  const [trueFalseSyncData, setTrueFalseSyncData] = useState(null); // { startedAtTs, serverTime, receivedAt }
+  /** Після міні-гри: дані для сцени з aftermg.mp4 + таблиця + втрата життя */
+  const [trueFalseResultsPayload, setTrueFalseResultsPayload] = useState(null);
+
+  const isTrueFalseActive =
+    isMobile() &&
+    gameState === GAME_PHASE.SCORES &&
+    trueFalseStart &&
+    trueFalseContestantIds.length > 0;
+
+  const isMinigameContestant = trueFalseContestantIds.includes(myPlayerId);
+
+  useEffect(() => {
+    if (gameState === GAME_PHASE.SCORES) {
+      trueFalseSubmittedRef.current = false;
+    }
+  }, [gameState, roundIndex]);
+
+  // Debug helper: auto-start minigame UI when using ?scoresDebug=1 / ?roundDebug=scores / ?minigameDebug=1
+  useEffect(() => {
+    if (!isMobile()) return;
+    if (!isScoresDebugActive() && !readMinigameDebugFlag()) return;
+    if (gameState !== GAME_PHASE.SCORES || roundIndex !== 1) return;
+    const anyWrong = players.some((p) => p.lastCorrect === false);
+    if (!anyWrong && !readMinigameDebugFlag()) {
+      setTrueFalseStart(false);
+      setTrueFalseContestantIds([]);
+      setTrueFalseSyncData(null);
+      return;
+    }
+    setTrueFalseStart(true);
+    setTrueFalseContestantIds(players.map((p) => p.id));
+    const now = Date.now();
+    if (readMinigameDebugFlag()) {
+      const past = now - 20000;
+      setTrueFalseSyncData({ startedAtTs: past, serverTime: past, receivedAt: now });
+    } else {
+      setTrueFalseSyncData({ startedAtTs: now, serverTime: now, receivedAt: now });
+    }
+  }, [gameState, roundIndex, players]);
+
+  const handleTrueFalseFinish = (minigameScore) => {
+    if (!isTrueFalseActive) return;
+    if (isMinigameContestant && trueFalseSubmittedRef.current) return;
+    if (isMinigameContestant) trueFalseSubmittedRef.current = true;
+    socket?.emit("trueFalseScore", {
+      roundIndex,
+      score: minigameScore ?? 0,
+    });
+  };
 
   const playClickSound = () => {
     if (isMobile()) return;
@@ -200,7 +390,40 @@ function App() {
   useEffect(() => {
     if (!isDevEnvironment()) return;
 
-    if (isScoresDebugActive()) {
+    if (readAftermathDebugFlag()) {
+      setConnected(true);
+      setScreen("game");
+      setIsDisplay(true);
+      setIsAdmin(false);
+      setRoomCode("9999");
+      setSelectedDifficulty("easy");
+      setLobbyDifficulty("easy");
+      setRoundIndex(1);
+      setHasPlayedRulesVideo(true);
+      setGameState(GAME_PHASE.SCORES);
+      setQuestion(null);
+      setQuestionPlayData(null);
+      setSelectedAnswer(null);
+      setAnswerResult(null);
+      setShowRoundResultIcons(false);
+      setTrueFalseStart(false);
+      setTrueFalseContestantIds([]);
+      setTrueFalseSyncData(null);
+      setTrueFalseResultsPayload(AFTERMATH_DEBUG_MOCK);
+      setPlayers([
+        { id: "dbg-1", name: "Гравець 1", score: 10, characterSlot: 1, lives: 3, lastCorrect: true },
+        { id: "dbg-2", name: "Гравець 2", score: 0, characterSlot: 2, lives: 2, lastCorrect: false },
+        { id: "dbg-3", name: "Гравець 3", score: 10, characterSlot: 3, lives: 3, lastCorrect: true },
+        { id: "dbg-4", name: "Гравець 4", score: 0, characterSlot: 4, lives: 1, lastCorrect: false },
+      ]);
+      // eslint-disable-next-line no-console
+      console.info(
+        "[AftermathDebug] Сцена після міні-гри (підгін стилів). Вимкнути: ?aftermathDebug=0 (лише dev / localhost)."
+      );
+      return;
+    }
+
+    if (isScoresDebugActive() || readMinigameDebugFlag()) {
       setConnected(true);
       setScreen("game");
       setIsDisplay(true);
@@ -228,7 +451,7 @@ function App() {
       ]);
       // eslint-disable-next-line no-console
       console.info(
-        "[ScoresDebug] Екран підрахунку балів після 1 раунду. Використовуйте ?scoresDebug=1 або ?roundDebug=scores. Вимкн.: ?scoresDebug=0 або ?roundDebug=0"
+        "[ScoresDebug] Екран підрахунку балів після 1 раунду. Міні-гра на мобільному: ?minigameDebug=1 (відкриється одразу). Вимкн.: ?scoresDebug=0 ?minigameDebug=0"
       );
       return;
     }
@@ -272,11 +495,11 @@ function App() {
 
   useEffect(() => {
     const gamePhases = [
-      GAME_PHASE.MAIN_SCENE,
       GAME_PHASE.QUESTION_ANNOUNCE,
       GAME_PHASE.QUESTION_PLAY,
       GAME_PHASE.ANSWER_PHASE,
       GAME_PHASE.SCORES,
+      GAME_PHASE.FINAL_BATTLE,
       GAME_PHASE.FINISHED,
     ];
     if (
@@ -397,26 +620,18 @@ function App() {
     socket.on("rulesStarted", () => {
       setRulesActiveMobile(true);
     });
-    socket.on("mainScene", (d) => {
-      setPlayers(d.players || []);
-      setRoundIndex(d.roundIndex || 1);
-      setGameState(GAME_PHASE.MAIN_SCENE);
-      setRulesActiveMobile(false);
-      // Екран ведучого переходить у гру тільки після кастомного інтро (handleIntroEnded).
-      // Для телефонів перехід у 'game' відбувається через effect по gameState.
-    });
     socket.on("questionAnnounce", (d) => {
       setRoundIndex(d.roundIndex || 1);
       setGameState(GAME_PHASE.QUESTION_ANNOUNCE);
     });
     socket.on("questionPlay", (d) => {
-      setQuestion({ ...d.question, index: d.roundIndex, total: 10 });
+      setQuestion({ ...d.question, index: d.roundIndex, total: TOTAL_ROUNDS });
       setQuestionPlayData(d);
       setRoundIndex(d.roundIndex || 1);
       setGameState(GAME_PHASE.QUESTION_PLAY);
     });
     socket.on("answerPhase", (d) => {
-      setQuestion({ ...d.question, index: d.roundIndex, total: 10 });
+      setQuestion({ ...d.question, index: d.roundIndex, total: TOTAL_ROUNDS });
       setQuestionPlayData(null);
       setSelectedAnswer(null);
       setAnswerResult(null);
@@ -424,7 +639,19 @@ function App() {
       setAnswerTimeLeft(15);
     });
     socket.on("answerResult", (d) => setAnswerResult(d));
+    socket.on("answerBeep", () => {
+      if (isMobile()) return; // sound only on the display
+      const a = answerBeepRef.current;
+      if (a) {
+        a.currentTime = 0;
+        a.play().catch(() => {});
+      }
+    });
     socket.on("scores", (d) => {
+      setTrueFalseStart(false);
+      setTrueFalseContestantIds([]);
+      setTrueFalseSyncData(null);
+      setTrueFalseResultsPayload(null);
       setScoresTransitioning(true);
       setTimeout(() => {
         setPlayers(d.players || []);
@@ -434,11 +661,41 @@ function App() {
         setScoresTransitioning(false);
       }, 450);
     });
+    socket.on("trueFalseStart", (d) => {
+      setMinigameId(d?.minigameId || "trueFalse");
+      setTrueFalseStart(true);
+      setTrueFalseContestantIds(d?.contestantIds || []);
+      setTrueFalseSyncData(null);
+    });
+    socket.on("trueFalseSync", (d) => {
+      if (!d || !Number.isFinite(Number(d.startedAtTs))) return;
+      const serverTime = Number(d.serverTime ?? d.startedAtTs);
+      setTrueFalseSyncData({
+        startedAtTs: Number(d.startedAtTs),
+        serverTime,
+        receivedAt: Date.now(),
+      });
+    });
+    socket.on("trueFalseResults", (d) => {
+      if (!d || !d.contestantIds) return;
+      setTrueFalseStart(false);
+      setTrueFalseResultsPayload(d);
+    });
+    socket.on("finalBattle", (d) => {
+      setPlayers(d.players || []);
+      setGameState(GAME_PHASE.FINAL_BATTLE);
+      setQuestion(null);
+      setQuestionPlayData(null);
+      setAnswerResult(null);
+      setTrueFalseStart(false);
+      setTrueFalseResultsPayload(null);
+    });
     socket.on("gameFinished", (d) => {
       setPlayers(d.players || []);
       setGameState(GAME_PHASE.FINISHED);
       setQuestion(null);
       setAnswerResult(null);
+      setTrueFalseResultsPayload(null);
     });
     return () => {
       socket.off("playerJoined", handlers.playerJoined);
@@ -448,20 +705,37 @@ function App() {
       socket.off("showIntro", handlers.showIntro);
       socket.off("skipRules");
       socket.off("rulesStarted");
+      socket.off("trueFalseStart");
+      socket.off("trueFalseSync");
+      socket.off("trueFalseResults");
+      socket.off("finalBattle");
+      socket.off("answerBeep");
     };
   }, [socket]);
 
   useEffect(() => {
     if (gameState !== GAME_PHASE.SCORES) {
       setShowRoundResultIcons(false);
+      resultSoundPlayedRef.current = false;
       return;
     }
+    if (resultSoundPlayedRef.current) return;
     const allCorrect =
       players.length > 0 && players.every((p) => p.lastCorrect === true);
     const delayMs = allCorrect ? 2000 : 5000;
-    const id = window.setTimeout(() => setShowRoundResultIcons(true), delayMs);
+    const id = window.setTimeout(() => {
+      if (resultSoundPlayedRef.current) return;
+      resultSoundPlayedRef.current = true;
+      setShowRoundResultIcons(true);
+      if (isMobile()) return; // sound only on the display
+      const a = resultAudioRef.current;
+      if (a) {
+        a.currentTime = 0;
+        a.play().catch(() => {});
+      }
+    }, delayMs);
     return () => window.clearTimeout(id);
-  }, [gameState, players]);
+  }, [gameState, roundIndex]);
 
   useEffect(() => {
     if (gameState === GAME_PHASE.SCORES) {
@@ -491,6 +765,14 @@ function App() {
     return () => clearInterval(t);
   }, [gameState, question?.id]);
 
+  // Final battle (after round 9). Placeholder: the display shows the caption for
+  // a few seconds, then tells the server to finish. Real video/rules go here later.
+  useEffect(() => {
+    if (gameState !== GAME_PHASE.FINAL_BATTLE || !isDisplay) return;
+    const t = setTimeout(() => socket?.emit("finalBattleDone"), 6000);
+    return () => clearTimeout(t);
+  }, [gameState, isDisplay, socket]);
+
   useEffect(() => {
     if (gameState !== GAME_PHASE.QUESTION_ANNOUNCE || !isDisplay) return;
     // Блок: раунд 1 не можна стартувати, поки не завершилось rulesmovie (на дисплеї).
@@ -500,7 +782,13 @@ function App() {
       setRoundIntroVideo("round1_intro");
       return;
     }
-    const t = setTimeout(() => socket?.emit("questionAnnounceDone"), 2000);
+    // Round 2: інтро перед стартом раунду (introround2.mp4)
+    if (roundIndex === 2 && !round2IntroDoneRef.current) {
+      setRoundIntroVideo("round2_intro");
+      return;
+    }
+    // Rounds 3-9: show the "РАУНД N" caption (RoundIntro) for a beat, then start.
+    const t = setTimeout(() => socket?.emit("questionAnnounceDone"), 3200);
     return () => clearTimeout(t);
   }, [gameState, isDisplay, socket, roundIndex, hasPlayedRulesVideo]);
 
@@ -510,21 +798,50 @@ function App() {
       setRoundIntroVideo(null);
       return;
     }
+    if (roundIndex === 2) {
+      if (round2IntroDoneRef.current) return;
+      if (roundIntroVideo !== "round2_intro") return;
+
+      const v = round2IntroVideoRef.current;
+      if (!v) return;
+
+      const finishRound2Intro = () => {
+        if (round2IntroDoneRef.current) return;
+        round2IntroDoneRef.current = true;
+        window.setTimeout(() => {
+          setRoundIntroVideo(null);
+          socket?.emit("questionAnnounceDone");
+        }, 120);
+      };
+
+      v.onended = () => {
+        try {
+          v.pause();
+        } catch {
+          /* ignore */
+        }
+        finishRound2Intro();
+      };
+      v.play().catch(() => finishRound2Intro());
+      return () => {
+        v.onended = null;
+      };
+    }
+
     if (roundIndex !== 1) return;
     if (!hasPlayedRulesVideo) return;
     if (round1IntroDoneRef.current) return;
     if (!roundIntroVideo) return;
 
-    const v = roundIntroVideoRef.current;
-    if (!v) return;
+    const vIntro = roundIntroVideoRef.current;
+    const vQuestion = roundIntroQuestionVideoRef.current;
+    if (!vIntro || !vQuestion) return;
 
     const startQuestion = () => {
       if (round1IntroDoneRef.current) return;
       round1IntroDoneRef.current = true;
       window.setTimeout(() => {
         setRoundIntroVideo(null);
-        // In local round debug mode we can be outside normal server flow,
-        // so force local transition to QUESTION_PLAY.
         if (roundDebugEnabledRef.current) {
           const debugQuestion = {
             id: "dbg-r1-q1",
@@ -535,7 +852,7 @@ function App() {
           setQuestion({
             ...debugQuestion,
             index: 1,
-            total: 10,
+            total: TOTAL_ROUNDS,
           });
           setQuestionPlayData({
             roundIndex: 1,
@@ -546,48 +863,49 @@ function App() {
           return;
         }
         socket?.emit("questionAnnounceDone");
-      }, 50);
+      }, 120);
     };
 
-    const onEnded = () => {
-      if (roundIntroVideo === "round1_intro") {
-        setRoundIntroVideo("round1_question");
-        return;
-      }
-      // If "question.mp4" ends quickly, still start the question.
-      startQuestion();
-    };
+    if (roundIntroVideo === "round1_intro") {
+      let onReady = null;
+      vIntro.onended = () => {
+        vIntro.pause();
+        vQuestion.currentTime = 0;
+        onReady = () => {
+          vQuestion.removeEventListener("canplay", onReady);
+          vQuestion.removeEventListener("playing", onReady);
+          setRoundIntroVideo("round1_question");
+          startQuestion();
+        };
+        vQuestion.addEventListener("canplay", onReady);
+        vQuestion.addEventListener("playing", onReady);
+        vQuestion.play().catch(() => onReady());
+      };
+      vIntro.play().catch(() => {});
+      return () => {
+        vIntro.onended = null;
+        if (onReady) {
+          vQuestion.removeEventListener("canplay", onReady);
+          vQuestion.removeEventListener("playing", onReady);
+        }
+      };
+    }
 
-    const tryPlay = () => {
-      try {
-        // Ensure playback starts from the beginning.
-        // Some browsers may keep `currentTime` when swapping `src`.
-        v.pause();
-        v.currentTime = 0;
-      } catch {}
-      v.play().catch(() => {});
-      if (roundIntroVideo === "round1_question") {
-        // As soon as question video starts, begin question.
-        startQuestion();
-      }
-    };
-
-    v.onended = onEnded;
-    v.onloadedmetadata = tryPlay;
-    tryPlay();
-
-    return () => {
-      if (v) {
-        v.onended = null;
-        v.onloadedmetadata = null;
-      }
-    };
+    // round1_question: vQuestion is visible and already playing.
+    try {
+      vIntro.pause();
+    } catch {}
+    return () => {};
   }, [roundIntroVideo, isDisplay, gameState, roundIndex, hasPlayedRulesVideo, socket]);
 
   useEffect(() => {
-    // Reset per-game/round intro when leaving round 1
     if (roundIndex !== 1) {
       round1IntroDoneRef.current = false;
+    }
+    if (roundIndex !== 2) {
+      round2IntroDoneRef.current = false;
+    }
+    if (roundIndex !== 1 && roundIndex !== 2) {
       setRoundIntroVideo(null);
     }
   }, [roundIndex]);
@@ -818,19 +1136,47 @@ function App() {
 
   const getOptionClass = (idx) => {
     if (!answerResult) return "option";
+    if (isMobile()) return "option option-disabled";
     if (idx === answerResult.correctIndex) return "option option-correct";
     if (idx === selectedAnswer && !answerResult.correct) return "option option-wrong";
     return "option option-disabled";
   };
 
+  const mgPreview = isDevEnvironment() ? readMgPreview() : null;
+  if (mgPreview) {
+    return (
+      <div className="app app-game-with-video">
+        <MinigameHost
+          minigameId={mgPreview}
+          uiMode="display"
+          isActive={false}
+          roundIndex={buildMgPreviewResults(mgPreview).roundIndex}
+          myPlayerId="pv-1"
+          namesById={Object.fromEntries(MG_PREVIEW_PLAYERS.map((p) => [p.id, p.name]))}
+          contestantIds={buildMgPreviewResults(mgPreview).contestantIds}
+          results={buildMgPreviewResults(mgPreview)}
+          onSceneDone={() => {}}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
-      <audio ref={menuAudioRef} src="/assets/sounds/mainmenu.mp3" preload="auto" />
-      <audio ref={clickAudioRef} src="/assets/sounds/click-sound.mp3" preload="auto" />
-      <audio ref={knifeSliceRef} src="/assets/sounds/knife-slice.mp3" preload="auto" />
-      <audio ref={bellRef} src="/assets/sounds/bell.mp3" preload="auto" />
-      <audio ref={notificationRef} src="/assets/sounds/notification.mp3" preload="auto" />
-      <audio ref={questionAudioRef} preload="auto" />
+      {/* All game audio lives on the display / desktop screen only — the phone
+          controllers are silent. Do not render these on mobile. */}
+      {!isMobile() && (
+        <>
+          <audio ref={menuAudioRef} src="/assets/sounds/mainmenu.mp3" preload="auto" />
+          <audio ref={clickAudioRef} src="/assets/sounds/click-sound.mp3" preload="auto" />
+          <audio ref={knifeSliceRef} src="/assets/sounds/knife-slice.mp3" preload="auto" />
+          <audio ref={bellRef} src="/assets/sounds/bell.mp3" preload="auto" />
+          <audio ref={notificationRef} src="/assets/sounds/notification.mp3" preload="auto" />
+          <audio ref={answerBeepRef} src="/assets/sounds/beep.mp3" preload="auto" />
+          <audio ref={resultAudioRef} src="/assets/sounds/result.mp3" preload="auto" />
+          <audio ref={questionAudioRef} preload="auto" />
+        </>
+      )}
   {isMobile() && screen === "join" && (
       <div className="app app-mobile-bg">
         <div className="join-screen-full">
@@ -991,7 +1337,7 @@ function App() {
                 <p className="room-code-hint">Введіть код на телефоні</p>
               </section>
               <p className="lobby-connected-count">
-                Підключилось гравців {players.length}/8
+                Підключилось гравців {players.length}/{MAX_ROOM_PLAYERS}
               </p>
               <section className="lobby-actions">
                 {gameState === "waiting" && isAdmin && (
@@ -1018,7 +1364,9 @@ function App() {
         ) : (
           <div className="app-inner lobby-inner lobby-mobile-inner">
             <section className="players-panel lobby-players-panel">
-              <h3>Гравці ({players.length}/7)</h3>
+              <h3>
+                Гравці ({players.length}/{MAX_ROOM_PLAYERS})
+              </h3>
               <ul className="players-list">
                 {players.map((p) => (
                   <li key={p.id} className="player-item">
@@ -1081,7 +1429,7 @@ function App() {
     </div>
   )}
 
-  {screen === "introScene" && (
+  {screen === "introScene" && !isMobile() && (
     <IntroScene players={players} onFinished={handleIntroEnded} />
   )}
 
@@ -1155,7 +1503,11 @@ function App() {
           }}
         />
       )}
-      {!isMobile() && isDisplay && gameState === GAME_PHASE.SCORES && (
+      {!isMobile() &&
+        isDisplay &&
+        gameState === GAME_PHASE.SCORES &&
+        !trueFalseStart &&
+        !trueFalseResultsPayload && (
         <div className="scores-video-overlay">
           <video
             ref={scoresVideoRef}
@@ -1180,21 +1532,83 @@ function App() {
           />
         </div>
       )}
+      {!isMobile() &&
+        isDisplay &&
+        gameState === GAME_PHASE.SCORES &&
+        (trueFalseStart ||
+          (trueFalseResultsPayload &&
+            (trueFalseResultsPayload.minigameId || "trueFalse") !== "trueFalse")) && (
+        <MinigameHost
+          key={`mg-${roundIndex}-${minigameId}`}
+          minigameId={minigameId}
+          uiMode="display"
+          isActive={trueFalseStart}
+          canAnswer={true}
+          roundIndex={roundIndex}
+          syncData={trueFalseSyncData}
+          socket={socket}
+          myPlayerId={myPlayerId}
+          namesById={playerNamesById}
+          results={trueFalseResultsPayload}
+          onVideoStartedAt={() => socket?.emit("trueFalseSync", { roundIndex })}
+          onSceneDone={() => {
+            setTrueFalseResultsPayload(null);
+            socket?.emit("trueFalseResultsSceneDone");
+          }}
+        />
+      )}
+      {!isMobile() &&
+        isDisplay &&
+        gameState === GAME_PHASE.SCORES &&
+        trueFalseResultsPayload &&
+        (trueFalseResultsPayload.minigameId || "trueFalse") === "trueFalse" && (
+        <TrueFalseAftermath
+          data={trueFalseResultsPayload}
+          stylingDebug={isDevEnvironment() && readAftermathDebugFlag()}
+          onComplete={() => {
+            if (isDevEnvironment() && readAftermathDebugFlag()) return;
+            setTrueFalseResultsPayload(null);
+            socket?.emit("trueFalseResultsSceneDone");
+          }}
+        />
+      )}
       {!isMobile() && isDisplay && gameState === GAME_PHASE.QUESTION_ANNOUNCE && roundIndex === 1 && roundIntroVideo && (
         <div className="round-video-overlay">
           <video
             ref={roundIntroVideoRef}
-            className={`round-video ${roundIntroVideo === "round1_intro" ? "round-video-contain" : ""}`}
-            src={
-              roundIntroVideo === "round1_intro"
-                ? "/assets/questions/video/introround1.mp4"
-                : "/assets/questions/video/question.mp4"
-            }
+            className={`round-video round-video-intro ${roundIntroVideo === "round1_intro" ? "round-video-visible" : "round-video-hidden"}`}
+            src="/assets/questions/video/introround1.mp4"
+            autoPlay
+            playsInline
+            preload="auto"
+          />
+          <video
+            ref={roundIntroQuestionVideoRef}
+            className={`round-video round-video-question ${roundIntroVideo === "round1_question" ? "round-video-visible" : "round-video-hidden"}`}
+            src="/assets/questions/video/question.mp4"
+            playsInline
+            preload="auto"
+          />
+        </div>
+      )}
+      {!isMobile() && isDisplay && gameState === GAME_PHASE.QUESTION_ANNOUNCE && roundIndex === 2 && roundIntroVideo === "round2_intro" && (
+        <div className="round-video-overlay">
+          <video
+            ref={round2IntroVideoRef}
+            className="round-video round-video-intro round-video-visible"
+            src="/assets/questions/video/introround2.mp4"
             autoPlay
             playsInline
             preload="auto"
           />
         </div>
+      )}
+      {!isMobile() &&
+        isDisplay &&
+        gameState === GAME_PHASE.QUESTION_ANNOUNCE &&
+        roundIndex >= 3 && <RoundIntro roundIndex={roundIndex} />}
+      {!isMobile() && isDisplay && gameState === GAME_PHASE.FINAL_BATTLE && (
+        <RoundIntro title="ФІНАЛЬНА БИТВА" label="Відео та правила — скоро" />
       )}
       <div className={`app-inner ${!isMobile() ? "app-inner-over-video" : ""}`}>
 
@@ -1232,11 +1646,6 @@ function App() {
           ))}
         </ul>
       </section>
-
-      {gameState === GAME_PHASE.MAIN_SCENE && (
-        <MainScene players={players} />
-      )}
-
 
       {isDisplay &&
         (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE) &&
@@ -1276,7 +1685,7 @@ function App() {
 
       {gameState === GAME_PHASE.ANSWER_PHASE && question && !isDisplay && (
         <section className="question-screen">
-          <div className="question-header">Раунд {question.index} з 10</div>
+          <div className="question-header">Раунд {question.index} з {question.total ?? TOTAL_ROUNDS}</div>
           <h2 className="question-text">{question.text}</h2>
           <div className="bomb-timer-wrap">
             <HorrorTimer
@@ -1297,7 +1706,7 @@ function App() {
               </button>
             ))}
           </div>
-          {answerResult && (
+          {answerResult && !isMobile() && (
             <div className={`result-message ${answerResult.correct ? "correct" : "wrong"}`}>
               {answerResult.correct ? "Правильно! +10 балів" : "Неправильно"}
             </div>
@@ -1306,17 +1715,46 @@ function App() {
       )}
 
       {gameState === GAME_PHASE.SCORES && isMobile() && (
-        <section className="scores-screen">
-          <h2>Бали після раунду</h2>
-          <ol className="scores-list">
-            {players.map((p, i) => (
-              <li key={p.id} className="score-item">
-                <span className="rank">{i + 1}.</span>
-                <span className="name">{p.name}</span>
-                <span className="score">{p.score}</span>
-              </li>
-            ))}
-          </ol>
+        <>
+          <section className="scores-screen">
+            <h2>Бали після раунду</h2>
+            <ol className="scores-list">
+              {players.map((p, i) => (
+                <li key={p.id} className="score-item">
+                  <span className="rank">{i + 1}.</span>
+                  <span className="name">{p.name}</span>
+                  <span className="score">{p.score}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {(trueFalseStart && trueFalseContestantIds.length > 0
+            ? true
+            : players.some((p) => p.lastCorrect === false)) && (
+            <MinigameHost
+              minigameId={minigameId}
+              key={`minigame-${roundIndex}-${minigameId}`}
+              uiMode="mobile"
+              isActive={trueFalseStart && trueFalseContestantIds.length > 0}
+              canAnswer={isTrueFalseActive}
+              roundIndex={roundIndex}
+              onFinish={handleTrueFalseFinish}
+              syncData={trueFalseSyncData}
+              socket={socket}
+              myPlayerId={myPlayerId}
+              namesById={playerNamesById}
+              contestantIds={trueFalseContestantIds}
+              results={trueFalseResultsPayload}
+            />
+          )}
+        </>
+      )}
+
+      {gameState === GAME_PHASE.FINAL_BATTLE && isMobile() && (
+        <section className="mobile-wait-card final-battle-mobile">
+          <div className="mobile-wait-title">ФІНАЛЬНА БИТВА</div>
+          <div className="mobile-wait-subtitle">Дивіться на головний екран</div>
         </section>
       )}
 

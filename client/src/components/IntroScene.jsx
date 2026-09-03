@@ -137,7 +137,6 @@ export default function IntroScene({ players, onFinished }) {
     };
 
     run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

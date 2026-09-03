@@ -1,0 +1,192 @@
+.truefalse-aftermath-debug-badge {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 12001;
+  max-width: min(320px, 92vw);
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(12, 10, 18, 0.92);
+  border: 1px solid rgba(120, 255, 170, 0.45);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(230, 255, 240, 0.95);
+  pointer-events: none;
+}
+
+.truefalse-aftermath-debug-badge strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #9effc0;
+}
+
+.truefalse-aftermath-debug-badge span {
+  display: block;
+  opacity: 0.88;
+  font-weight: 400;
+}
+
+.truefalse-aftermath-root {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: transparent;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: clamp(1.25rem, 8vh, 4.5rem);
+  box-sizing: border-box;
+}
+
+.truefalse-aftermath-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.truefalse-aftermath-panel {
+  position: relative;
+  z-index: 2;
+  max-width: min(520px, 92vw);
+  max-height: min(78vh, 640px);
+  padding: 1.25rem 1.5rem 1rem;
+  border-radius: 14px;
+  background: rgba(8, 6, 14, 0.82);
+  border: 1px solid rgba(255, 80, 120, 0.35);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.65), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  animation: truefalseAftermathIn 0.55s ease-out both;
+}
+
+@keyframes truefalseAftermathIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.truefalse-aftermath-title {
+  margin: 0 0 0.25rem;
+  font-size: clamp(1.15rem, 2.8vw, 1.45rem);
+  font-weight: 700;
+  color: #ffe6ee;
+  text-align: center;
+}
+
+.truefalse-aftermath-sub {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  color: rgba(255, 220, 230, 0.75);
+  text-align: center;
+}
+
+.truefalse-aftermath-table-scroll {
+  overflow: auto;
+  max-height: 36vh;
+  margin-bottom: 1rem;
+}
+
+.truefalse-aftermath-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  color: #f4f0f6;
+}
+
+.truefalse-aftermath-table th,
+.truefalse-aftermath-table td {
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.truefalse-aftermath-table th {
+  color: rgba(255, 200, 215, 0.85);
+  font-weight: 600;
+}
+
+.truefalse-aftermath-table tbody tr.truefalse-aftermath-row-risk td {
+  color: #ffc9d9;
+}
+
+.truefalse-aftermath-scorecell {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #7dffb3;
+}
+
+.truefalse-aftermath-lives {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.truefalse-aftermath-life-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.92rem;
+}
+
+.truefalse-aftermath-life-name {
+  color: rgba(255, 235, 240, 0.92);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.truefalse-aftermath-hearts {
+  position: relative;
+  letter-spacing: 0.12em;
+  flex-shrink: 0;
+}
+
+.truefalse-aftermath-heart {
+  display: inline-block;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.truefalse-aftermath-heart--lost {
+  animation: truefalseHeartLost 0.95s ease-in forwards;
+}
+
+@keyframes truefalseHeartLost {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  35% {
+    transform: scale(1.2) translateY(-4px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.35) translateY(22px);
+  }
+}
+
+.truefalse-aftermath-life-row--hit .truefalse-aftermath-hearts {
+  animation: truefalseHeartRowShake 0.45s ease-out;
+}
+
+@keyframes truefalseHeartRowShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
