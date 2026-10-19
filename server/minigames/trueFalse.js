@@ -31,6 +31,19 @@ function buildContest({ players, correctIndex, roundIndex }) {
   };
 }
 
+/**
+ * Live progress for the TV: each phone sends "tf:progress" { score, frozen }
+ * after every answer. Display only — the final score still comes from the
+ * phone's "trueFalseScore" report.
+ */
+function onClientEvent(mg, playerId, name, data, ctx) {
+  if (name !== "tf:progress") return;
+  mg.live = mg.live || {};
+  const score = Math.max(0, Math.min(999, Math.floor(Number(data.score) || 0)));
+  mg.live[playerId] = { score, frozen: !!data.frozen };
+  ctx.emitAll("trueFalse:live", { byId: mg.live });
+}
+
 /** Everyone tied at the lowest reported score loses one life. */
 function resolveLosers(mg) {
   const scoreOf = (id) => mg.scores.get(id) ?? 0;
@@ -49,6 +62,7 @@ module.exports = {
   TOTAL_DURATION_MS,
   clientScored: true,
   buildContest,
+  onClientEvent,
   resolveLosers,
   buildResults,
 };

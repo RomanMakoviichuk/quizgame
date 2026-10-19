@@ -1,0 +1,223 @@
+/* "Welcome, guests" — knitted style. Timeline over ~10s:
+   0.0  burlap wall fades in, title drops      0.3  the thread is pulled across
+   0.5-2.3  tags drop onto the thread one by one, then swing gently (seamlessly)
+   0.6-...  sewing buttons keep raining down   2.6  the tagline
+   8.8-10   fade to black (then a pause in the dark) */
+.wp-root {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  overflow: hidden;
+  background: #120a06;
+  color: #f6ead2;
+  font-family: "Playpen Sans", cursive;
+  animation: wp-in 0.5s ease-out both;
+}
+
+.wp-burlap {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: 34vh;
+  background-repeat: repeat;
+  filter: brightness(0.42) saturate(0.9);
+}
+/* warm spotlight in the middle, dark corners */
+.wp-light {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 45%, rgba(255, 200, 130, 0.28), transparent 70%),
+    radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.85) 100%);
+}
+
+.wp-head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 5vh;
+  text-align: center;
+  animation: wp-drop 0.7s 0.1s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+.wp-kicker {
+  display: inline-block;
+  margin: 0 0 1vh;
+  padding: 0.6vh 2.4vw;
+  border: 0.35vh dashed rgba(246, 234, 210, 0.7); /* stitched ribbon */
+  border-radius: 1vh;
+  background: rgba(120, 30, 30, 0.75);
+  font-size: clamp(1rem, 2.8vh, 2rem);
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  box-shadow: 0 0.6vh 1.6vh rgba(0, 0, 0, 0.5);
+}
+.wp-title { font-size: clamp(2.6rem, 12vh, 8rem); line-height: 1; }
+
+/* the thread the tags hang on */
+.wp-line {
+  position: absolute;
+  left: 2vw;
+  right: 2vw;
+  top: 38vh;
+  height: 0.4vh;
+  border-radius: 1vh;
+  background: repeating-linear-gradient(90deg, #d9c7a3 0 1.2vh, #a8916a 1.2vh 1.6vh);
+  box-shadow: 0 0.4vh 0.6vh rgba(0, 0, 0, 0.5);
+  transform-origin: left center;
+  animation: wp-thread 0.6s 0.3s cubic-bezier(.6, 0, .3, 1) both;
+}
+
+.wp-tags {
+  position: absolute;
+  left: 3vw;
+  right: 3vw;
+  top: 37vh;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+}
+.wp-tag-slot {
+  position: relative;
+  width: min(11vw, 24vh);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: 50% 0;
+  animation:
+    wp-hang 0.7s calc(0.5s + var(--i) * 0.22s) cubic-bezier(.3, 1.5, .5, 1) both,
+    wp-swing 3.2s calc(1.2s + var(--i) * 0.22s) ease-in-out infinite;
+}
+/* wooden clothes-peg on the thread */
+.wp-peg {
+  width: 1.6vh;
+  height: 4.4vh;
+  border-radius: 0.5vh;
+  background: linear-gradient(90deg, #b88a55, #e0b884 50%, #a87a45);
+  box-shadow: 0 0.3vh 0.5vh rgba(0, 0, 0, 0.5), inset 0 1.6vh 0 -1.4vh #6b4a2a;
+  z-index: 2;
+}
+/* the fabric tag: felt with a stitched edge */
+.wp-tag {
+  position: relative;
+  margin-top: -1.2vh;
+  width: 100%;
+  padding: 19vh 0.6vw 1.8vh;
+  box-sizing: border-box;
+  border-radius: 1.6vh;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.08), transparent 60%),
+    linear-gradient(170deg, #f3e3c3, #dcc49b);
+  color: #3a2314;
+  text-align: center;
+  box-shadow: 0 1.4vh 2.4vh rgba(0, 0, 0, 0.6);
+}
+.wp-tag::before { /* the stitches */
+  content: "";
+  position: absolute;
+  inset: 0.8vh;
+  border: 0.3vh dashed rgba(120, 30, 30, 0.55);
+  border-radius: 1.1vh;
+  pointer-events: none;
+}
+.wp-tag img {
+  position: absolute;
+  left: 50%;
+  top: 1vh;
+  height: 18vh;
+  max-width: 92%;
+  object-fit: contain;
+  width: auto;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 0.8vh 0.8vh rgba(0, 0, 0, 0.45));
+  user-select: none;
+}
+.wp-hello {
+  display: block;
+  font-size: clamp(0.65rem, 1.7vh, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8a2b22;
+}
+.wp-name {
+  display: block;
+  margin: 0.2vh 0 0.4vh;
+  font-size: clamp(0.9rem, 3vh, 1.9rem);
+  font-weight: 800;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.wp-lives { font-size: clamp(0.8rem, 2.2vh, 1.4rem); color: #c0392b; letter-spacing: 0.15em; }
+
+.wp-tagline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 7vh;
+  margin: 0;
+  text-align: center;
+  font-size: clamp(1rem, 3.6vh, 2.4rem);
+  font-weight: 700;
+  color: #ffe2a8;
+  text-shadow: 0 0.3vh 0 #000, 0 0 2vh rgba(255, 170, 80, 0.55);
+  animation: wp-rise 0.6s 2.6s ease-out both;
+}
+
+/* sewing buttons: a coloured disc with four holes */
+/* falling buttons pass behind the tags and the texts */
+.wp-buttons { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.wp-head, .wp-line, .wp-tags, .wp-tagline { z-index: 2; }
+.wp-buttons i {
+  position: absolute;
+  left: var(--x);
+  top: -6vh;
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 35%, rgba(0, 0, 0, 0.55) 0 9%, transparent 10%),
+    radial-gradient(circle at 65% 35%, rgba(0, 0, 0, 0.55) 0 9%, transparent 10%),
+    radial-gradient(circle at 35% 65%, rgba(0, 0, 0, 0.55) 0 9%, transparent 10%),
+    radial-gradient(circle at 65% 65%, rgba(0, 0, 0, 0.55) 0 9%, transparent 10%),
+    radial-gradient(circle, var(--c) 0 62%, color-mix(in srgb, var(--c) 70%, #000) 64% 100%);
+  box-shadow: 0 0.3vh 0.5vh rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  animation: wp-fall var(--dur) var(--d) linear infinite backwards;
+}
+
+.wp-blackout {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: #000;
+  opacity: 0;
+  animation: wp-black 1.2s calc(var(--wp-ms, 10000ms) - 1200ms) ease-in both;
+}
+
+@keyframes wp-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wp-drop { 0% { transform: translateY(-60%) scale(1.15); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes wp-thread { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* the drop ends exactly upright and the swing starts from upright: no jerk between them */
+@keyframes wp-hang {
+  0% { transform: translateY(-45vh) rotate(-12deg); opacity: 0; }
+  55% { transform: translateY(1.5vh) rotate(5deg); opacity: 1; }
+  80% { transform: translateY(-0.5vh) rotate(-2deg); }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes wp-swing {
+  0%, 100% { rotate: 0deg; }
+  25% { rotate: 2.5deg; }
+  75% { rotate: -2.5deg; }
+}
+@keyframes wp-rise { 0% { opacity: 0; transform: translateY(2vh); } 100% { opacity: 1; transform: none; } }
+@keyframes wp-fall {
+  0% { opacity: 0; transform: translateY(0) rotate(0); }
+  10% { opacity: 0.95; }
+  100% { opacity: 0.95; transform: translateY(115vh) rotate(var(--r)); }
+}
+@keyframes wp-black { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .wp-root * { animation-duration: 0.001ms !important; animation-delay: 0s !important; }
+}

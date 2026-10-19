@@ -1,6 +1,11 @@
 import TrueFalseMinigame from "./TrueFalseMinigame";
 import MathRushMinigame from "./MathRushMinigame";
 import RockPaperScissorsMinigame from "./RockPaperScissorsMinigame";
+import HotBombMinigame from "./HotBombMinigame";
+import TugOfWarMinigame from "./TugOfWarMinigame";
+import RatMinigame from "./RatMinigame";
+import MemoryMinigame from "./MemoryMinigame";
+import NameThatTuneMinigame from "./NameThatTuneMinigame";
 
 /**
  * Renders the active minigame by id — the single switch point for every minigame.
@@ -15,6 +20,11 @@ const MINIGAME_COMPONENTS = {
   trueFalse: TrueFalseMinigame,
   mathRush: MathRushMinigame,
   rps: RockPaperScissorsMinigame,
+  hotBomb: HotBombMinigame,
+  tugOfWar: TugOfWarMinigame,
+  rat: RatMinigame,
+  memory: MemoryMinigame,
+  tune: NameThatTuneMinigame,
 };
 
 export default function MinigameHost({ minigameId = "trueFalse", ...props }) {

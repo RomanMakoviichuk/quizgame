@@ -3,6 +3,7 @@
  *   lobby     — createRoom / joinRoom / start intro / rules
  *   gameplay  — phase *Done handshakes + answers
  *   minigame  — sync / score / aftermath handshakes
+ *   final     — intro handshake + race answers
  *
  * All game logic lives in phases.js; handlers only validate the socket and
  * forward to it.
@@ -21,29 +22,71 @@ const {
   addPlayer,
   getPlayersList,
 } = require("./rooms");
-const { normalizeDifficulty } = require("./questions");
+const { categoryReadiness, normalizeGameDifficulty, NOT_ENOUGH_MESSAGE } = require("./questions");
+const store = require("./content/store");
+const clock = require("./clock");
 
 module.exports = function registerHandlers(io) {
   const phases = require("./phases")(io);
+
+  /** Resolve the room's category, falling back to the first ready active one. */
+  function resolveCategoryId(requestedId) {
+    const active = store.getPublicCategories();
+    if (requestedId && active.some((c) => c.id === requestedId)) return requestedId;
+    const ready = active.find(
+      (c) => c.questionCount >= 0 && categoryReadiness(c.id).ok
+    );
+    return (ready || active[0] || {}).id || null;
+  }
 
   io.on("connection", (socket) => {
     const roomOf = () => getRoom(socket.roomCode);
     const playerOf = (room) => room?.players.get(socket.id) || null;
     const isAdmin = (room) => !!playerOf(room)?.isAdmin;
 
+    // Game events that arrive while the room is paused (a display video that
+    // ended right at the pause, a late answer, a minigame action) are queued and
+    // replayed on resume, in order — nothing is lost and nothing runs frozen.
+    const onGame = (event, fn) =>
+      socket.on(event, (...args) => {
+        const room = roomOf();
+        if (room && clock.isPaused(room)) {
+          room.deferredWhilePaused.push(() => fn(...args));
+          return;
+        }
+        fn(...args);
+      });
+
     // ------------------------------------------------------------------ lobby
 
     socket.on("createRoom", (data, callback) => {
-      const selectedDifficulty = normalizeDifficulty(data?.selectedDifficulty);
-      const room = createRoom(socket.id, selectedDifficulty);
+      const categoryId = resolveCategoryId(data?.categoryId);
+      const difficulty = normalizeGameDifficulty(data?.difficulty);
+      const room = createRoom(socket.id, categoryId, difficulty);
       socket.join(room.code);
       socket.roomCode = room.code;
       socket.isDisplay = true;
+      const category = store.getCategory(categoryId);
       callback?.({
         roomCode: room.code,
         players: [],
         gameState: room.gameState,
-        selectedDifficulty,
+        categoryId,
+        categoryName: category ? category.name : null,
+        difficulty,
+      });
+    });
+
+    socket.on("selectCategory", (data) => {
+      const room = roomOf();
+      if (!room || room.gameState !== GAME_STATE.WAITING) return;
+      if (!(isAdmin(room) || socket.isDisplay)) return;
+      const categoryId = resolveCategoryId(data?.categoryId);
+      room.categoryId = categoryId;
+      const category = store.getCategory(categoryId);
+      io.to(room.code).emit("categorySelected", {
+        categoryId,
+        categoryName: category ? category.name : null,
       });
     });
 
@@ -68,13 +111,15 @@ module.exports = function registerHandlers(io) {
       socket.playerId = player.id;
 
       const players = getPlayersList(room);
+      const category = store.getCategory(room.categoryId);
       callback?.({
         roomCode: code,
         playerId: player.id,
         players,
         gameState: room.gameState,
         isAdmin: player.isAdmin,
-        selectedDifficulty: normalizeDifficulty(room.selectedDifficulty),
+        categoryId: room.categoryId,
+        categoryName: category ? category.name : null,
       });
       io.to(code).emit("playerJoined", { players });
     });
@@ -83,11 +128,28 @@ module.exports = function registerHandlers(io) {
       const room = roomOf();
       if (!room || room.gameState !== GAME_STATE.WAITING || !isAdmin(room)) return;
 
-      room.selectedDifficulty = normalizeDifficulty(data?.selectedDifficulty);
+      if (data?.categoryId) room.categoryId = resolveCategoryId(data.categoryId);
+
+      const readiness = categoryReadiness(room.categoryId);
+      if (!readiness.ok) {
+        io.to(room.code).emit("gameError", {
+          message: NOT_ENOUGH_MESSAGE,
+          available: readiness.available,
+          needed: readiness.needed,
+        });
+        return;
+      }
+
+      room.introStarted = true;
+      // Dev/demo only (MINIGAME_DEMO=…): no intro / rules video, straight into round 1.
+      if (process.env.MINIGAME_DEMO) {
+        phases.startGame(room);
+        return;
+      }
       io.to(room.code).emit("showIntro");
 
-      if (room.introTimer) clearTimeout(room.introTimer);
-      room.introTimer = setTimeout(() => {
+      if (room.introTimer) clock.cancel(room.introTimer);
+      room.introTimer = clock.schedule(room, () => {
         if (room.gameState === GAME_STATE.WAITING && room.players.size >= 1) {
           room.introTimer = null;
           phases.startGame(room);
@@ -95,35 +157,42 @@ module.exports = function registerHandlers(io) {
       }, INTRO_DURATION_MS);
     });
 
-    socket.on("startGame", () => {
+    onGame("startGame", () => {
       const room = roomOf();
       if (!room || room.gameState !== GAME_STATE.WAITING) return;
       if (!(isAdmin(room) || socket.isDisplay) || room.players.size < 1) return;
       if (room.introTimer) {
-        clearTimeout(room.introTimer);
+        clock.cancel(room.introTimer);
         room.introTimer = null;
       }
       phases.startGame(room);
     });
 
-    socket.on("introEnded", () => {
+    onGame("introEnded", () => {
       const room = roomOf();
       if (!room || room.gameState !== GAME_STATE.WAITING) return;
       if (!socket.isDisplay || room.players.size < 1) return;
       if (room.introTimer) {
-        clearTimeout(room.introTimer);
+        clock.cancel(room.introTimer);
         room.introTimer = null;
       }
       phases.startGame(room);
     });
 
-    socket.on("skipRules", () => {
+    // Admin's phone: skip the cinematic intro (the display jumps to the rules video)
+    onGame("skipIntro", () => {
+      const room = roomOf();
+      if (!room || room.gameState !== GAME_STATE.WAITING || !room.introStarted || !isAdmin(room)) return;
+      io.to(room.code).emit("skipIntro");
+    });
+
+    onGame("skipRules", () => {
       const room = roomOf();
       if (!room || room.gameState !== GAME_STATE.WAITING || !isAdmin(room)) return;
       io.to(room.code).emit("skipRules");
     });
 
-    socket.on("rulesStarted", () => {
+    onGame("rulesStarted", () => {
       const room = roomOf();
       if (!room || room.gameState !== GAME_STATE.WAITING || !socket.isDisplay)
         return;
@@ -132,14 +201,14 @@ module.exports = function registerHandlers(io) {
 
     // --------------------------------------------------------------- gameplay
 
-    socket.on("questionAnnounceDone", () => {
+    onGame("questionAnnounceDone", () => {
       const room = roomOf();
       if (!room || !socket.isDisplay) return;
       if (room.gameState === GAME_STATE.QUESTION_ANNOUNCE)
         phases.emitQuestionPlay(room);
     });
 
-    socket.on("questionPlayDone", () => {
+    onGame("questionPlayDone", () => {
       const room = roomOf();
       if (!room || !socket.isDisplay) return;
       if (room.gameState !== GAME_STATE.QUESTION_PLAY) return;
@@ -148,51 +217,112 @@ module.exports = function registerHandlers(io) {
       phases.startAnswerPhase(room);
     });
 
-    socket.on("answer", (data) => {
+    onGame("answer", (data) => {
       const room = roomOf();
       if (!room) return;
       phases.submitAnswer(room, socket.id, data?.answerIndex);
     });
 
-    socket.on("scoresDone", () => {
+    onGame("scoresDone", () => {
       const room = roomOf();
       if (!room || !socket.isDisplay) return;
       phases.handleScoresDone(room);
     });
 
-    socket.on("finalBattleDone", () => {
+    // ------------------------------------------------------------ final race
+
+    onGame("finalBattleIntroDone", () => {
       const room = roomOf();
       if (!room || !socket.isDisplay) return;
-      phases.handleFinalBattleDone(room);
+      phases.handleFinalIntroDone(room);
     });
+
+    onGame("finalAnswer", (data) => {
+      const room = roomOf();
+      if (!room || room.gameState !== GAME_STATE.FINAL_BATTLE) return;
+      phases.submitFinalAnswer(room, socket.playerId, data?.answerIndex);
+    });
+
+    // Dev/demo only (FINAL_DEMO=1): jump from the lobby straight into the final
+    // with made-up ratings and a few ghosts, to rehearse the final scene.
+    if (process.env.FINAL_DEMO === "1") {
+      onGame("debugStartFinal", () => {
+        const room = roomOf();
+        if (!room || room.gameState !== GAME_STATE.WAITING) return;
+        if (!(isAdmin(room) || socket.isDisplay) || room.players.size < 1) return;
+        const list = [...room.players.values()];
+        list.forEach((p, i) => {
+          p.score = [72, 41, 90, 20, 61, 0, 51, 31][i % 8];
+          if (i % 3 === 2) {
+            p.lives = 0;
+            p.isGhost = true;
+            p.diedAtRound = 5 + (i % 4);
+          } else {
+            p.lives = 1 + (i % 3);
+          }
+        });
+        room.rounds = [];
+        phases.startFinalBattle(room);
+      });
+    }
 
     // --------------------------------------------------------------- minigame
 
-    socket.on("trueFalseSync", () => {
+    onGame("trueFalseSync", () => {
       const room = roomOf();
       if (!room || !socket.isDisplay || room.gameState !== GAME_STATE.SCORES)
         return;
       phases.syncMinigame(room);
     });
 
-    socket.on("trueFalseScore", (data) => {
+    onGame("trueFalseScore", (data) => {
       const room = roomOf();
       if (!room || room.gameState !== GAME_STATE.SCORES) return;
       phases.submitMinigameScore(room, socket.playerId, data?.score);
     });
 
     // Server-authoritative minigames (Math Rush answers, RPS choices, …).
-    socket.on("minigameEvent", (msg) => {
+    onGame("minigameEvent", (msg) => {
       const room = roomOf();
       if (!room || room.gameState !== GAME_STATE.SCORES) return;
       phases.handleMinigameEvent(room, socket.playerId, msg?.name, msg?.data);
     });
 
-    socket.on("trueFalseResultsSceneDone", () => {
+    // the TV reports things only it knows (e.g. «Вгадай мелодію»: songs loaded / audio failed)
+    onGame("minigameDisplayEvent", (msg) => {
+      const room = roomOf();
+      if (!room || !socket.isDisplay || room.gameState !== GAME_STATE.SCORES) return;
+      phases.handleMinigameDisplayEvent(room, msg?.name, msg?.data);
+    });
+
+    onGame("trueFalseResultsSceneDone", () => {
       const room = roomOf();
       if (!room || !socket.isDisplay || room.gameState !== GAME_STATE.SCORES)
         return;
       phases.applyMinigameLives(room);
+    });
+
+    // ------------------------------------------------------------------ pause
+    // Only the room admin (first player) pauses/resumes, any time after the
+    // intro has started and until the game is finished.
+
+    const canPause = (room) =>
+      room.gameState !== GAME_STATE.FINISHED &&
+      (room.gameState !== GAME_STATE.WAITING || room.introStarted);
+
+    socket.on("pauseGame", () => {
+      const room = roomOf();
+      if (!room || !isAdmin(room) || !canPause(room)) return;
+      if (!clock.pause(room)) return;
+      io.to(room.code).emit("gamePaused", { by: playerOf(room)?.name || null });
+    });
+
+    socket.on("resumeGame", () => {
+      const room = roomOf();
+      if (!room || !isAdmin(room) || !clock.isPaused(room)) return;
+      const pausedMs = clock.resume(room);
+      io.to(room.code).emit("gameResumed", { pausedMs });
+      for (const fn of room.deferredWhilePaused.splice(0)) fn();
     });
 
     // ---------------------------------------------------------- leave/disconnect
@@ -215,6 +345,8 @@ module.exports = function registerHandlers(io) {
       if (!player) return;
       const wasAdmin = player.isAdmin;
       room.players.delete(socket.id);
+      phases.handleFinalDeparture(room, player.id);
+      phases.handleMinigameDeparture(room, player.id);
       if (viaLeave) {
         socket.leave(room.code);
         socket.roomCode = null;

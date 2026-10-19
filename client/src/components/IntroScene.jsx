@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import gameClock from "../game/gameClock";
 
 const INTRO_BASE = "/assets/videos/intro";
 
@@ -7,6 +8,20 @@ export default function IntroScene({ players, onFinished }) {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(null);
   const hasRunRef = useRef(false);
   const introAudioRef = useRef(null);
+  const aliveRef = useRef(true); // false once unmounted (e.g. the admin skipped the intro)
+
+  // The intro soundtrack is a detached Audio() (not in the DOM), so the admin
+  // pause can't find it there — follow the game clock directly.
+  useEffect(
+    () =>
+      gameClock.subscribe((isPaused) => {
+        const audio = introAudioRef.current;
+        if (!audio) return;
+        if (isPaused) audio.pause();
+        else if (audio.currentTime > 0 && !audio.ended) audio.play().catch(() => {});
+      }),
+    []
+  );
   const [revealMs, setRevealMs] = useState(3000);
   const [revealKey, setRevealKey] = useState(0);
   const fadeTimeoutRef = useRef(null);
@@ -90,6 +105,7 @@ export default function IntroScene({ players, onFinished }) {
 
       // 1. intro.mp4 + intro.mp3
       await playVideo(`${INTRO_BASE}/intro.mp4`, { withAudio: true });
+      if (!aliveRef.current) return;
 
       // 2. Reveal for each player: player_SLOT.mp4 + scene_SLOT.mp4 (SLOT = characterSlot 1..8)
       for (let i = 0; i < usedPlayers.length; i++) {
@@ -108,8 +124,10 @@ export default function IntroScene({ players, onFinished }) {
             setCurrentPlayerIndex(i);
           },
         });
+        if (!aliveRef.current) return;
         setCurrentPlayerIndex(null);
         await playVideo(`${INTRO_BASE}/scene_${slot}.mp4`);
+        if (!aliveRef.current) return;
       }
 
       // 3. end.mp4
@@ -119,11 +137,12 @@ export default function IntroScene({ players, onFinished }) {
           const fadeMs = 10000;
           const actualFadeMs = Math.min(fadeMs, Math.max(0, durationMs));
           const startFadeInMs = Math.max(0, durationMs - actualFadeMs);
-          if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
-          fadeTimeoutRef.current = setTimeout(() => fadeOutIntroAudio(actualFadeMs), startFadeInMs);
+          if (fadeTimeoutRef.current) gameClock.clearTimeout(fadeTimeoutRef.current);
+          fadeTimeoutRef.current = gameClock.setTimeout(() => fadeOutIntroAudio(actualFadeMs), startFadeInMs);
         },
       });
 
+      if (!aliveRef.current) return;
       setCurrentPlayerIndex(null);
       // зупинити intro.mp3 після завершення інтро
       if (introAudioRef.current) {
@@ -140,9 +159,15 @@ export default function IntroScene({ players, onFinished }) {
   }, []);
 
   useEffect(() => {
+    aliveRef.current = true;
     return () => {
-      if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+      aliveRef.current = false;
+      if (fadeTimeoutRef.current) gameClock.clearTimeout(fadeTimeoutRef.current);
       if (fadeRafRef.current) cancelAnimationFrame(fadeRafRef.current);
+      // skipped: the intro music must not keep playing under the rules video
+      try {
+        introAudioRef.current?.pause();
+      } catch {}
     };
   }, []);
 

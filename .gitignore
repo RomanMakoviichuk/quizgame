@@ -22,3 +22,11 @@ yarn-error.log*
 
 # codebase-memory-mcp index (delete this line to share the graph with teammates)
 .codebase-memory/
+
+# question database — managed at runtime via /admin, seeded on first boot
+/server/content/content.json
+/server/content/content.json.*
+/server/content/*.corrupt-*
+
+# runtime state: which "РАУНД N" clip played last (server/media.js)
+/server/data/round-announce.json

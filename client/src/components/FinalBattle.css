@@ -1,0 +1,1470 @@
+@import url("https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap");
+
+/* One type system for the final, credits, results and the phone controller. */
+:root {
+  --fb-display: "Unbounded", "Oswald", system-ui, sans-serif;
+  --fb-text: "Manrope", system-ui, sans-serif;
+}
+
+/* =====================================================================
+   Фінальна гонка — зала з тінню (display) + пульт (mobile) + титри.
+   Background: /assets/images/FinalBattle/background.webp. Everything else
+   (torches, dust, strips, the shadow) is CSS on top of it.
+   ===================================================================== */
+
+.players-panel-hidden {
+  display: none !important;
+}
+
+.fb-scene {
+  --fb-gold: #ffd76a;
+  --fb-ember: #ff7a3c;
+  --fb-blood: #b3261e;
+  --fb-ink: #f3ead9;
+  --fb-ghost: #8ff0ea;
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  overflow: hidden;
+  background: #050403;
+  color: var(--fb-ink);
+  font-family: var(--fb-text);
+}
+
+.fb-world {
+  position: absolute;
+  inset: 0;
+}
+.fb-world[data-shake="1"] {
+  animation: fb-shake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes fb-shake {
+  10%, 90% { transform: translate(-2px, 1px); }
+  20%, 80% { transform: translate(4px, -2px); }
+  30%, 50%, 70% { transform: translate(-6px, 2px); }
+  40%, 60% { transform: translate(6px, -1px); }
+}
+
+/* ------------------------------------------------------------- the hall */
+
+.fb-bg {
+  position: absolute;
+  inset: -2%;
+  background-size: cover;
+  background-position: 60% 50%;
+  filter: saturate(0.95) brightness(0.92);
+  animation: fb-breathe 18s ease-in-out infinite alternate;
+}
+@keyframes fb-breathe {
+  from { transform: scale(1); }
+  to { transform: scale(1.025) translateX(-0.4%); }
+}
+
+/* living torch light over the three sconces of the background */
+.fb-torches span {
+  position: absolute;
+  top: 47%;
+  width: 22vw;
+  height: 34vw;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center, rgba(255, 170, 70, 0.38), rgba(255, 120, 40, 0.12) 35%, transparent 65%);
+  mix-blend-mode: screen;
+  animation: fb-torch 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes fb-torch {
+  0%, 100% { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
+  20% { opacity: 1; transform: translate(-50%, -51%) scale(1.04); }
+  45% { opacity: 0.7; }
+  60% { opacity: 0.95; transform: translate(-50%, -49%) scale(0.98); }
+  80% { opacity: 0.78; }
+}
+
+/* the lit doorway breathes; it blazes when someone escapes */
+.fb-doorglow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -6%;
+  width: 22%;
+  background: radial-gradient(ellipse at 85% 55%, rgba(255, 214, 120, 0.55), rgba(255, 170, 60, 0.18) 40%, transparent 70%);
+  mix-blend-mode: screen;
+  animation: fb-door 4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes fb-door {
+  50% { opacity: 0.65; }
+}
+.fb-ending-escaped .fb-doorglow {
+  width: 60%;
+  animation: fb-door-blaze 2.5s ease-out forwards;
+}
+@keyframes fb-door-blaze {
+  to { opacity: 1; filter: brightness(1.6); }
+}
+
+/* dust in the light beams */
+.fb-dust span {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 228, 170, 0.75);
+  box-shadow: 0 0 6px rgba(255, 200, 120, 0.8);
+  opacity: 0;
+  animation: fb-dust linear infinite;
+  pointer-events: none;
+}
+@keyframes fb-dust {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15% { opacity: 0.7; }
+  85% { opacity: 0.5; }
+  100% { transform: translate(6vw, -12vh); opacity: 0; }
+}
+
+/* ------------------------------------------------------------- strips */
+
+.fb-strips {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.fb-strip {
+  position: absolute;
+  top: 27%;
+  bottom: 6%;
+  border-left: 1px dashed rgba(243, 234, 217, 0.16);
+  background: linear-gradient(transparent, rgba(255, 255, 255, 0.015) 50%, transparent);
+  transition: background 0.8s ease;
+}
+.fb-strip:nth-child(odd) {
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.08) 50%, transparent);
+}
+.fb-strip-major {
+  border-left: 2px dashed rgba(243, 234, 217, 0.35);
+}
+.fb-strip em {
+  position: absolute;
+  bottom: -3.4vh;
+  left: 50%;
+  transform: translateX(-50%);
+  font-style: normal;
+  font-family: var(--fb-display);
+  font-size: clamp(0.8rem, 1.3vw, 1.6rem);
+  letter-spacing: 0.08em;
+  color: rgba(243, 234, 217, 0.75);
+  text-shadow: 0 0 6px #000;
+  white-space: nowrap;
+}
+.fb-strip-exit {
+  border-left: 2px solid rgba(255, 215, 106, 0.7);
+  background: linear-gradient(90deg, rgba(255, 215, 106, 0.2), rgba(255, 215, 106, 0.05));
+  box-shadow: inset 0 0 3vw rgba(255, 200, 90, 0.35);
+}
+.fb-strip-exit em {
+  color: var(--fb-gold);
+  text-shadow: 0 0 10px rgba(255, 200, 90, 0.9);
+}
+/* ------------------------------------------------------------- racers */
+
+.fb-racer {
+  position: absolute;
+  width: var(--sprite);
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left 1.15s cubic-bezier(0.5, 0.05, 0.25, 1) 0.35s, top 0.6s ease 0.35s;
+}
+.fb-racer-sprite {
+  position: relative;
+  width: var(--sprite);
+  height: var(--sprite);
+  object-fit: contain;
+  filter: drop-shadow(0 0 0.35vh rgba(0, 0, 0, 0.9)) drop-shadow(0 0.8vh 0.6vh rgba(0, 0, 0, 0.6));
+}
+.fb-racer-floor {
+  position: absolute;
+  bottom: 0.4vh;
+  width: 70%;
+  height: 1.2vh;
+  border-radius: 50%;
+  background: radial-gradient(rgba(0, 0, 0, 0.7), transparent 70%);
+}
+.fb-racer-name {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translate(-50%, -0.6vh);
+  max-width: calc(var(--sprite) * 1.3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.1em 0.6em;
+  border-radius: 999px;
+  font-size: clamp(0.65rem, 1vw, 1.15rem);
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(10, 7, 4, 0.78);
+  border: 1px solid rgba(255, 215, 106, 0.35);
+  box-shadow: 0 0.3vh 1vh rgba(0, 0, 0, 0.6);
+}
+
+.fb-racer-enter {
+  animation: fb-enter 0.9s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+@keyframes fb-enter {
+  from { opacity: 0; transform: translate(-50%, -10%) scale(0.6); filter: blur(6px); }
+}
+
+.fb-racer-moved .fb-racer-sprite {
+  animation: fb-hop 0.38s ease-in-out 0.35s 3;
+}
+@keyframes fb-hop {
+  50% { transform: translateY(-16%) rotate(-5deg); }
+}
+.fb-racer-moved::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  right: 55%;
+  width: 6vw;
+  height: 50%;
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 106, 0.28));
+  filter: blur(8px);
+  opacity: 0;
+  animation: fb-trail 1.4s ease-out 0.35s;
+  pointer-events: none;
+}
+@keyframes fb-trail {
+  20% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.fb-racer-ghost .fb-racer-sprite {
+  opacity: 0.8;
+  filter: drop-shadow(0 0 1.4vh rgba(143, 240, 234, 0.9)) brightness(1.1);
+  animation: fb-float 3.4s ease-in-out infinite;
+}
+.fb-racer-ghost.fb-racer-moved .fb-racer-sprite {
+  animation: fb-float 3.4s ease-in-out infinite, fb-hop 0.38s ease-in-out 0.35s 3;
+}
+@keyframes fb-float {
+  50% { transform: translateY(-9%); }
+}
+.fb-racer-ghost .fb-racer-name {
+  border-color: rgba(143, 240, 234, 0.6);
+  color: #d9fbf8;
+}
+
+/* swallowed this step: the moment the shadow edge arrives (~1.9s into the
+   reveal) a burst of black closes over the doll and it is gone — no half-way state */
+.fb-racer-dying .fb-racer-sprite,
+.fb-racer-dying .fb-racer-name,
+.fb-racer-dying .fb-racer-floor {
+  animation: fb-swallowed 0.35s ease-in 2.05s both;
+}
+@keyframes fb-swallowed {
+  0% { opacity: 1; filter: brightness(1.6) drop-shadow(0 0 2vh var(--fb-blood)); }
+  100% { opacity: 0; filter: brightness(0); transform: scale(0.85); }
+}
+.fb-racer-swallow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: calc(var(--sprite) * 1.7);
+  height: calc(var(--sprite) * 1.7);
+  border-radius: 50%;
+  background: radial-gradient(circle, #000 0 45%, rgba(0, 0, 0, 0.85) 60%, transparent 72%);
+  filter: blur(4px);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  animation: fb-swallow 0.9s cubic-bezier(0.3, 0, 0.2, 1) 1.9s forwards;
+  pointer-events: none;
+}
+@keyframes fb-swallow {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  30% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0; }
+}
+.fb-racer-gone {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.fb-racer-escaped .fb-racer-sprite {
+  filter: drop-shadow(0 0 2.6vh rgba(255, 215, 106, 0.95)) brightness(1.25);
+}
+
+.fb-move-badge {
+  position: absolute;
+  top: -1.2em;
+  z-index: 2;
+  font-family: var(--fb-display);
+  font-size: clamp(1.4rem, 2.8vw, 3.2rem);
+  text-shadow: 0 0 0.3em rgba(0, 0, 0, 0.95), 0 0 0.6em currentColor;
+  animation: fb-badge 2.8s ease-out 0.4s both;
+}
+.fb-rank-1 { color: var(--fb-gold); }
+.fb-rank-2 { color: #eaeaea; }
+.fb-rank-3 { color: #e3a46e; }
+@keyframes fb-badge {
+  0% { transform: translateY(50%) scale(0.4); opacity: 0; }
+  18% { transform: none; opacity: 1; }
+  75% { opacity: 1; }
+  100% { transform: translateY(-80%); opacity: 0; }
+}
+
+/* "already answered" during the question: a small gold-stitched patch */
+.fb-answered {
+  position: absolute;
+  top: -0.2em;
+  right: -0.5em;
+  z-index: 2;
+  width: clamp(22px, 2.1vw, 38px);
+  height: clamp(22px, 2.1vw, 38px);
+  animation: fb-pop 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes fb-pop {
+  from { transform: scale(0) rotate(-30deg); }
+}
+
+/* ------------------------------------------------------------- the shadow */
+
+.fb-shadow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 60;
+  background: linear-gradient(90deg, #000 0%, #030102 70%, #070203);
+  box-shadow: 0 0 6vw 2vw rgba(0, 0, 0, 0.9);
+  transition: width 0.9s cubic-bezier(0.55, 0, 0.45, 1) 1.5s;
+  pointer-events: none;
+}
+.fb-stage-intro .fb-shadow {
+  transition-delay: 0s;
+}
+/* the red killing strip: the shadow's leading edge, exactly one strip wide */
+.fb-shadow-kill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  background:
+    linear-gradient(90deg, rgba(120, 12, 8, 0.78), rgba(205, 42, 30, 0.5) 50%, rgba(255, 85, 55, 0.32)),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 7px);
+  border-left: 1px solid rgba(255, 96, 70, 0.35);
+  border-right: 2px solid rgba(255, 96, 70, 0.9);
+  box-shadow: 0 0 2.4vw 0.4vw rgba(200, 40, 28, 0.55), inset -0.6vw 0 1.4vw rgba(255, 90, 60, 0.35);
+  animation: fb-kill 1.4s ease-in-out infinite;
+}
+@keyframes fb-kill {
+  50% { box-shadow: 0 0 3.4vw 0.8vw rgba(220, 50, 32, 0.75), inset -0.6vw 0 1.8vw rgba(255, 110, 70, 0.5); }
+}
+.fb-shadow-edge {
+  position: absolute;
+  top: -5%;
+  bottom: -5%;
+  z-index: 1;
+  right: -0.4vw;
+  width: 2vw;
+}
+.fb-shadow-edge i {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 10%, #000 0 35%, transparent 62%),
+    radial-gradient(circle at 35% 30%, #000 0 30%, transparent 60%),
+    radial-gradient(circle at 15% 52%, #000 0 36%, transparent 64%),
+    radial-gradient(circle at 40% 74%, #000 0 30%, transparent 58%),
+    radial-gradient(circle at 18% 94%, #000 0 34%, transparent 62%);
+  background-size: 100% 24%;
+  filter: blur(5px);
+  animation: fb-smoke 4.5s ease-in-out infinite alternate;
+}
+.fb-shadow-edge i:nth-child(2) {
+  animation-duration: 6.5s;
+  animation-direction: alternate-reverse;
+  background-size: 100% 31%;
+  opacity: 0.85;
+}
+.fb-shadow-edge i:nth-child(3) {
+  background:
+    linear-gradient(90deg, transparent 0%, rgba(179, 38, 30, 0.45) 45%, transparent 100%);
+  filter: blur(10px);
+  mix-blend-mode: screen;
+  animation: fb-ember-line 2.2s ease-in-out infinite;
+}
+@keyframes fb-smoke {
+  0% { transform: translateX(-25%) scaleX(0.9); background-position: 0 0; }
+  100% { transform: translateX(15%) scaleX(1.15); background-position: 0 60%; }
+}
+@keyframes fb-ember-line {
+  50% { opacity: 0.35; }
+}
+/* the thing that waits inside the shadow (ShadowLurker) — clipped to the
+   black body of the shadow, peeking out at its edge */
+.fb-shadow-lurk {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.fb-lurker {
+  position: absolute;
+  right: -18vh; /* half of it stays hidden past the edge: it peeks out */
+  bottom: 4vh;
+  height: 72vh;
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  mix-blend-mode: screen; /* the clip's black background melts into the shadow */
+  -webkit-mask-image: radial-gradient(ellipse 55% 52% at 42% 45%, #000 50%, transparent 100%);
+  mask-image: radial-gradient(ellipse 55% 52% at 42% 45%, #000 50%, transparent 100%);
+  opacity: 0;
+  filter: blur(10px) brightness(0.35) contrast(1.2);
+  transform: translateX(-14%) scale(0.92);
+  transition:
+    opacity 1.6s ease,
+    filter 1.8s ease,
+    transform 2.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.fb-lurker-shown {
+  opacity: 0.96;
+  filter: blur(0) brightness(1) contrast(1.05);
+  transform: none;
+}
+
+.fb-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 61;
+  background: radial-gradient(ellipse at 60% 50%, transparent 55%, rgba(0, 0, 0, 0.65));
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------- question panel */
+
+.fb-panel {
+  position: absolute;
+  z-index: 80;
+  top: 1.6%;
+  left: 50%;
+  width: min(80vw, 1450px);
+  padding: 1vh 1.8vw 1.3vh;
+  border-radius: 1.2vw;
+  text-align: center;
+  background:
+    linear-gradient(rgba(18, 12, 8, 0.93), rgba(10, 7, 5, 0.9));
+  border: 1px solid rgba(255, 215, 106, 0.35);
+  box-shadow: 0 1.5vh 5vh rgba(0, 0, 0, 0.75), inset 0 0 3vw rgba(255, 160, 60, 0.06);
+  transition: transform 0.55s cubic-bezier(0.5, 0, 0.2, 1), opacity 0.45s ease, filter 0.45s ease;
+}
+.fb-panel-in {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+.fb-panel-out {
+  transform: translate(-50%, -120%) scale(0.96);
+  opacity: 0;
+  filter: blur(4px);
+  pointer-events: none;
+}
+.fb-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--fb-display);
+  font-size: clamp(1rem, 1.6vw, 2rem);
+  letter-spacing: 0.14em;
+  color: rgba(243, 234, 217, 0.7);
+}
+.fb-timer {
+  min-width: 2em;
+  font-size: 1.7em;
+  color: var(--fb-gold);
+  text-shadow: 0 0 10px rgba(255, 200, 90, 0.6);
+}
+.fb-timer-low {
+  color: #ff5a4d;
+  text-shadow: 0 0 12px rgba(255, 60, 40, 0.9);
+  animation: fb-pulse 0.5s ease-in-out infinite alternate;
+}
+@keyframes fb-pulse {
+  to { transform: scale(1.18); }
+}
+.fb-question {
+  margin: 0 0 1vh;
+  font-size: clamp(1.2rem, 2.3vw, 2.8rem);
+  line-height: 1.2;
+  font-weight: 700;
+  text-shadow: 0 2px 10px #000;
+}
+.fb-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8vh 1vw;
+}
+.fb-options-row {
+  grid-template-columns: repeat(4, 1fr);
+}
+.fb-option {
+  padding: 0.7vh 0.9vw;
+  border-radius: 0.7vw;
+  text-align: left;
+  font-size: clamp(0.95rem, 1.55vw, 1.9rem);
+  background: rgba(243, 234, 217, 0.07);
+  border: 1px solid rgba(243, 234, 217, 0.16);
+}
+.fb-option b {
+  display: inline-block;
+  width: 1.6em;
+  color: var(--fb-gold);
+}
+.fb-timebar {
+  margin-top: 1vh;
+  height: 0.7vh;
+  border-radius: 1vh;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.fb-timebar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--fb-blood), var(--fb-ember), var(--fb-gold));
+  transform-origin: left;
+  animation: fb-shrink linear both;
+}
+@keyframes fb-shrink {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* small, out-of-the-way reminder of the right answer while racers move */
+.fb-correct-chip {
+  position: absolute;
+  z-index: 80;
+  top: 2.5%;
+  left: 50%;
+  padding: 0.6vh 1.4vw;
+  border-radius: 999px;
+  font-size: clamp(0.9rem, 1.35vw, 1.6rem);
+  white-space: nowrap;
+  background: rgba(20, 50, 28, 0.85);
+  border: 1px solid rgba(157, 255, 191, 0.6);
+  box-shadow: 0 0 2vh rgba(157, 255, 191, 0.25);
+  animation: fb-chip 3.6s ease both;
+}
+.fb-correct-chip span {
+  opacity: 0.75;
+}
+.fb-correct-chip b {
+  color: #9dffbf;
+}
+@keyframes fb-chip {
+  0% { transform: translate(-50%, -150%); opacity: 0; }
+  12%, 70% { transform: translate(-50%, 0); opacity: 1; }
+  100% { transform: translate(-50%, -150%); opacity: 0; }
+}
+
+/* ------------------------------------------------------------- overlays */
+
+.fb-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  animation: fb-fade 0.6s ease-out both;
+}
+@keyframes fb-fade {
+  from { opacity: 0; }
+}
+.fb-overlay-title {
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.92) 80%);
+}
+.fb-overlay-title .fb-title {
+  animation: fb-zoom 4.2s ease-out both;
+}
+@keyframes fb-zoom {
+  from { transform: scale(0.8); filter: blur(8px); opacity: 0; }
+  25% { filter: none; opacity: 1; }
+  to { transform: scale(1.05); }
+}
+.fb-title {
+  font-size: clamp(2.5rem, 8vw, 8rem);
+  font-weight: 800;
+  line-height: 1.05;
+}
+.fb-subtitle {
+  margin-top: 1.5vh;
+  font-size: clamp(1rem, 2vw, 2.2rem);
+  letter-spacing: 0.06em;
+  color: #e9d6b4;
+  text-shadow: 0 2px 10px #000;
+}
+.fb-overlay-rules {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+.fb-rules {
+  max-width: min(70vw, 1200px);
+  padding: 3vh 3vw;
+  border-radius: 1.4vw;
+  text-align: left;
+  background: linear-gradient(rgba(22, 15, 10, 0.95), rgba(12, 8, 6, 0.95));
+  border: 2px dashed rgba(255, 215, 106, 0.45);
+  box-shadow: 0 0 6vh rgba(0, 0, 0, 0.85), inset 0 0 4vw rgba(255, 150, 60, 0.07);
+  animation: fb-rules-in 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+@keyframes fb-rules-in {
+  from { transform: translateY(4vh) scale(0.96); opacity: 0; }
+}
+.fb-rules h2 {
+  margin: 0 0 1.5vh;
+  font-family: var(--fb-display);
+  font-size: clamp(2rem, 4vw, 4.5rem);
+  letter-spacing: 0.1em;
+  color: #f6dfb6;
+}
+.fb-rules ul {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: clamp(1rem, 1.9vw, 2.1rem);
+  line-height: 1.55;
+}
+.fb-rules li {
+  animation: fb-rules-in 0.6s ease both;
+}
+.fb-rules li:nth-child(2) { animation-delay: 0.5s; }
+.fb-rules li:nth-child(3) { animation-delay: 1s; }
+.fb-rules li:nth-child(4) { animation-delay: 1.5s; }
+.fb-rules li:nth-child(5) { animation-delay: 2s; }
+.fb-rules b {
+  color: var(--fb-gold);
+}
+.fb-overlay-count {
+  background: rgba(0, 0, 0, 0.3);
+}
+.fb-count {
+  font-family: var(--fb-display);
+  font-size: clamp(8rem, 26vw, 24rem);
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 4vh var(--fb-blood), 0 0 1vh #000;
+  animation: fb-count 1s ease-out both;
+}
+@keyframes fb-count {
+  from { transform: scale(1.8); opacity: 0; }
+  30% { opacity: 1; }
+  to { transform: scale(0.9); opacity: 0.15; }
+}
+
+/* winner */
+.fb-overlay-win {
+  background: #050403;
+  animation: fb-fade 1s ease-out 1.6s both;
+}
+/* the clean hall (background.webp) behind the winner card */
+.fb-win-bg {
+  position: absolute;
+  inset: -2%;
+  background-size: cover;
+  background-position: 60% 50%;
+  animation: fb-breathe 18s ease-in-out infinite alternate;
+}
+/* warm light from the doorway + soft vignette, so the card reads well */
+.fb-win-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 48%, rgba(255, 200, 110, 0.22), transparent 45%),
+    radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0, 0, 0, 0.72) 95%);
+}
+.fb-win-rays {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 160vmax;
+  height: 160vmax;
+  margin: -80vmax 0 0 -80vmax;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 215, 106, 0.16) 0deg 6deg, transparent 6deg 18deg);
+  mask-image: radial-gradient(circle, #000 0%, transparent 55%);
+  -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 55%);
+  animation: fb-spin 30s linear infinite;
+}
+@keyframes fb-spin {
+  to { transform: rotate(360deg); }
+}
+.fb-win-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.fb-win-kicker {
+  margin: 0 0 1vh;
+  font-family: var(--fb-display);
+  font-size: clamp(1.4rem, 3vw, 3.4rem);
+  letter-spacing: 0.28em;
+  color: var(--fb-gold);
+  text-shadow: 0 0 1.5vh rgba(255, 200, 90, 0.8);
+  animation: fb-rules-in 0.8s ease 2s both;
+}
+.fb-win-medal {
+  display: grid;
+  place-items: center;
+  width: min(34vh, 360px);
+  height: min(34vh, 360px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 235, 180, 0.35), rgba(255, 180, 70, 0.12) 55%, transparent 70%);
+  box-shadow: 0 0 0 0.4vh rgba(255, 215, 106, 0.6), 0 0 8vh rgba(255, 200, 90, 0.55);
+  animation: fb-medal 1.1s cubic-bezier(0.2, 1.5, 0.4, 1) 1.9s both;
+}
+@keyframes fb-medal {
+  from { transform: scale(0) rotate(-30deg); opacity: 0; }
+}
+.fb-win-sprite {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 3vh rgba(255, 230, 160, 0.95));
+  animation: fb-float 3s ease-in-out infinite;
+}
+.fb-win-name {
+  margin-top: 2vh;
+  font-size: clamp(2.5rem, 7vw, 7rem);
+  font-weight: 800;
+  animation: fb-rules-in 0.8s ease 2.5s both;
+}
+.fb-overlay-win .fb-subtitle {
+  animation: fb-rules-in 0.8s ease 3s both;
+}
+.fb-confetti span {
+  position: absolute;
+  top: -4vh;
+  width: 0.7vw;
+  height: 1.4vw;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation: fb-confetti linear infinite both;
+}
+@keyframes fb-confetti {
+  from { top: -4vh; }
+  to { top: 108vh; margin-left: 6vw; rotate: 720deg; }
+}
+
+.fb-overlay-lose {
+  background: radial-gradient(ellipse at center, rgba(80, 0, 0, 0.45), #000 75%);
+  animation: fb-fade 1.2s ease-out 1.8s both;
+}
+
+/* ============================================================= credits */
+
+.fb-credits {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  overflow: hidden;
+  background: #000;
+  color: var(--fb-ink, #f3ead9);
+  font-family: var(--fb-text);
+  animation: fb-fade 1.2s ease both;
+}
+.fb-credits-bg {
+  position: absolute;
+  inset: -4%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(6px) brightness(0.28) saturate(0.8);
+  animation: fb-breathe 30s ease-in-out infinite alternate;
+}
+.fb-credits-skip {
+  position: absolute;
+  z-index: 2;
+  right: 2vw;
+  bottom: 3vh;
+  padding: 0.5em 1.2em;
+  border-radius: 999px;
+  border: 1px solid rgba(243, 234, 217, 0.35);
+  background: rgba(0, 0, 0, 0.5);
+  color: #f3ead9;
+  font: inherit;
+  cursor: pointer;
+}
+.fb-credits-roll {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: min(70vw, 900px);
+  transform: translateX(-50%);
+  text-align: center;
+  animation: fb-roll var(--roll) linear forwards;
+}
+@keyframes fb-roll {
+  from { transform: translate(-50%, 0); }
+  to { transform: translate(-50%, calc(-100% - 100vh)); }
+}
+.fb-credits-title {
+  margin-bottom: 8vh;
+  font-size: clamp(2.4rem, 6vw, 6rem);
+  font-weight: 800;
+}
+.fb-credits-roll section {
+  margin: 0 0 7vh;
+}
+.fb-credits-roll h3 {
+  margin: 0 0 1.2vh;
+  font-family: var(--fb-display);
+  font-size: clamp(1.2rem, 2.2vw, 2.4rem);
+  letter-spacing: 0.16em;
+  color: var(--fb-gold, #ffd76a);
+}
+.fb-credits-roll p {
+  margin: 0.4vh 0;
+  font-size: clamp(1.1rem, 2vw, 2.2rem);
+}
+.fb-credits-big {
+  font-size: clamp(1.8rem, 4vw, 4.2rem) !important;
+  font-weight: 800;
+}
+.fb-credits-winner {
+  width: min(24vh, 260px);
+  height: min(24vh, 260px);
+  object-fit: contain;
+  filter: drop-shadow(0 0 3vh rgba(255, 215, 106, 0.85));
+}
+.fb-credits-cast {
+  display: grid;
+  gap: 1.2vh;
+}
+.fb-credits-castrow {
+  display: grid;
+  grid-template-columns: 6vh 1fr 1fr;
+  align-items: center;
+  gap: 1.5vw;
+  text-align: left;
+  font-size: clamp(1rem, 1.8vw, 2rem);
+}
+.fb-credits-castrow img {
+  width: 6vh;
+  height: 6vh;
+  object-fit: contain;
+}
+.fb-credits-castrow em {
+  font-style: normal;
+  opacity: 0.6;
+  font-size: 0.8em;
+}
+.fb-credits-end {
+  margin-top: 14vh !important;
+}
+
+/* ============================================================= phone */
+
+.fb-mobile {
+  position: relative;
+  z-index: 5;
+  margin: 12px 16px;
+  padding: 16px;
+  border-radius: 16px;
+  color: #efe6d6;
+  background: rgba(10, 8, 6, 0.9);
+  border: 1px solid rgba(255, 215, 106, 0.22);
+  font-family: var(--fb-text);
+}
+.fb-mobile-ghost {
+  border-color: rgba(143, 240, 234, 0.55);
+  box-shadow: 0 0 18px rgba(143, 240, 234, 0.25);
+}
+.fb-m-title {
+  font-family: var(--fb-display);
+  font-size: 2rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+.fb-m-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.fb-m-sprite {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+.fb-mobile-ghost .fb-m-sprite {
+  opacity: 0.8;
+  filter: drop-shadow(0 0 8px rgba(143, 240, 234, 0.9));
+}
+.fb-m-status {
+  font-family: var(--fb-display);
+  font-size: 1.6rem;
+  letter-spacing: 0.08em;
+}
+.fb-m-status-racing { color: #ffe1a8; }
+.fb-mobile-ghost .fb-m-status-racing { color: #8ff0ea; }
+.fb-m-status-consumed { color: #ff7a6e; }
+.fb-m-status-escaped { color: #9dffbf; }
+.fb-m-cell {
+  font-size: 0.95rem;
+  opacity: 0.85;
+}
+.fb-m-bar {
+  position: relative;
+  height: 14px;
+  margin: 14px 26px 6px 0;
+  border-radius: 7px;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.12) 0 6px, transparent 6px 10px);
+}
+.fb-m-bar-dark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 7px 0 0 7px;
+  background: linear-gradient(90deg, #000, #3a0d0a);
+  transition: width 1.2s ease;
+}
+.fb-m-bar-me {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  background: #ffd76a;
+  box-shadow: 0 0 8px #ffd76a;
+  transition: left 1.2s ease;
+}
+.fb-mobile-ghost .fb-m-bar-me {
+  background: #8ff0ea;
+  box-shadow: 0 0 8px #8ff0ea;
+}
+.fb-m-bar-exit {
+  position: absolute;
+  right: -26px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.fb-m-note {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+  text-align: center;
+}
+.fb-m-big {
+  margin: 18px 0 6px;
+  font-size: 1.15rem;
+  text-align: center;
+  line-height: 1.4;
+}
+.fb-m-qhead {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+  font-family: var(--fb-display);
+  font-size: 1.3rem;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+.fb-m-timer.low {
+  color: #ff6a5c;
+}
+.fb-m-question {
+  margin: 6px 0 12px;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+.fb-m-options {
+  display: grid;
+  gap: 10px;
+}
+.fb-m-option {
+  min-height: 52px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(243, 234, 217, 0.25);
+  background: rgba(243, 234, 217, 0.08);
+  color: inherit;
+  font: inherit;
+  font-size: 1.05rem;
+  text-align: left;
+}
+.fb-m-option b {
+  display: inline-block;
+  width: 1.6em;
+  color: #ffd76a;
+}
+.fb-m-option:disabled {
+  opacity: 0.45;
+}
+.fb-m-option.selected {
+  opacity: 1;
+  border-color: #ffd76a;
+  background: rgba(255, 215, 106, 0.16);
+}
+.fb-m-feedback {
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.fb-m-feedback.good { background: rgba(60, 170, 110, 0.3); color: #c9ffd8; }
+.fb-m-feedback.meh { background: rgba(255, 215, 106, 0.15); color: #ffe7a8; }
+.fb-m-feedback.bad { background: rgba(200, 50, 42, 0.25); color: #ffc2bb; }
+
+/* main-game ghost marks (players panel, phone quiz screen) */
+.player-sprite.player-sprite-ghost {
+  opacity: 0.75;
+  filter: drop-shadow(0 0 8px rgba(143, 240, 234, 0.85));
+}
+.ghost-banner {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 700;
+  color: #d9fbf8;
+  background: rgba(20, 60, 60, 0.6);
+  border: 1px solid rgba(143, 240, 234, 0.55);
+}
+
+/* ============================================================= results */
+
+.fr-screen {
+  --fr-gold: #ffd76a;
+  --fr-ink: #f3ead9;
+  position: fixed;
+  inset: 0;
+  z-index: 1550;
+  overflow-y: auto;
+  color: var(--fr-ink);
+  font-family: var(--fb-text);
+  background: #060403;
+  animation: fb-fade 0.8s ease both;
+}
+.fr-bg {
+  position: fixed;
+  inset: -4%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(10px) brightness(0.3) saturate(0.9);
+}
+.fr-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(255, 190, 90, 0.18), transparent 55%),
+    linear-gradient(transparent 55%, rgba(0, 0, 0, 0.75));
+}
+.fr-inner {
+  position: relative;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(16px, 3vh, 40px) 16px clamp(16px, 3vh, 32px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 2.2vh, 30px);
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.fr-head {
+  text-align: center;
+}
+.fr-kicker {
+  margin: 0;
+  font-family: var(--fb-display);
+  font-size: clamp(0.95rem, 1.6vw, 1.5rem);
+  letter-spacing: 0.28em;
+  color: var(--fr-gold);
+  opacity: 0.85;
+}
+.fr-title {
+  margin: 0.1em 0 0.15em;
+  font-size: clamp(2.2rem, 6vw, 5.2rem);
+  line-height: 1;
+}
+.fr-sub {
+  margin: 0;
+  font-size: clamp(0.95rem, 1.5vw, 1.35rem);
+  color: #e6d6b8;
+}
+.fr-sub b {
+  color: var(--fr-gold);
+}
+
+/* ---- podium: 2 · 1 · 3 */
+.fr-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: clamp(8px, 1.6vw, 24px);
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+}
+.fr-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fr-rise 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+.fr-place-1 { animation-delay: 0.35s; }
+.fr-place-2 { animation-delay: 0.15s; }
+.fr-place-3 { animation-delay: 0.55s; }
+@keyframes fr-rise {
+  from { transform: translateY(30px); opacity: 0; }
+}
+.fr-portrait {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(72px, min(12vw, 17vh), 170px);
+  aspect-ratio: 1;
+  margin-bottom: -14px;
+  z-index: 1;
+}
+.fr-place-1 .fr-portrait {
+  width: clamp(96px, min(16vw, 23vh), 230px);
+}
+.fr-place-1 .fr-portrait::before {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 215, 106, 0.45), transparent 65%);
+  animation: fb-door 3s ease-in-out infinite;
+}
+.fr-portrait img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.7));
+}
+.fr-place-1 .fr-portrait img {
+  filter: drop-shadow(0 0 18px rgba(255, 215, 106, 0.8));
+  animation: fb-float 3.2s ease-in-out infinite;
+}
+.fr-plinth {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: clamp(14px, 2.4vh, 22px) 10px clamp(8px, 1.4vh, 14px);
+  border-radius: 18px 18px 10px 10px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(40, 28, 18, 0.92), rgba(16, 11, 8, 0.92));
+  border: 1px solid rgba(255, 215, 106, 0.22);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(6px);
+}
+.fr-place-1 .fr-plinth {
+  min-height: clamp(110px, 18vh, 210px);
+  border-color: rgba(255, 215, 106, 0.6);
+  background: linear-gradient(180deg, rgba(74, 52, 22, 0.95), rgba(22, 15, 8, 0.95));
+}
+.fr-place-2 .fr-plinth { min-height: clamp(96px, 14vh, 170px); }
+.fr-place-3 .fr-plinth { min-height: clamp(84px, 11vh, 140px); }
+.fr-place {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-family: var(--fb-display);
+  font-size: 1.5rem;
+  color: #1a1206;
+  background: linear-gradient(145deg, #fff2c2, #d7a73f);
+  box-shadow: 0 0 14px rgba(255, 215, 106, 0.5);
+}
+.fr-place-2 .fr-place { background: linear-gradient(145deg, #ffffff, #a9b0b8); box-shadow: 0 0 12px rgba(220, 225, 235, 0.4); }
+.fr-place-3 .fr-place { background: linear-gradient(145deg, #ffd9b8, #b0703f); box-shadow: 0 0 12px rgba(230, 160, 100, 0.4); }
+.fr-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: clamp(1rem, 1.7vw, 1.5rem);
+}
+.fr-place-1 .fr-name {
+  font-size: clamp(1.15rem, 2.2vw, 1.9rem);
+  color: var(--fr-gold);
+}
+
+/* ---- chips + rating */
+.fr-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.fr-chip-free { color: #c9ffd8; background: rgba(60, 170, 110, 0.22); border-color: rgba(157, 255, 191, 0.45); }
+.fr-chip-hall { color: #ffe7a8; background: rgba(255, 215, 106, 0.12); border-color: rgba(255, 215, 106, 0.35); }
+.fr-chip-lost { color: #ffb3aa; background: rgba(179, 38, 30, 0.22); border-color: rgba(255, 120, 100, 0.35); }
+.fr-rating {
+  font-family: var(--fb-display);
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  color: rgba(243, 234, 217, 0.8);
+}
+.fr-lost-img {
+  filter: grayscale(1) brightness(0.55) drop-shadow(0 8px 10px rgba(0, 0, 0, 0.7)) !important;
+  opacity: 0.8;
+}
+
+/* ---- everyone else */
+.fr-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 10px;
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+}
+.fr-row {
+  display: grid;
+  grid-template-columns: 34px 52px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: clamp(4px, 0.8vh, 8px) 14px;
+  border-radius: 14px;
+  background: rgba(20, 14, 10, 0.82);
+  border: 1px solid rgba(243, 234, 217, 0.1);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
+  animation: fr-rise 0.6s ease both 0.7s;
+}
+.fr-row-place {
+  font-family: var(--fb-display);
+  font-size: 1.5rem;
+  color: rgba(243, 234, 217, 0.55);
+  text-align: center;
+}
+.fr-row img {
+  width: clamp(36px, 6vh, 52px);
+  height: clamp(36px, 6vh, 52px);
+  object-fit: contain;
+}
+.fr-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.fr-me .fr-plinth,
+.fr-row.fr-me {
+  outline: 2px solid rgba(143, 240, 234, 0.75);
+  outline-offset: 2px;
+}
+
+/* ---- footer */
+.fr-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  max-width: 980px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+.fr-legend {
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+.fr-exit {
+  padding: 12px 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 215, 106, 0.7);
+  background: linear-gradient(180deg, rgba(255, 215, 106, 0.18), rgba(255, 215, 106, 0.06));
+  color: var(--fr-gold);
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.fr-exit:hover {
+  background: linear-gradient(180deg, rgba(255, 215, 106, 0.32), rgba(255, 215, 106, 0.12));
+  box-shadow: 0 0 22px rgba(255, 215, 106, 0.35);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .fr-podium { gap: 6px; }
+  .fr-plinth { padding: 18px 4px 10px; border-radius: 14px 14px 8px 8px; }
+  .fr-chip { font-size: 0.68rem; padding: 2px 7px; }
+  .fr-row { grid-template-columns: 26px 42px minmax(0, 1fr) auto; }
+  .fr-row .fr-rating { display: none; }
+  .fr-row img { width: 42px; height: 42px; }
+  .fr-foot { justify-content: center; }
+  .fr-legend { display: none; }
+  .fr-exit { width: 100%; }
+}
+
+.fb-credits-warning {
+  margin-top: 3vh !important;
+  font-style: italic;
+  letter-spacing: 0.08em;
+  color: #ff9a8a;
+  text-shadow: 0 0 1.4vh rgba(179, 38, 30, 0.8);
+}
+
+/* after the reveal: who got it wrong (red stitched ✕, stays put) / right but
+   too slow (gold stitched ✓). Patches are SVG (StitchMark). */
+.fb-verdict {
+  position: absolute;
+  top: -1.5em;
+  left: 50%;
+  z-index: 3;
+  width: clamp(30px, 3vw, 56px);
+  height: clamp(30px, 3vw, 56px);
+  margin-left: calc(clamp(30px, 3vw, 56px) / -2);
+  font-size: clamp(0.9rem, 1.5vw, 1.7rem);
+  animation: fb-verdict 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) 0.3s both;
+}
+@keyframes fb-verdict {
+  from { transform: scale(0) rotate(-35deg); opacity: 0; }
+}
+.fb-verdict-wrong {
+  filter: drop-shadow(0 0 0.9vh rgba(255, 40, 20, 0.75)) drop-shadow(0 0.3vh 0.5vh rgba(0, 0, 0, 0.7));
+}
+.fb-verdict-right {
+  filter: drop-shadow(0 0 0.7vh rgba(255, 200, 80, 0.55)) drop-shadow(0 0.3vh 0.5vh rgba(0, 0, 0, 0.7));
+}
+.fb-racer:has(.fb-verdict-wrong) .fb-racer-sprite {
+  animation: fb-wrong-shake 0.4s ease-in-out 0.35s;
+}
+@keyframes fb-wrong-shake {
+  25% { transform: translateX(-6%) rotate(-3deg); }
+  75% { transform: translateX(6%) rotate(3deg); }
+}
+
+/* the stitched patch itself */
+.fb-stitch {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.fb-stitch-rim {
+  stroke: #e9d7b0;
+  stroke-width: 1.3;
+  stroke-dasharray: 2.6 2.2;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+.fb-stitch-shadow,
+.fb-stitch-thread,
+.fb-stitch-twist {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  /* sewn on stroke by stroke */
+  animation: fb-sew 0.35s ease-out forwards;
+  animation-delay: calc(0.55s + var(--i, 0) * 0.22s);
+}
+.fb-stitch-shadow {
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 6.2;
+  transform: translate(0.6px, 0.9px);
+}
+.fb-stitch-thread {
+  stroke-width: 4.6;
+}
+/* twisted-thread look: short light dashes over the thread */
+.fb-stitch-twist {
+  stroke-width: 1.4;
+  opacity: 0.75;
+  animation-name: fb-sew-twist;
+}
+@keyframes fb-sew {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes fb-sew-twist {
+  0% { stroke-dasharray: 30; stroke-dashoffset: 30; }
+  99% { stroke-dasharray: 30; stroke-dashoffset: 0; }
+  100% { stroke-dasharray: 1.6 2.2; stroke-dashoffset: 0; }
+}
+/* the small "answered" patch is already sewn when it pops in */
+.fb-answered .fb-stitch-shadow,
+.fb-answered .fb-stitch-thread,
+.fb-answered .fb-stitch-twist {
+  animation-delay: 0.1s;
+}
+
+/* results must fit a short TV/laptop viewport (no scrolling to reach the exit) */
+@media (max-height: 800px) and (min-width: 641px) {
+  .fr-inner {
+    gap: 1.2vh;
+    padding-top: 1.6vh;
+    padding-bottom: 1.6vh;
+  }
+  .fr-title {
+    font-size: clamp(1.8rem, 9vh, 4rem);
+  }
+  .fr-kicker,
+  .fr-sub {
+    font-size: clamp(0.8rem, 2.2vh, 1.1rem);
+  }
+  .fr-portrait {
+    width: clamp(60px, 13vh, 130px);
+  }
+  .fr-place-1 .fr-portrait {
+    width: clamp(80px, 18vh, 170px);
+  }
+  .fr-plinth {
+    padding: 1.6vh 8px 1vh;
+    gap: 3px;
+  }
+  .fr-place-1 .fr-plinth { min-height: 13vh; }
+  .fr-place-2 .fr-plinth { min-height: 11vh; }
+  .fr-place-3 .fr-plinth { min-height: 9vh; }
+  .fr-row {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+  .fr-row img {
+    width: 5vh;
+    height: 5vh;
+  }
+  .fr-exit {
+    padding: 8px 22px;
+  }
+}
+
+/* the very last line of the credits */
+.fb-credits-bravo {
+  margin-top: 12vh !important;
+}
+.fb-credits-bravo h3 {
+  letter-spacing: 0.06em !important;
+  text-transform: none;
+}
+.fb-credits-bravo .fb-credits-big {
+  color: var(--fb-gold, #ffd76a);
+  text-shadow: 0 0 2.4vh rgba(255, 200, 90, 0.7);
+  animation: fb-bravo 1.6s ease-in-out infinite alternate;
+}
+@keyframes fb-bravo {
+  to { text-shadow: 0 0 4vh rgba(255, 210, 110, 0.95); }
+}

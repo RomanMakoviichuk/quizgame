@@ -25,10 +25,11 @@ test("3 players, two choices -> winning side continues", () => {
   assert.deepEqual(o.eliminated, ["C"]);
 });
 
-test("3 players, all three choices -> full cycle, replay", () => {
+test("3 players, rock-paper-scissors cycle -> points: the most beaten choice is out", () => {
+  // rock beats scissors, scissors beat paper, paper beats rock -> 0 / 0 / 0 -> replay
   const o = resolveRoundOutcome({ A: "rock", B: "paper", C: "scissors" });
   assert.equal(o.replay, true);
-  assert.equal(o.winningChoice, null);
+  assert.deepEqual(o.scores, { rock: 0, paper: 0, scissors: 0 });
   assert.deepEqual(o.eliminated, []);
 });
 
@@ -39,10 +40,71 @@ test("4 players, two choices -> paper beats rock", () => {
   assert.deepEqual(o.eliminated.sort(), ["A", "B"]);
 });
 
-test("4 players, all three choices present -> replay", () => {
+test("one choice beats every other shown choice -> only it continues", () => {
+  // rock beats scissors and solder
+  const o = resolveRoundOutcome({ A: "rock", B: "scissors", C: "solder", D: "solder" });
+  assert.equal(o.winningChoice, "rock");
+  assert.deepEqual(o.continued, ["A"]);
+  assert.deepEqual(o.eliminated.sort(), ["B", "C", "D"]);
+});
+
+test("cycle with uneven numbers -> lowest points are out", () => {
+  // scissors x2 beat paper; paper beats rock; rock beats scissors x2
+  // rock: +2 -1 = 1 ; scissors: +1 -1 = 0 ; paper: +1 -2 = -1
   const o = resolveRoundOutcome({ A: "rock", B: "paper", C: "scissors", D: "scissors" });
+  assert.equal(o.replay, false);
+  assert.deepEqual(o.scores, { rock: 1, paper: -1, scissors: 0 });
+  assert.deepEqual(o.outChoices, ["paper"]);
+  assert.deepEqual(o.eliminated, ["B"]);
+  assert.deepEqual(o.continued.sort(), ["A", "C", "D"]);
+});
+
+test("all five shown once -> everyone level, replay", () => {
+  const o = resolveRoundOutcome({ A: "rock", B: "paper", C: "scissors", D: "solder", E: "yanukovych" });
   assert.equal(o.replay, true);
   assert.deepEqual(o.eliminated, []);
+});
+
+test("every option beats exactly two and loses to two, with a verb for each win", () => {
+  for (const c of rps.CHOICES) {
+    assert.equal(rps.BEATS[c].length, 2);
+    const losesTo = rps.CHOICES.filter((o) => rps.BEATS[o].includes(c));
+    assert.equal(losesTo.length, 2, c);
+    for (const v of rps.BEATS[c]) assert.ok(rps.VERBS[`${c}>${v}`], `${c}>${v}`);
+  }
+  assert.equal(Object.keys(rps.VERBS).length, 10);
+});
+
+test("the user's rule table", () => {
+  const win = (a, b) => resolveRoundOutcome({ A: a, B: b }).winningChoice;
+  assert.equal(win("scissors", "paper"), "scissors");
+  assert.equal(win("paper", "rock"), "paper");
+  assert.equal(win("rock", "solder"), "rock");
+  assert.equal(win("solder", "yanukovych"), "solder");
+  assert.equal(win("yanukovych", "scissors"), "yanukovych");
+  assert.equal(win("scissors", "solder"), "scissors");
+  assert.equal(win("solder", "paper"), "solder");
+  assert.equal(win("paper", "yanukovych"), "paper");
+  assert.equal(win("yanukovych", "rock"), "yanukovych");
+  assert.equal(win("rock", "scissors"), "rock");
+});
+
+test("an 8-player contest stays short", () => {
+  let total = 0;
+  const games = 2000;
+  for (let g = 0; g < games; g++) {
+    let alive = ["A", "B", "C", "D", "E", "F", "G", "H"];
+    let rounds = 0;
+    while (alive.length > 1 && rounds < 50) {
+      rounds++;
+      const o = resolveRoundOutcome(
+        Object.fromEntries(alive.map((id) => [id, rps.CHOICES[Math.floor(Math.random() * rps.CHOICES.length)]]))
+      );
+      if (!o.replay) alive = o.continued;
+    }
+    total += rounds;
+  }
+  assert.ok(total / games < 5, `average ${total / games} rounds`);
 });
 
 test("everyone chooses the same option -> replay", () => {

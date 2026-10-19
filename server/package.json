@@ -1,7 +1,7 @@
 {
   "name": "quiz-game-server",
   "version": "1.0.0",
-  "description": "Multiplayer quiz game server",
+  "description": "Хто є хто! — game server",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

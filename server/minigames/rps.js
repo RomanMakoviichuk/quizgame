@@ -1,15 +1,18 @@
 /**
- * "Камінь-Ножиці-Папір" — multiplayer elimination minigame.
+ * "Камінь-Ножиці-Папір-Паяльник-Янукович" — multiplayer elimination minigame.
  *
  * Trigger: 2+ players got the quiz question wrong (0 or 1 -> not this minigame).
  * Participants: only the players who answered the quiz question WRONG.
  * Life loss: exactly one player — the last one eliminated (the decisive round).
  *
- * Round outcome (`resolveRoundOutcome`, unit-tested):
- *   - 1 distinct choice   -> nobody out, replay
- *   - 3 distinct choices  -> full cycle, nobody out, replay
- *   - 2 distinct choices  -> only the winning side continues
+ * Five options, each beats two and loses to two (see BEATS / VERBS):
+ *   Ножиці ріжуть папір        Ножиці розрізають паяльник
+ *   Папір накриває камінь      Папір накриває Януковича
+ *   Камінь роздавлює паяльник  Камінь ламає ножиці
+ *   Паяльник пече Януковича    Паяльник пропалює папір
+ *   Янукович краде ножиці      Янукович викидає камінь
  *
+ * Round outcome (`resolveRoundOutcome`, unit-tested) — see below.
  * Server-authoritative: the server runs every round, hides choices until the
  * reveal, auto-picks for anyone who times out, and decides the loser.
  */
@@ -17,35 +20,80 @@ const crypto = require("crypto");
 
 const ID = "rps";
 
-const CHOICE_MS = Number(process.env.RPS_CHOICE_MS) || 8000; // pick window per round
-const REVEAL_MS = Number(process.env.RPS_REVEAL_MS) || 3500; // reveal animation
-// reading time for the on-screen instruction + a 3-2-1 countdown at the end
-const PREP_MS = Number(process.env.RPS_PREP_MS) || 11000;
+const CHOICE_MS = Number(process.env.RPS_CHOICE_MS) || 9000; // pick window per round
+const REVEAL_MS = Number(process.env.RPS_REVEAL_MS) || 9000; // flip + battle animation + time to read
+// reading time for the on-screen rules (5 fighters, 10 rules) + a 3-2-1 countdown at the end
+const PREP_MS = Number(process.env.RPS_PREP_MS) || 30000;
 const MAX_ROUNDS = 15; // safety valve against an endless tie loop
 const TOTAL_DURATION_MS = PREP_MS + MAX_ROUNDS * (CHOICE_MS + REVEAL_MS) + 8000;
 
-const CHOICES = ["rock", "paper", "scissors"];
-const BEATS = { rock: "scissors", scissors: "paper", paper: "rock" };
-const randChoice = () => CHOICES[crypto.randomInt(0, 3)];
+const CHOICES = ["rock", "scissors", "paper", "solder", "yanukovych"];
+/** choice -> the two choices it beats */
+const BEATS = {
+  rock: ["solder", "scissors"],
+  scissors: ["paper", "solder"],
+  paper: ["rock", "yanukovych"],
+  solder: ["yanukovych", "paper"],
+  yanukovych: ["scissors", "rock"],
+};
+/** "winner>loser" -> verb, for the reveal captions */
+const VERBS = {
+  "scissors>paper": "ріжуть",
+  "paper>rock": "накриває",
+  "rock>solder": "роздавлює",
+  "solder>yanukovych": "пече",
+  "yanukovych>scissors": "краде",
+  "scissors>solder": "розрізають",
+  "solder>paper": "пропалює",
+  "paper>yanukovych": "накриває",
+  "yanukovych>rock": "викидає",
+  "rock>scissors": "ламає",
+};
+const beats = (a, b) => BEATS[a].includes(b);
+const randChoice = () => CHOICES[crypto.randomInt(0, CHOICES.length)];
 
 /**
  * Pure. Given { playerId: choice } for the players still in, decide the round.
- * Returns { winningChoice, continued[], eliminated[], replay }.
+ * Returns { winningChoice, continued[], eliminated[], replay, scores, outChoices }.
+ *
+ *   everyone the same               -> replay
+ *   one choice beats every other    -> only that choice continues
+ *     shown choice (always the case with 2 different choices)
+ *   otherwise (a cycle)             -> points: +1 for every rival player your
+ *                                      choice beats, -1 for every one that beats
+ *                                      it; the lowest score is out. Everybody
+ *                                      level -> replay.
+ * `scores` is { choice: points } for the choices shown (null when not used).
  */
 function resolveRoundOutcome(choicesByPlayer) {
   const ids = Object.keys(choicesByPlayer);
   const distinct = [...new Set(ids.map((id) => choicesByPlayer[id]))];
+  const replay = { winningChoice: null, continued: [...ids], eliminated: [], replay: true, scores: null, outChoices: [] };
+  const split = (outChoices, winningChoice, scores) => ({
+    winningChoice,
+    continued: ids.filter((id) => !outChoices.includes(choicesByPlayer[id])),
+    eliminated: ids.filter((id) => outChoices.includes(choicesByPlayer[id])),
+    replay: false,
+    scores,
+    outChoices,
+  });
 
-  if (distinct.length !== 2) {
-    // 1 (all same) or 3 (full cycle) -> nobody eliminated, replay
-    return { winningChoice: null, continued: [...ids], eliminated: [], replay: true };
-  }
+  if (distinct.length < 2) return replay;
 
-  const [x, y] = distinct;
-  const winningChoice = BEATS[x] === y ? x : y;
-  const continued = ids.filter((id) => choicesByPlayer[id] === winningChoice);
-  const eliminated = ids.filter((id) => choicesByPlayer[id] !== winningChoice);
-  return { winningChoice, continued, eliminated, replay: false };
+  const top = distinct.find((c) => distinct.every((o) => o === c || beats(c, o)));
+  if (top) return split(distinct.filter((c) => c !== top), top, null);
+
+  const count = Object.fromEntries(distinct.map((c) => [c, ids.filter((id) => choicesByPlayer[id] === c).length]));
+  const scores = Object.fromEntries(
+    distinct.map((c) => [
+      c,
+      distinct.reduce((sum, o) => sum + (beats(c, o) ? count[o] : beats(o, c) ? -count[o] : 0), 0),
+    ])
+  );
+  const lowest = Math.min(...Object.values(scores));
+  const outChoices = distinct.filter((c) => scores[c] === lowest);
+  if (outChoices.length === distinct.length) return { ...replay, scores };
+  return split(outChoices, null, scores);
 }
 
 /**
@@ -101,7 +149,7 @@ function onSync(mg, nowTs, ctx) {
   const s = mg.rps;
   s.startAt = nowTs + PREP_MS;
   ctx.emitAll("rps:go", { startAt: s.startAt, serverNow: nowTs });
-  ctx.setTimer(() => startRound(mg, ctx), s.startAt - Date.now());
+  ctx.setTimer(() => startRound(mg, ctx), s.startAt - ctx.now());
 }
 
 function startRound(mg, ctx) {
@@ -110,7 +158,7 @@ function startRound(mg, ctx) {
   s.phase = "choosing";
   s.choices = {};
   s.choiceAt = {};
-  const deadlineAt = Date.now() + CHOICE_MS;
+  const deadlineAt = ctx.now() + CHOICE_MS;
   ctx.emitAll("rps:round", {
     round: s.round,
     alive: s.alive,
@@ -137,6 +185,7 @@ function onClientEvent(mg, playerId, name, data, ctx) {
     round: s.round,
     submitted: s.alive.filter((id) => s.choices[id]).length,
     total: s.alive.length,
+    lockedIds: s.alive.filter((id) => s.choices[id]),
   });
 
   if (s.alive.every((id) => s.choices[id])) finishChoosing(mg, ctx);
@@ -173,6 +222,8 @@ function finishChoosing(mg, ctx) {
     continued: outcome.continued,
     eliminated: outcome.eliminated,
     replay: outcome.replay,
+    scores: outcome.scores,
+    outChoices: outcome.outChoices,
   });
 
   const nextAlive = outcome.replay ? s.alive : outcome.continued;
@@ -217,6 +268,11 @@ function resolveLosers(mg) {
   return mg.rps.lifeLoser ? [mg.rps.lifeLoser] : [];
 }
 
+/** The last player standing — always exactly one once the contest is decided. */
+function resolveWinner(mg) {
+  return mg.rps?.winner || null;
+}
+
 function buildResults(mg) {
   const s = mg.rps;
   return {
@@ -238,6 +294,7 @@ module.exports = {
   MAX_ROUNDS,
   CHOICES,
   BEATS,
+  VERBS,
   resolveRoundOutcome,
   pickLifeLoser,
   buildContest,
@@ -245,5 +302,6 @@ module.exports = {
   onSync,
   onClientEvent,
   resolveLosers,
+  resolveWinner,
   buildResults,
 };

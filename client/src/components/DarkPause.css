@@ -1,0 +1,6 @@
+.dark-pause {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: #000;
+}

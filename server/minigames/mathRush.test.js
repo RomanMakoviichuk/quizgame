@@ -165,13 +165,18 @@ test("onClientEvent: server awards points, rejects stale/duplicate answers", () 
   assert.equal(mg.mr.A.score, 1);
   assert.equal(mg.mr.A.answered, 1);
 
-  // wrong answer -> no point, still advances
+  // wrong answer -> minus one point, still advances
   const q1 = mg.pool[1];
   const wrongChoice = (q1.correctIndex + 1) % 4;
   mr.onClientEvent(mg, "A", "mathRush:answer", { seq: 1, choice: wrongChoice }, ctx);
-  assert.equal(mg.mr.A.score, 1);
+  assert.equal(mg.mr.A.score, 0);
   assert.equal(mg.mr.A.wrong, 1);
   assert.equal(mg.mr.A.cursor, 2);
+
+  // the score may go below zero
+  const q2 = mg.pool[2];
+  mr.onClientEvent(mg, "A", "mathRush:answer", { seq: 2, choice: (q2.correctIndex + 1) % 4 }, ctx);
+  assert.equal(mg.mr.A.score, -1);
 });
 
 test("onClientEvent: answers outside the play window are rejected", () => {

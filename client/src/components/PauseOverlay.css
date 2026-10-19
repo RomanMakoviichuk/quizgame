@@ -1,0 +1,144 @@
+@import url("https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@500;600;700&display=swap");
+
+/* Freeze every CSS animation on the page while paused — except the pause UI. */
+html.game-paused body *:not(.pause-layer):not(.pause-layer *),
+html.game-paused body *:not(.pause-layer):not(.pause-layer *)::before,
+html.game-paused body *:not(.pause-layer):not(.pause-layer *)::after {
+  animation-play-state: paused !important;
+}
+
+/* ---- admin's floating pause button (phone) */
+.pause-fab {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: 12px;
+  z-index: 20000; /* above the cinematic intro (9999) */
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 215, 106, 0.6);
+  background: radial-gradient(circle at 35% 30%, rgba(80, 56, 24, 0.95), rgba(20, 14, 8, 0.95));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), 0 0 14px rgba(255, 215, 106, 0.25);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.pause-fab:active {
+  transform: scale(0.92);
+}
+.pause-fab-icon {
+  display: flex;
+  gap: 6px;
+}
+.pause-fab-icon i,
+.pause-glyph i {
+  display: block;
+  border-radius: 3px;
+  background: #ffd76a;
+}
+.pause-fab-icon i {
+  width: 6px;
+  height: 20px;
+}
+
+/* ---- pause screen (TV + phones) */
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20001;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: radial-gradient(ellipse at center, rgba(20, 12, 6, 0.72), rgba(0, 0, 0, 0.92));
+  backdrop-filter: blur(6px) grayscale(0.6);
+  -webkit-backdrop-filter: blur(6px) grayscale(0.6);
+  animation: pause-in 0.35s ease both;
+  font-family: "Manrope", system-ui, sans-serif;
+  color: #f3ead9;
+}
+@keyframes pause-in {
+  from { opacity: 0; }
+}
+.pause-card {
+  width: min(92vw, 560px);
+  padding: 28px 24px 24px;
+  border-radius: 22px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(40, 28, 16, 0.94), rgba(14, 10, 7, 0.94));
+  border: 1px solid rgba(255, 215, 106, 0.35);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  animation: pause-card 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes pause-card {
+  from { transform: translateY(16px) scale(0.96); opacity: 0; }
+}
+.pause-glyph {
+  display: inline-flex;
+  gap: 12px;
+  margin-bottom: 10px;
+  animation: pause-breathe 1.8s ease-in-out infinite;
+}
+.pause-glyph i {
+  width: 14px;
+  height: 46px;
+  box-shadow: 0 0 18px rgba(255, 215, 106, 0.6);
+}
+@keyframes pause-breathe {
+  50% { opacity: 0.45; transform: scale(0.96); }
+}
+.pause-title {
+  margin: 0;
+  font-family: "Unbounded", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(2rem, 7vw, 3.2rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffd76a;
+  text-shadow: 0 0 22px rgba(255, 200, 90, 0.45);
+}
+.pause-sub {
+  margin: 10px 0 18px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+.pause-wait {
+  margin: 0;
+  font-weight: 600;
+  opacity: 0.7;
+}
+.pause-resume {
+  width: 100%;
+  padding: 16px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 215, 106, 0.8);
+  background: linear-gradient(180deg, #ffd76a, #d9a53c);
+  color: #1d1306;
+  font-family: "Unbounded", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(255, 200, 90, 0.3);
+}
+.pause-resume:active {
+  transform: scale(0.98);
+}
+
+/* the TV version is bigger */
+.pause-overlay-tv .pause-card {
+  width: min(60vw, 900px);
+  padding: 5vh 4vw;
+}
+.pause-overlay-tv .pause-glyph i {
+  width: 2vw;
+  height: 9vh;
+}
+.pause-overlay-tv .pause-title {
+  font-size: clamp(3rem, 7vw, 7rem);
+}
+.pause-overlay-tv .pause-sub,
+.pause-overlay-tv .pause-wait {
+  font-size: clamp(1rem, 1.8vw, 2rem);
+}

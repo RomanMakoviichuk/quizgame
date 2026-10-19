@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap");
 .truefalse-aftermath-debug-badge {
   position: fixed;
   right: 12px;
@@ -48,145 +49,109 @@
   object-fit: cover;
 }
 
-.truefalse-aftermath-panel {
+
+/* results panel over aftermg.mp4 — same look as the True/False stage */
+.tfa-panel {
   position: relative;
   z-index: 2;
-  max-width: min(520px, 92vw);
-  max-height: min(78vh, 640px);
-  padding: 1.25rem 1.5rem 1rem;
-  border-radius: 14px;
-  background: rgba(8, 6, 14, 0.82);
-  border: 1px solid rgba(255, 80, 120, 0.35);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.65), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-  animation: truefalseAftermathIn 0.55s ease-out both;
-}
-
-@keyframes truefalseAftermathIn {
-  from {
-    opacity: 0;
-    transform: translateY(18px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.truefalse-aftermath-title {
-  margin: 0 0 0.25rem;
-  font-size: clamp(1.15rem, 2.8vw, 1.45rem);
-  font-weight: 700;
-  color: #ffe6ee;
+  width: min(760px, 94vw);
+  max-height: 84vh;
+  padding: 1.2rem 1.4rem 1.1rem;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(8, 12, 24, 0.9), rgba(5, 7, 12, 0.86));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 1px rgba(47, 139, 255, 0.25), 0 0 60px rgba(47, 139, 255, 0.18), 0 0 60px rgba(255, 74, 61, 0.14), 0 20px 50px rgba(0, 0, 0, 0.7);
+  color: #f2f5ff;
+  font-family: "Manrope", system-ui, sans-serif;
   text-align: center;
+  animation: tfa-in 0.55s cubic-bezier(.3, 1.3, .5, 1) both;
 }
-
-.truefalse-aftermath-sub {
-  margin: 0 0 1rem;
-  font-size: 0.88rem;
-  color: rgba(255, 220, 230, 0.75);
-  text-align: center;
-}
-
-.truefalse-aftermath-table-scroll {
-  overflow: auto;
-  max-height: 36vh;
-  margin-bottom: 1rem;
-}
-
-.truefalse-aftermath-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.95rem;
-  color: #f4f0f6;
-}
-
-.truefalse-aftermath-table th,
-.truefalse-aftermath-table td {
-  padding: 0.45rem 0.6rem;
-  text-align: left;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.truefalse-aftermath-table th {
-  color: rgba(255, 200, 215, 0.85);
-  font-weight: 600;
-}
-
-.truefalse-aftermath-table tbody tr.truefalse-aftermath-row-risk td {
-  color: #ffc9d9;
-}
-
-.truefalse-aftermath-scorecell {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: #7dffb3;
-}
-
-.truefalse-aftermath-lives {
+.tfa-brand {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding-top: 0.35rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.5em;
+  font-family: "Unbounded", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.4rem, 3vw, 2.4rem);
 }
+.tfa-t { color: #7cc0ff; text-shadow: 0 0 20px rgba(47, 139, 255, 0.9), 0 3px 0 #0b2d66; }
+.tfa-f { color: #ff9a7a; text-shadow: 0 0 20px rgba(255, 74, 61, 0.9), 0 3px 0 #6a1410; }
+.tfa-or { font-size: 0.5em; opacity: 0.8; font-family: "Manrope", sans-serif; }
+.tfa-sub { margin: 0.2rem 0 0.9rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; font-size: clamp(0.7rem, 1.1vw, 0.9rem); opacity: 0.7; }
 
-.truefalse-aftermath-life-row {
-  display: flex;
-  justify-content: space-between;
+.tfa-rows { display: flex; flex-direction: column; gap: 0.5rem; }
+.tfa-row {
+  display: grid;
+  grid-template-columns: 2.2rem clamp(2.6rem, 4.5vw, 3.6rem) 1fr 3rem auto;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 0.92rem;
+  gap: 0.7rem;
+  padding: 0.35rem 0.9rem 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  animation: tfa-row-in 0.45s ease-out both;
+  transition: border-color 0.4s, background 0.4s, box-shadow 0.4s;
+}
+.tfa-row.lead { border-color: rgba(255, 211, 107, 0.7); box-shadow: 0 0 22px rgba(255, 211, 107, 0.25); }
+.tfa-row.risk { border-color: rgba(255, 74, 61, 0.45); }
+.tfa-row.hit { background: rgba(255, 74, 61, 0.16); border-color: #ff4a3d; box-shadow: 0 0 26px rgba(255, 74, 61, 0.45); animation: tfa-shake 0.5s ease-in-out; }
+.tfa-rank { font-family: "Unbounded", sans-serif; font-weight: 800; font-size: 1.1rem; opacity: 0.85; }
+.tfa-sprite { width: 100%; height: auto; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6)); }
+.tfa-row.hit .tfa-sprite { filter: grayscale(0.8) drop-shadow(0 0 8px rgba(255, 74, 61, 0.8)); }
+.tfa-mid { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; text-align: left; }
+.tfa-name { font-weight: 800; font-size: clamp(0.95rem, 1.6vw, 1.2rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tfa-bar { height: 0.55rem; border-radius: 999px; background: rgba(0, 0, 0, 0.4); overflow: hidden; }
+.tfa-bar-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(90deg, #2f8bff, #5fe08c);
+  transition: transform 0.7s cubic-bezier(.3, 1.2, .5, 1);
+}
+.tfa-row.risk .tfa-bar-fill { background: linear-gradient(90deg, #ff4a3d, #ff9a7a); }
+.tfa-score { font-family: "Unbounded", sans-serif; font-weight: 800; font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: #5fe08c; }
+.tfa-row.risk .tfa-score { color: #ff9a7a; }
+.tfa-hearts { display: flex; gap: 0.15rem; font-size: 1.15rem; color: #ff4a6b; text-shadow: 0 0 8px rgba(255, 74, 107, 0.6); }
+.tfa-heart { display: inline-block; }
+.tfa-heart.lost { animation: tfa-heart-break 1s ease-in forwards; }
+.tfa-verdict {
+  margin: 0.9rem 0 0;
+  font-family: "Unbounded", sans-serif;
+  font-weight: 800;
+  font-size: clamp(1rem, 2vw, 1.5rem);
+  color: #ff6b5e;
+  text-shadow: 0 0 18px rgba(255, 74, 61, 0.6);
+  animation: tfa-pop 0.45s cubic-bezier(.3, 1.6, .5, 1);
 }
 
-.truefalse-aftermath-life-name {
-  color: rgba(255, 235, 240, 0.92);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+@keyframes tfa-in { from { opacity: 0; transform: translateY(24px) scale(0.95); } to { opacity: 1; transform: none; } }
+@keyframes tfa-row-in { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: none; } }
+@keyframes tfa-pop { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes tfa-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(10px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+@keyframes tfa-heart-break {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.6); color: #fff; }
+  60% { transform: scale(1.2) rotate(-20deg); opacity: 1; }
+  100% { transform: translateY(26px) rotate(-40deg) scale(0.6); opacity: 0; filter: grayscale(1); }
 }
 
-.truefalse-aftermath-hearts {
-  position: relative;
-  letter-spacing: 0.12em;
-  flex-shrink: 0;
+/* 7-8 players on a shorter screen: keep the whole table and the verdict inside */
+.truefalse-aftermath-root:has(.tfa-panel) { align-items: center; padding-top: 0; }
+@media (max-height: 820px) {
+  .tfa-panel { padding: 0.9rem 1.2rem 0.8rem; }
+  .tfa-brand { font-size: clamp(1.2rem, 2.4vw, 1.9rem); }
+  .tfa-sub { margin-bottom: 0.5rem; }
+  .tfa-rows { gap: 0.3rem; }
+  .tfa-row { padding-top: 0.2rem; padding-bottom: 0.2rem; grid-template-columns: 2rem 2.4rem 1fr 2.8rem auto; }
+  .tfa-verdict { margin-top: 0.5rem; }
 }
-
-.truefalse-aftermath-heart {
-  display: inline-block;
-  transition: opacity 0.35s ease, transform 0.35s ease;
-}
-
-.truefalse-aftermath-heart--lost {
-  animation: truefalseHeartLost 0.95s ease-in forwards;
-}
-
-@keyframes truefalseHeartLost {
-  0% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-  35% {
-    transform: scale(1.2) translateY(-4px);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.35) translateY(22px);
-  }
-}
-
-.truefalse-aftermath-life-row--hit .truefalse-aftermath-hearts {
-  animation: truefalseHeartRowShake 0.45s ease-out;
-}
-
-@keyframes truefalseHeartRowShake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-4px);
-  }
-  75% {
-    transform: translateX(4px);
-  }
-}
+.tfa-hearts { min-width: 3.6rem; justify-content: flex-end; }

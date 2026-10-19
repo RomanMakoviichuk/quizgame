@@ -1,0 +1,18 @@
+{
+  "_comment": "«Вгадай мелодію»: правильні назви для файлів з client/public/assets/minigames/Name That Tune/songs. Файл, якого тут немає, читається з імені «Виконавець - Назва.mp3». Ключ — точне ім'я файлу. Необов'язково: \"start\" (секунда, з якої грати), \"skip\": true (не використовувати).",
+  "files": {
+    "Britney Spears - Baby One More Time.mp3": { "artist": "Britney Spears", "title": "...Baby One More Time" },
+    "Eminem - please stand up.mp3": { "artist": "Eminem", "title": "The Real Slim Shady" },
+    "Gnarls Barkley Official - Crazy.mp3": { "artist": "Gnarls Barkley", "title": "Crazy" },
+    "Gorillaz - Feel Good Inc..mp3": { "artist": "Gorillaz", "title": "Feel Good Inc." },
+    "Imagine Dragons - Believer.mp3": { "artist": "Imagine Dragons", "title": "Believer" },
+    "KAZKA — ПЛАКАЛА.mp3": { "artist": "KAZKA", "title": "Плакала" },
+    "Linkin Park - Numb.mp3": { "artist": "Linkin Park", "title": "Numb" },
+    "Miley Cyrus - Flowers.mp3": { "artist": "Miley Cyrus", "title": "Flowers" },
+    "Nirvana - Smells Like Teen Spirit.mp3": { "artist": "Nirvana", "title": "Smells Like Teen Spirit" },
+    "Queen - Bohemian Raphsody.mp3": { "artist": "Queen", "title": "Bohemian Rhapsody" },
+    "System Of A Down - Toxicity.mp3": { "artist": "System Of A Down", "title": "Toxicity" },
+    "The Cranberries - Zombie.mp3": { "artist": "The Cranberries", "title": "Zombie" },
+    "The Prodigy - Breathe.mp3": { "artist": "The Prodigy", "title": "Breathe" }
+  }
+}

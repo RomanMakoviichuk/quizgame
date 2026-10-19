@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { io } from "socket.io-client";
 import HorrorTimer from "./components/HorrorTimer";
 import TypewriterSubtitles from "./components/TypewriterSubtitles";
@@ -6,9 +6,29 @@ import { GAME_PHASE, TOTAL_ROUNDS } from "./game/constants";
 import IntroScene from "./components/IntroScene";
 import FireTitle from "./components/FireTitle";
 import RoundIntro from "./components/RoundIntro";
+import CinemaClip from "./components/CinemaClip";
+
+// game difficulty (server: questions.normalizeGameDifficulty)
+const GAME_DIFFICULTIES = [
+  { id: "easy", icon: "🙂", label: "Легка", hint: "прості питання" },
+  { id: "medium", icon: "🤔", label: "Середня", hint: "доведеться подумати" },
+  { id: "hard", icon: "💀", label: "Складна", hint: "для знавців" },
+  { id: "mixed", icon: "📈", label: "Наростаюча", hint: "від легких до складних" },
+];
+const ROUND_GAP_MS = 2000; // rounds 2-9: a pause in the dark before the round announcement
+const MINIGAME_GAP_MS = 3000; // a pause in the dark between the round's results and its minigame
+const QUESTION_REVEAL_MS = 2500; // the question scene's video plays alone this long before the question appears
+import DarkPause from "./components/DarkPause";
+import RoundResults from "./components/RoundResults";
+import WelcomePlayers from "./components/WelcomePlayers";
 import MinigameHost from "./components/MinigameHost";
 import TrueFalseAftermath from "./components/TrueFalseAftermath";
+import FinalBattle, { FinalCredits, FinalResults } from "./components/FinalBattle";
+import { createFinalPreview } from "./components/finalBattlePreview";
 import "./App.css";
+import gameClock from "./game/gameClock";
+import PauseOverlay from "./components/PauseOverlay";
+import { playKillAndDeath, preloadDeathSounds } from "./game/deathSounds";
 
 const SOCKET_URL =
   process.env.REACT_APP_SERVER_URL ||
@@ -147,6 +167,27 @@ const readMinigameDebugFlag = () => {
  * Mounts the minigame with a mock results payload so you can tune the visuals
  * without playing a full game. Does not talk to the server.
  */
+/** Dev-only: ?finalPreview=display | ?finalPreview=mobile — scripted final race. */
+const readFinalPreview = () => {
+  if (typeof window === "undefined") return null;
+  const v = new URLSearchParams(window.location.search).get("finalPreview");
+  if (!v) return null;
+  return v === "mobile" ? "mobile" : "display";
+};
+
+function FinalBattlePreview({ mode }) {
+  const [pv] = useState(() => createFinalPreview());
+  useEffect(() => {
+    if (mode === "mobile") pv.startNow();
+    return () => pv.stop();
+  }, [pv, mode]);
+  return (
+    <div className={`app ${mode === "mobile" ? "app-game-mobile app-mobile-bg" : "app-game-with-video"}`}>
+      <FinalBattle uiMode={mode} socket={pv.socket} intro={pv.intro} myPlayerId="fp-3" />
+    </div>
+  );
+}
+
 const readMgPreview = () => {
   if (typeof window === "undefined") return null;
   const id = new URLSearchParams(window.location.search).get("mgPreview");
@@ -227,48 +268,77 @@ function App() {
   const [playerName, setPlayerName] = useState("");
   const [playerId, setPlayerId] = useState(null);
   const [players, setPlayers] = useState([]);
+  const ghostIdsRef = useRef(new Set());
   const [gameState, setGameState] = useState("waiting");
   const [question, setQuestion] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [answerResult, setAnswerResult] = useState(null);
+  /** Final race: intro payload ("finalBattle") and outcome ("gameFinished"). */
+  const [finalIntro, setFinalIntro] = useState(null);
+  const [finalResult, setFinalResult] = useState(null);
+  const [creditsDone, setCreditsDone] = useState(false);
+  /** Admin pause: server freezes its timers, every client freezes gameClock + media. */
+  const [paused, setPaused] = useState(false);
+  const [pausedBy, setPausedBy] = useState(null);
+  const [introStarted, setIntroStarted] = useState(false);
+  const pausedMediaRef = useRef([]);
   const [joinError, setJoinError] = useState("");
   const [connected, setConnected] = useState(false);
   const [isDisplay, setIsDisplay] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const DIFFICULTIES = [
-    { id: "easy", name: "Легкий" },
-    { id: "medium", name: "Середній" },
-    { id: "hard", name: "Важкий" },
-  ];
-  const [selectedDifficulty, setSelectedDifficulty] = useState("easy");
-  const [lobbyDifficulty, setLobbyDifficulty] = useState("easy");
-  const [showMenuDifficulty, setShowMenuDifficulty] = useState(false);
+  // Quiz categories come from the content store (managed in /admin).
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoriesError, setCategoriesError] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [selectedDifficulty, setSelectedDifficulty] = useState("mixed"); // chosen with the category
+  const [lobbyDifficulty, setLobbyDifficulty] = useState("");
+  const [lobbyCategoryName, setLobbyCategoryName] = useState("");
+  const [showMenuDifficulty, setShowMenuDifficulty] = useState(false); // category picker modal
   const [musicStarted, setMusicStarted] = useState(true);
   const [musicMuted, setMusicMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showIntroFade, setShowIntroFade] = useState(false);
   const [countdownNum, setCountdownNum] = useState(null);
   const [answerTimeLeft, setAnswerTimeLeft] = useState(15);
-  const [round1SubtitleActive, setRound1SubtitleActive] = useState(false);
+  // TV: the question appears a beat after its scene starts (QUESTION_REVEAL_MS), every round
+  const [questionRevealed, setQuestionRevealed] = useState(false);
   const [showRoundResultIcons, setShowRoundResultIcons] = useState(false);
+  /**
+   * Results sequence on the display (clips picked by the server, server/media.js):
+   *   "afterRound"  host clip after the round
+   *   "reveal"      ✓/✕ appear on the players + result sound, a short beat
+   *   "afterResult" host reaction: all correct / partial / all wrong
+   * then "scoresDone" goes to the server (minigame or next round).
+   */
+  const [scoresVideos, setScoresVideos] = useState(null);
+  const [scoresStage, setScoresStage] = useState(null);
   const [scoresTransitioning, setScoresTransitioning] = useState(false);
   const [roundIndex, setRoundIndex] = useState(1);
   const [hasPlayedRulesVideo, setHasPlayedRulesVideo] = useState(false);
   const [rulesNeedsClick, setRulesNeedsClick] = useState(false);
   const [rulesEnding, setRulesEnding] = useState(false);
+  // TV between the rules and round 1: "welcome" (the players' tags) -> "dark" (3s in the dark) -> null
+  const [preRoundStage, setPreRoundStage] = useState(null);
   const [rulesFadeOutMs, setRulesFadeOutMs] = useState(450);
   const [rulesSkipFadeIn, setRulesSkipFadeIn] = useState(false);
   const [rulesActiveMobile, setRulesActiveMobile] = useState(false);
-  const [roundIntroVideo, setRoundIntroVideo] = useState(null); // null | "round1_intro" | "round1_question" | "round2_intro"
+  const [introActiveMobile, setIntroActiveMobile] = useState(false); // the cinematic intro runs on the TV
+  const introSkippedRef = useRef(false);
+  const [roundIntroVideo, setRoundIntroVideo] = useState(null); // the announcement clip on screen now (URL) or null
   const [questionPlayData, setQuestionPlayData] = useState(null);
   const questionAudioRef = useRef(null);
   const questionPlayDoneRef = useRef(false);
   const rulesVideoRef = useRef(null);
-  const roundIntroVideoRef = useRef(null);
-  const roundIntroQuestionVideoRef = useRef(null); // preloads question.mp4 during introround1
-  const round2IntroVideoRef = useRef(null);
-  const round1IntroDoneRef = useRef(false);
-  const round2IntroDoneRef = useRef(false);
+  const announceDoneRef = useRef(false); // this round's announcement finished (questionAnnounceDone sent)
+  const roundGapDoneRef = useRef(false); // the dark pause before this round is over
+  const [roundGap, setRoundGap] = useState(false); // showing that pause now
+  const [minigameNext, setMinigameNext] = useState(false); // the server armed a minigame for this round
+  const [minigameGap, setMinigameGap] = useState(false); // the dark pause before it, showing now
+  // this round's announcement clip from the server (questions/video/Round_N/, in turn); null = caption only
+  const [announceVideo, setAnnounceVideo] = useState(null);
+  // this round's question background (questions/video/questions/, random); null = main.mp4
+  const [questionVideo, setQuestionVideo] = useState(null);
   const menuAudioRef = useRef(null);
   const chainAudioRef = useRef(null);
   const clickAudioRef = useRef(null);
@@ -285,13 +355,31 @@ function App() {
   const rulesSkipFadeRafRef = useRef(null);
   const roundDebugEnabledRef = useRef(false);
   const gameBackgroundVideoRef = useRef(null);
-  const scoresVideoRef = useRef(null);
   const scoresDoneEmittedRef = useRef(false);
   const trueFalseSubmittedRef = useRef(false);
   const resultSoundPlayedRef = useRef(false);
 
   const myPlayerId = playerId ?? players?.[0]?.id ?? null;
-  const playerNamesById = Object.fromEntries(players.map((p) => [p.id, p.name]));
+  const playerNamesById = useMemo(() => Object.fromEntries(players.map((p) => [p.id, p.name])), [players]);
+  const playerSlotsById = useMemo(
+    () => Object.fromEntries(players.map((p) => [p.id, p.characterSlot])),
+    [players]
+  );
+  const playerLivesById = useMemo(() => Object.fromEntries(players.map((p) => [p.id, p.lives])), [players]);
+
+  // Death in the main game: a player just lost the last life (became a ghost).
+  // The display plays a random kill + death sound pair for each new ghost.
+  useEffect(() => {
+    const ghosts = new Set(players.filter((p) => p.isGhost).map((p) => p.id));
+    const fresh = [...ghosts].filter((id) => !ghostIdsRef.current.has(id));
+    ghostIdsRef.current = ghosts;
+    if (!fresh.length || !isDisplay || isMobile()) return;
+    fresh.forEach((_, i) => gameClock.setTimeout(() => playKillAndDeath(0.95), i * 900));
+  }, [players, isDisplay]);
+
+  useEffect(() => {
+    if (isDisplay && !isMobile()) preloadDeathSounds();
+  }, [isDisplay]);
 
   // Minigame runs after every round (server/minigames/ decides which one).
   const [minigameId, setMinigameId] = useState("trueFalse");
@@ -329,7 +417,7 @@ function App() {
     }
     setTrueFalseStart(true);
     setTrueFalseContestantIds(players.map((p) => p.id));
-    const now = Date.now();
+    const now = gameClock.now();
     if (readMinigameDebugFlag()) {
       const past = now - 20000;
       setTrueFalseSyncData({ startedAtTs: past, serverTime: past, receivedAt: now });
@@ -357,6 +445,28 @@ function App() {
       a.play().catch(() => {});
     }
   };
+
+  /** Freeze this device: game timers, CSS animations, and every playing video/audio. */
+  function applyPause(by) {
+    gameClock.pause();
+    document.documentElement.classList.add("game-paused");
+    const playing = [...document.querySelectorAll("video, audio")].filter((m) => !m.paused && !m.ended);
+    playing.forEach((m) => m.pause());
+    pausedMediaRef.current = playing;
+    setPausedBy(by);
+    setPaused(true);
+  }
+
+  function applyResume() {
+    gameClock.resume();
+    document.documentElement.classList.remove("game-paused");
+    pausedMediaRef.current.forEach((m) => {
+      if (m.isConnected) m.play().catch(() => {});
+    });
+    pausedMediaRef.current = [];
+    setPaused(false);
+    setPausedBy(null);
+  }
 
   const withClick = (fn) => (e) => {
     playClickSound();
@@ -387,6 +497,31 @@ function App() {
     return () => s.close();
   }, []);
 
+  const loadCategories = () => {
+    setCategoriesLoading(true);
+    setCategoriesError("");
+    fetch(`${SOCKET_URL}/api/categories`)
+      .then((r) => r.json())
+      .then((d) => {
+        const list = Array.isArray(d?.categories) ? d.categories : [];
+        setCategories(list);
+        setSelectedCategoryId((prev) => {
+          if (prev && list.some((c) => c.id === prev)) return prev;
+          const firstPlayable = list.find((c) => c.playable);
+          return (firstPlayable || list[0] || {}).id || null;
+        });
+      })
+      .catch(() => setCategoriesError("Не вдалося завантажити категорії"))
+      .finally(() => setCategoriesLoading(false));
+  };
+
+  // Load categories once for the host (display) menu.
+  useEffect(() => {
+    if (isMobile()) return;
+    loadCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!isDevEnvironment()) return;
 
@@ -396,8 +531,7 @@ function App() {
       setIsDisplay(true);
       setIsAdmin(false);
       setRoomCode("9999");
-      setSelectedDifficulty("easy");
-      setLobbyDifficulty("easy");
+      setLobbyCategoryName("");
       setRoundIndex(1);
       setHasPlayedRulesVideo(true);
       setGameState(GAME_PHASE.SCORES);
@@ -429,8 +563,7 @@ function App() {
       setIsDisplay(true);
       setIsAdmin(false);
       setRoomCode("9999");
-      setSelectedDifficulty("easy");
-      setLobbyDifficulty("easy");
+      setLobbyCategoryName("");
       setRoundIndex(1);
       setHasPlayedRulesVideo(true);
       setGameState(GAME_PHASE.SCORES);
@@ -464,8 +597,7 @@ function App() {
     setIsDisplay(true);
     setIsAdmin(false);
     setRoomCode("9999");
-    setSelectedDifficulty("easy");
-    setLobbyDifficulty("easy");
+    setLobbyCategoryName("");
     setRoundIndex(1);
     setHasPlayedRulesVideo(true);
     setRulesNeedsClick(false);
@@ -560,6 +692,9 @@ function App() {
       adminChanged: (d) => setPlayers(d.players || []),
       playersUpdate: (d) => setPlayers(d.players || []),
       showIntro: () => {
+        setIntroStarted(true);
+        introSkippedRef.current = false;
+        setIntroActiveMobile(true);
         if (!isMobile() && !isAdminRef.current) knifeSliceRef.current?.play().catch(() => {});
         setShowIntroFade(true);
         if (isMobile()) {
@@ -567,10 +702,11 @@ function App() {
           setScreen("mobileWait");
         } else {
           const startCountdown = () => {
+            if (introSkippedRef.current) return;
             setScreen("countdown");
             setCountdownNum(3);
           };
-          setTimeout(startCountdown, 800);
+          gameClock.setTimeout(startCountdown, 800);
         }
       },
     };
@@ -610,7 +746,7 @@ function App() {
         };
         rulesSkipFadeRafRef.current = requestAnimationFrame(tick);
 
-        window.setTimeout(() => {
+        gameClock.setTimeout(() => {
           setRulesSkipFadeIn(false);
         }, fadeMs);
 
@@ -618,9 +754,21 @@ function App() {
       } catch {}
     });
     socket.on("rulesStarted", () => {
+      setIntroActiveMobile(false);
       setRulesActiveMobile(true);
     });
+    socket.on("skipIntro", () => {
+      // Admin pressed "skip intro" on the phone: the display goes straight to the rules video.
+      setIntroActiveMobile(false);
+      if (!isDisplayRef.current) return;
+      introSkippedRef.current = true;
+      setCountdownNum(null);
+      setScreen((s) => (s === "countdown" || s === "introScene" || s === "lobby" ? "rules" : s));
+    });
     socket.on("questionAnnounce", (d) => {
+      if (d.skipIntroVideos) setHasPlayedRulesVideo(true);
+      setAnnounceVideo(d.introVideo || null);
+      setQuestionVideo(d.questionVideo || null);
       setRoundIndex(d.roundIndex || 1);
       setGameState(GAME_PHASE.QUESTION_ANNOUNCE);
     });
@@ -653,12 +801,16 @@ function App() {
       setTrueFalseSyncData(null);
       setTrueFalseResultsPayload(null);
       setScoresTransitioning(true);
-      setTimeout(() => {
+      gameClock.setTimeout(() => {
         setPlayers(d.players || []);
         setRoundIndex(d.roundIndex ?? 1);
         setGameState(GAME_PHASE.SCORES);
         setShowRoundResultIcons(false);
         setScoresTransitioning(false);
+        setScoresVideos(d.videos || null);
+        setMinigameNext(!!d.minigameNext);
+        setMinigameGap(false);
+        setScoresStage(d.videos?.afterRound ? "afterRound" : "reveal");
       }, 450);
     });
     socket.on("trueFalseStart", (d) => {
@@ -673,7 +825,7 @@ function App() {
       setTrueFalseSyncData({
         startedAtTs: Number(d.startedAtTs),
         serverTime,
-        receivedAt: Date.now(),
+        receivedAt: gameClock.now(),
       });
     });
     socket.on("trueFalseResults", (d) => {
@@ -682,7 +834,9 @@ function App() {
       setTrueFalseResultsPayload(d);
     });
     socket.on("finalBattle", (d) => {
-      setPlayers(d.players || []);
+      setFinalIntro(d || null);
+      setFinalResult(null);
+      setCreditsDone(false);
       setGameState(GAME_PHASE.FINAL_BATTLE);
       setQuestion(null);
       setQuestionPlayData(null);
@@ -692,10 +846,29 @@ function App() {
     });
     socket.on("gameFinished", (d) => {
       setPlayers(d.players || []);
+      setFinalResult(d || null);
       setGameState(GAME_PHASE.FINISHED);
       setQuestion(null);
       setAnswerResult(null);
       setTrueFalseResultsPayload(null);
+    });
+    socket.on("categorySelected", (d) => {
+      setLobbyCategoryName(d?.categoryName || "");
+      if (d?.categoryId) setSelectedCategoryId(d.categoryId);
+    });
+    socket.on("gamePaused", (d) => {
+      applyPause(d?.by || null);
+    });
+    socket.on("gameResumed", () => {
+      applyResume();
+    });
+    socket.on("gameError", (d) => {
+      const msg = d?.message || "Не вдалося розпочати гру.";
+      setGameState(GAME_PHASE.WAITING);
+      setShowIntroFade(false);
+      setScreen("lobby");
+      setCountdownNum(null);
+      alert(msg);
     });
     return () => {
       socket.off("playerJoined", handlers.playerJoined);
@@ -705,37 +878,60 @@ function App() {
       socket.off("showIntro", handlers.showIntro);
       socket.off("skipRules");
       socket.off("rulesStarted");
+      socket.off("skipIntro");
       socket.off("trueFalseStart");
       socket.off("trueFalseSync");
       socket.off("trueFalseResults");
       socket.off("finalBattle");
+      socket.off("gameFinished");
+      socket.off("gamePaused");
+      socket.off("gameResumed");
       socket.off("answerBeep");
+      socket.off("categorySelected");
+      socket.off("gameError");
     };
   }, [socket]);
 
+  // Results sequence step "reveal": show ✓/✕, play the result sound, hold a
+  // beat, then the reaction clip (or straight to the server if there is none).
   useEffect(() => {
     if (gameState !== GAME_PHASE.SCORES) {
       setShowRoundResultIcons(false);
       resultSoundPlayedRef.current = false;
-      return;
+      setScoresStage(null);
+      return undefined;
     }
-    if (resultSoundPlayedRef.current) return;
-    const allCorrect =
-      players.length > 0 && players.every((p) => p.lastCorrect === true);
-    const delayMs = allCorrect ? 2000 : 5000;
-    const id = window.setTimeout(() => {
-      if (resultSoundPlayedRef.current) return;
+    if (scoresStage !== "reveal") return undefined;
+    if (!resultSoundPlayedRef.current) {
       resultSoundPlayedRef.current = true;
       setShowRoundResultIcons(true);
-      if (isMobile()) return; // sound only on the display
-      const a = resultAudioRef.current;
-      if (a) {
-        a.currentTime = 0;
-        a.play().catch(() => {});
+      if (!isMobile()) {
+        const a = resultAudioRef.current;
+        if (a) {
+          a.currentTime = 0;
+          a.play().catch(() => {});
+        }
       }
-    }, delayMs);
-    return () => window.clearTimeout(id);
-  }, [gameState, roundIndex]);
+    }
+    // the display moves on when its results screen (RoundResults, ~10s) is over: finishResultsCheck()
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState, scoresStage, isDisplay]);
+
+  // the reaction clip already played under the results board (RoundResults); a minigame
+  // next gets a few seconds in the dark first, otherwise straight on
+  function finishResultsCheck() {
+    if (minigameNext) setMinigameGap(true);
+    else emitScoresDone();
+  }
+
+  function emitScoresDone() {
+    if (scoresDoneEmittedRef.current || !socket) return;
+    if (isScoresDebugActive() || !roomCode) return;
+    scoresDoneEmittedRef.current = true;
+    setScoresStage("done");
+    socket.emit("scoresDone");
+  }
 
   useEffect(() => {
     if (gameState === GAME_PHASE.SCORES) {
@@ -743,175 +939,78 @@ function App() {
     }
   }, [gameState]);
 
+  // The question scene opens on its video alone; the question (text + reading) comes 2.5s later.
   useEffect(() => {
-    if (!isDisplay || roundIndex !== 1) {
-      setRound1SubtitleActive(false);
-      return;
+    if (!isDisplay || gameState !== GAME_PHASE.QUESTION_PLAY) {
+      setQuestionRevealed(gameState === GAME_PHASE.ANSWER_PHASE);
+      return undefined;
     }
-    if (gameState !== GAME_PHASE.QUESTION_PLAY) {
-      setRound1SubtitleActive(false);
-      return;
-    }
-    setRound1SubtitleActive(false);
-    const id = window.setTimeout(() => setRound1SubtitleActive(true), 3000);
-    return () => window.clearTimeout(id);
+    setQuestionRevealed(false);
+    const id = gameClock.setTimeout(() => setQuestionRevealed(true), QUESTION_REVEAL_MS);
+    return () => gameClock.clearTimeout(id);
   }, [gameState, isDisplay, roundIndex, questionPlayData?.question?.id]);
+
 
   useEffect(() => {
     if (gameState !== GAME_PHASE.ANSWER_PHASE || !question) return;
-    const t = setInterval(() => {
+    const t = gameClock.setInterval(() => {
       setAnswerTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
-    return () => clearInterval(t);
+    return () => gameClock.clearInterval(t);
   }, [gameState, question?.id]);
 
-  // Final battle (after round 9). Placeholder: the display shows the caption for
-  // a few seconds, then tells the server to finish. Real video/rules go here later.
-  useEffect(() => {
-    if (gameState !== GAME_PHASE.FINAL_BATTLE || !isDisplay) return;
-    const t = setTimeout(() => socket?.emit("finalBattleDone"), 6000);
-    return () => clearTimeout(t);
-  }, [gameState, isDisplay, socket]);
-
-  useEffect(() => {
-    if (gameState !== GAME_PHASE.QUESTION_ANNOUNCE || !isDisplay) return;
-    // Блок: раунд 1 не можна стартувати, поки не завершилось rulesmovie (на дисплеї).
-    if (roundIndex === 1 && !hasPlayedRulesVideo) return;
-    // Round 1: show presentation video -> question video, then start question
-    if (roundIndex === 1 && !round1IntroDoneRef.current) {
-      setRoundIntroVideo("round1_intro");
+  // ---------------------------------------------------------------- round announcement (display)
+  // The round's clip (questions/video/Round_N/, a different one every game) fades
+  // in from black and out to black; without a clip the "РАУНД N" caption holds
+  // for a beat. Then the question scene fades in over its own video.
+  function finishAnnounce() {
+    if (announceDoneRef.current) return;
+    announceDoneRef.current = true;
+    setRoundIntroVideo(null);
+    if (roundIndex === 1 && roundDebugEnabledRef.current) {
+      const debugQuestion = {
+        id: "dbg-r1-q1",
+        text: "DEBUG: Раунд 1 запущено. Тут буде текст питання з round1.",
+        options: ["A", "B", "C", "D"],
+        correctIndex: 0,
+      };
+      setQuestion({ ...debugQuestion, index: 1, total: TOTAL_ROUNDS });
+      setQuestionPlayData({ roundIndex: 1, question: debugQuestion, audioSrc: null });
+      setGameState(GAME_PHASE.QUESTION_PLAY);
       return;
     }
-    // Round 2: інтро перед стартом раунду (introround2.mp4)
-    if (roundIndex === 2 && !round2IntroDoneRef.current) {
-      setRoundIntroVideo("round2_intro");
-      return;
-    }
-    // Rounds 3-9: show the "РАУНД N" caption (RoundIntro) for a beat, then start.
-    const t = setTimeout(() => socket?.emit("questionAnnounceDone"), 3200);
-    return () => clearTimeout(t);
-  }, [gameState, isDisplay, socket, roundIndex, hasPlayedRulesVideo]);
+    socket?.emit("questionAnnounceDone");
+  }
 
+  // a new round: its announcement hasn't run yet (declared first: runs before the effect below)
   useEffect(() => {
-    if (!isDisplay) return;
-    if (gameState !== GAME_PHASE.QUESTION_ANNOUNCE) {
-      setRoundIntroVideo(null);
-      return;
-    }
-    if (roundIndex === 2) {
-      if (round2IntroDoneRef.current) return;
-      if (roundIntroVideo !== "round2_intro") return;
-
-      const v = round2IntroVideoRef.current;
-      if (!v) return;
-
-      const finishRound2Intro = () => {
-        if (round2IntroDoneRef.current) return;
-        round2IntroDoneRef.current = true;
-        window.setTimeout(() => {
-          setRoundIntroVideo(null);
-          socket?.emit("questionAnnounceDone");
-        }, 120);
-      };
-
-      v.onended = () => {
-        try {
-          v.pause();
-        } catch {
-          /* ignore */
-        }
-        finishRound2Intro();
-      };
-      v.play().catch(() => finishRound2Intro());
-      return () => {
-        v.onended = null;
-      };
-    }
-
-    if (roundIndex !== 1) return;
-    if (!hasPlayedRulesVideo) return;
-    if (round1IntroDoneRef.current) return;
-    if (!roundIntroVideo) return;
-
-    const vIntro = roundIntroVideoRef.current;
-    const vQuestion = roundIntroQuestionVideoRef.current;
-    if (!vIntro || !vQuestion) return;
-
-    const startQuestion = () => {
-      if (round1IntroDoneRef.current) return;
-      round1IntroDoneRef.current = true;
-      window.setTimeout(() => {
-        setRoundIntroVideo(null);
-        if (roundDebugEnabledRef.current) {
-          const debugQuestion = {
-            id: "dbg-r1-q1",
-            text: "DEBUG: Раунд 1 запущено. Тут буде текст питання з round1.",
-            options: ["A", "B", "C", "D"],
-            correctIndex: 0,
-          };
-          setQuestion({
-            ...debugQuestion,
-            index: 1,
-            total: TOTAL_ROUNDS,
-          });
-          setQuestionPlayData({
-            roundIndex: 1,
-            question: debugQuestion,
-            audioSrc: null,
-          });
-          setGameState(GAME_PHASE.QUESTION_PLAY);
-          return;
-        }
-        socket?.emit("questionAnnounceDone");
-      }, 120);
-    };
-
-    if (roundIntroVideo === "round1_intro") {
-      let onReady = null;
-      vIntro.onended = () => {
-        vIntro.pause();
-        vQuestion.currentTime = 0;
-        onReady = () => {
-          vQuestion.removeEventListener("canplay", onReady);
-          vQuestion.removeEventListener("playing", onReady);
-          setRoundIntroVideo("round1_question");
-          startQuestion();
-        };
-        vQuestion.addEventListener("canplay", onReady);
-        vQuestion.addEventListener("playing", onReady);
-        vQuestion.play().catch(() => onReady());
-      };
-      vIntro.play().catch(() => {});
-      return () => {
-        vIntro.onended = null;
-        if (onReady) {
-          vQuestion.removeEventListener("canplay", onReady);
-          vQuestion.removeEventListener("playing", onReady);
-        }
-      };
-    }
-
-    // round1_question: vQuestion is visible and already playing.
-    try {
-      vIntro.pause();
-    } catch {}
-    return () => {};
-  }, [roundIntroVideo, isDisplay, gameState, roundIndex, hasPlayedRulesVideo, socket]);
-
-  useEffect(() => {
-    if (roundIndex !== 1) {
-      round1IntroDoneRef.current = false;
-    }
-    if (roundIndex !== 2) {
-      round2IntroDoneRef.current = false;
-    }
-    if (roundIndex !== 1 && roundIndex !== 2) {
-      setRoundIntroVideo(null);
-    }
+    announceDoneRef.current = false;
+    roundGapDoneRef.current = false;
+    setRoundGap(false);
+    setRoundIntroVideo(null);
   }, [roundIndex]);
 
   useEffect(() => {
-    if (gameState !== GAME_PHASE.QUESTION_PLAY || !questionPlayData || !isDisplay) return;
+    if (gameState !== GAME_PHASE.QUESTION_ANNOUNCE || !isDisplay) return undefined;
+    // round 1 waits for the rules video on the display
+    if (roundIndex === 1 && !hasPlayedRulesVideo) return undefined;
+    if (announceDoneRef.current) return undefined;
+    // rounds 2-9 start with a few seconds in the dark (round 1 already had one after the welcome)
+    if (roundIndex >= 2 && !roundGapDoneRef.current) {
+      setRoundGap(true);
+      return undefined;
+    }
+    if (announceVideo) {
+      setRoundIntroVideo(announceVideo);
+      return undefined;
+    }
+    const t = gameClock.setTimeout(finishAnnounce, 3200);
+    return () => gameClock.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState, isDisplay, roundIndex, hasPlayedRulesVideo, announceVideo, roundGap]);
+
+  useEffect(() => {
+    if (gameState !== GAME_PHASE.QUESTION_PLAY || !questionPlayData || !isDisplay || !questionRevealed) return;
     questionPlayDoneRef.current = false;
     const audio = questionPlayData.question?.audioSrc ?? questionPlayData.audioSrc;
     const checkDone = () => {
@@ -927,7 +1026,7 @@ function App() {
     return () => {
       if (questionAudioRef.current) questionAudioRef.current.onended = null;
     };
-  }, [gameState, questionPlayData, isDisplay, socket]);
+  }, [gameState, questionPlayData, isDisplay, socket, questionRevealed]);
 
   const handleSubtitlesComplete = () => {
     if (!isDisplay || gameState !== GAME_PHASE.QUESTION_PLAY) return;
@@ -936,7 +1035,7 @@ function App() {
       questionPlayDoneRef.current = true;
       socket?.emit("questionPlayDone");
     } else {
-      setTimeout(() => {
+      gameClock.setTimeout(() => {
         if (questionPlayDoneRef.current) return;
         questionPlayDoneRef.current = true;
         socket?.emit("questionPlayDone");
@@ -945,19 +1044,29 @@ function App() {
   };
 
   const completeRules = () => {
-    setHasPlayedRulesVideo(true);
     setRulesEnding(false);
     setRulesNeedsClick(false);
     setRulesActiveMobile(false);
-    // Тільки після rulesmovie запускаємо гру на сервері
-    if (socket && isDisplay) socket.emit("introEnded");
     setScreen("game");
+    if (!isDisplay) {
+      setHasPlayedRulesVideo(true);
+      return;
+    }
+    // a breather before round 1: welcome the players, a pause in the dark, then the game starts on the server
+    setPreRoundStage("welcome");
+  };
+
+  const finishPreRound = () => {
+    setPreRoundStage(null);
+    setHasPlayedRulesVideo(true);
+    // Тільки після rulesmovie (і паузи) запускаємо гру на сервері
+    socket?.emit("introEnded");
   };
 
   const finishRules = (fadeMs = 450) => {
     setRulesFadeOutMs(fadeMs);
     setRulesEnding(true);
-    window.setTimeout(() => {
+    gameClock.setTimeout(() => {
       completeRules();
     }, fadeMs);
   };
@@ -986,11 +1095,11 @@ function App() {
     setRulesFadeOutMs(450);
     setRulesSkipFadeIn(false);
     // Wait a tick so ref is attached.
-    const id = window.setTimeout(() => {
+    const id = gameClock.setTimeout(() => {
       tryStartRulesVideo();
     }, 50);
     return () => {
-      window.clearTimeout(id);
+      gameClock.clearTimeout(id);
       if (rulesSkipFadeRafRef.current) cancelAnimationFrame(rulesSkipFadeRafRef.current);
       rulesSkipFadeRafRef.current = null;
     };
@@ -1016,10 +1125,10 @@ function App() {
     setCountdownNum(3);
     playBell();
 
-    const id = setInterval(() => {
+    const id = gameClock.setInterval(() => {
       n--;
       if (n <= 0) {
-        clearInterval(id);
+        gameClock.clearInterval(id);
         if (isDisplay) {
           setScreen("introScene");
         } else {
@@ -1031,7 +1140,7 @@ function App() {
       setCountdownNum(n);
       playBell();
     }, 1000);
-    return () => clearInterval(id);
+    return () => gameClock.clearInterval(id);
   }, [screen]);
 
   const handleCreateRoom = () => {
@@ -1042,7 +1151,7 @@ function App() {
       return;
     }
     setShowMenuDifficulty(false);
-    socket.emit("createRoom", { selectedDifficulty }, (data) => {
+    socket.emit("createRoom", { categoryId: selectedCategoryId, difficulty: selectedDifficulty }, (data) => {
       if (!data || !data.roomCode) {
         alert("Помилка створення кімнати. Спробуйте ще раз.");
         return;
@@ -1050,7 +1159,9 @@ function App() {
       setRoomCode(data.roomCode);
       setPlayers(data.players || []);
       setGameState(data.gameState || "waiting");
-      setLobbyDifficulty(data.selectedDifficulty || "easy");
+      setLobbyCategoryName(data.categoryName || "");
+      setLobbyDifficulty(data.difficulty || "");
+      if (data.categoryId) setSelectedCategoryId(data.categoryId);
       setIsDisplay(true);
       setIsAdmin(false);
       setScreen("lobby");
@@ -1081,7 +1192,7 @@ function App() {
       setPlayers(data.players || []);
       setGameState(data.gameState || "waiting");
       setPlayerId(data.playerId);
-      setLobbyDifficulty(data.selectedDifficulty || "easy");
+      setLobbyCategoryName(data.categoryName || "");
       setIsDisplay(false);
       setIsAdmin(data.isAdmin || false);
       setScreen("lobby");
@@ -1091,15 +1202,14 @@ function App() {
   const handleStartGame = () => {
     if (!socket || !isAdmin) return;
     if (!isMobile()) knifeSliceRef.current?.play().catch(() => {});
-    socket.emit("startIntro", { selectedDifficulty: lobbyDifficulty });
+    socket.emit("startIntro", {});
   };
 
   const handleIntroEnded = () => {
     if (!socket) return;
     // Дисплей: спочатку rulesmovie, і тільки потім запускаємо 1-й раунд
     if (isDisplay) {
-      setScreen("rules");
-      socket.emit("rulesStarted");
+      setScreen("rules"); // the rules effect above announces "rulesStarted" (once)
       return;
     }
     // Телефони: rules не показуємо
@@ -1119,13 +1229,17 @@ function App() {
   };
 
   const handleExit = () => {
+    if (gameClock.isPaused()) applyResume();
+    setIntroStarted(false);
     if (socket && roomCode) socket.emit("leaveRoom");
     setScreen(isMobile() ? "join" : "menu");
     setRoomCode("");
     setPlayers([]);
-    setLobbyDifficulty("easy");
+    setLobbyCategoryName("");
     setQuestion(null);
     setAnswerResult(null);
+    setFinalIntro(null);
+    setFinalResult(null);
     setPlayerId(null);
     setIsDisplay(false);
     setIsAdmin(false);
@@ -1142,6 +1256,9 @@ function App() {
     return "option option-disabled";
   };
 
+  const finalPreview = isDevEnvironment() ? readFinalPreview() : null;
+  if (finalPreview) return <FinalBattlePreview mode={finalPreview} />;
+
   const mgPreview = isDevEnvironment() ? readMgPreview() : null;
   if (mgPreview) {
     return (
@@ -1153,6 +1270,7 @@ function App() {
           roundIndex={buildMgPreviewResults(mgPreview).roundIndex}
           myPlayerId="pv-1"
           namesById={Object.fromEntries(MG_PREVIEW_PLAYERS.map((p) => [p.id, p.name]))}
+          slotsById={Object.fromEntries(MG_PREVIEW_PLAYERS.map((p) => [p.id, p.characterSlot]))}
           contestantIds={buildMgPreviewResults(mgPreview).contestantIds}
           results={buildMgPreviewResults(mgPreview)}
           onSceneDone={() => {}}
@@ -1161,8 +1279,23 @@ function App() {
     );
   }
 
+  const amAdmin = isAdmin || !!players.find((p) => p.id === myPlayerId && p.isAdmin);
+  const canPause =
+    !!roomCode &&
+    gameState !== GAME_PHASE.FINISHED &&
+    (gameState !== GAME_PHASE.WAITING || introStarted);
+
   return (
     <>
+      <PauseOverlay
+        paused={paused}
+        pausedBy={pausedBy}
+        canPause={canPause}
+        isAdmin={amAdmin}
+        isDisplay={isDisplay}
+        onPause={() => socket?.emit("pauseGame")}
+        onResume={() => socket?.emit("resumeGame")}
+      />
       {/* All game audio lives on the display / desktop screen only — the phone
           controllers are silent. Do not render these on mobile. */}
       {!isMobile() && (
@@ -1246,7 +1379,7 @@ function App() {
             <nav className="menu-nav">
               <button
                 className="glowing-btn menu-glowing-btn menu-glowing-btn-play"
-                onClick={withClick(handleMenuStartClick)}
+                onClick={withClick(() => { loadCategories(); handleMenuStartClick(); })}
                 disabled={!connected}
                 aria-label="Грати"
                 type="button"
@@ -1279,23 +1412,62 @@ function App() {
               >
                 <span className="modal-back-icon" />
               </button>
-              <h2>Оберіть складність гри</h2>
-              {DIFFICULTIES.map((d) => (
-                <label key={d.id} className="category-check difficulty-check">
-                  <input
-                    type="radio"
-                    name="menu-difficulty"
-                    checked={selectedDifficulty === d.id}
-                    onChange={() => setSelectedDifficulty(d.id)}
-                  />
-                  {d.name}
-                </label>
-              ))}
+              <h2>Оберіть категорію вікторини</h2>
+              {categoriesLoading && <p className="menu-hint">Завантаження категорій…</p>}
+              {categoriesError && <p className="join-error">{categoriesError}</p>}
+              {!categoriesLoading && !categoriesError && categories.length === 0 && (
+                <p className="menu-hint">
+                  Немає активних категорій. Додайте їх в адмін-панелі (/admin).
+                </p>
+              )}
+              <div className="category-list">
+                {categories.map((c) => (
+                  <label
+                    key={c.id}
+                    className={`category-check ${!c.playable ? "category-check-disabled" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name="menu-category"
+                      disabled={!c.playable}
+                      checked={selectedCategoryId === c.id}
+                      onChange={() => setSelectedCategoryId(c.id)}
+                    />
+                    {(c.icon ? c.icon + " " : "") + c.name}
+                    {!c.playable && (
+                      <span className="category-count">
+                        {" "}— мало питань ({c.questionCount}/{c.minQuestions})
+                      </span>
+                    )}
+                  </label>
+                ))}
+              </div>
+              <h3 className="difficulty-heading">Складність</h3>
+              <div className="difficulty-picker" role="radiogroup" aria-label="Складність">
+                {GAME_DIFFICULTIES.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selectedDifficulty === d.id}
+                    className={`difficulty-option ${d.id} ${selectedDifficulty === d.id ? "selected" : ""}`}
+                    onClick={withClick(() => setSelectedDifficulty(d.id))}
+                  >
+                    <span className="difficulty-icon">{d.icon}</span>
+                    <b>{d.label}</b>
+                    <small>{d.hint}</small>
+                  </button>
+                ))}
+              </div>
               <div className="modal-buttons modal-buttons-single">
                 <button
                   type="button"
                   className="btn modal-btn-lobby-btn"
                   onClick={withClick(handleCreateRoom)}
+                  disabled={
+                    !selectedCategoryId ||
+                    !(categories.find((c) => c.id === selectedCategoryId) || {}).playable
+                  }
                   aria-label="В лобі"
                 >
                   <span className="btn__inner">
@@ -1339,6 +1511,16 @@ function App() {
               <p className="lobby-connected-count">
                 Підключилось гравців {players.length}/{MAX_ROOM_PLAYERS}
               </p>
+              {lobbyCategoryName && (
+                <p className="lobby-connected-count">
+                  Категорія: {lobbyCategoryName}
+                </p>
+              )}
+              {lobbyDifficulty && (
+                <p className="lobby-connected-count">
+                  Складність: {(GAME_DIFFICULTIES.find((d) => d.id === lobbyDifficulty) || {}).label || lobbyDifficulty}
+                </p>
+              )}
               <section className="lobby-actions">
                 {gameState === "waiting" && isAdmin && (
                   <button className="btn-start" onClick={withClick(handleStartGame)}>
@@ -1413,6 +1595,18 @@ function App() {
         <div className="mobile-wait-subtitle">
           Гра запускається на телевізорі / основному екрані
         </div>
+        {isAdmin && introActiveMobile && !rulesActiveMobile && (
+          <button
+            type="button"
+            className="btn-skip-rules"
+            onClick={withClick(() => {
+              setIntroActiveMobile(false);
+              socket?.emit("skipIntro");
+            })}
+          >
+            Пропустити інтро
+          </button>
+        )}
         {isAdmin && rulesActiveMobile && (
           <button
             type="button"
@@ -1488,13 +1682,13 @@ function App() {
               ? "/assets/videos/main.mp4"
               : isDisplay &&
                 (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE)
-                ? "/assets/questions/video/question.mp4"
+                ? questionVideo || "/assets/videos/main.mp4"
                 : "/assets/videos/main.mp4"
           }
           autoPlay
           loop
           playsInline
-          muted={false}
+          muted={gameState === GAME_PHASE.FINAL_BATTLE || gameState === GAME_PHASE.FINISHED || (["rps", "hotBomb", "tugOfWar", "mathRush", "rat", "memory", "tune"].includes(minigameId) && !!(trueFalseStart || trueFalseResultsPayload))}
           onLoadedMetadata={(e) => {
             const isQuestionPhase =
               isDisplay &&
@@ -1503,34 +1697,47 @@ function App() {
           }}
         />
       )}
+      {!isMobile() && isDisplay && gameState === GAME_PHASE.SCORES && minigameGap && !trueFalseStart && (
+        <DarkPause
+          key={`mg-gap-${roundIndex}`}
+          ms={MINIGAME_GAP_MS}
+          onDone={() => {
+            setMinigameGap(false);
+            emitScoresDone();
+          }}
+        />
+      )}
       {!isMobile() &&
         isDisplay &&
         gameState === GAME_PHASE.SCORES &&
         !trueFalseStart &&
-        !trueFalseResultsPayload && (
-        <div className="scores-video-overlay">
-          <video
-            ref={scoresVideoRef}
-            className="round-video"
-            src={
-              players.length > 0 && players.every((p) => p.lastCorrect === true)
-                ? "/assets/questions/video/score2.mp4"
-                : "/assets/questions/video/score.mp4"
-            }
-            autoPlay
-            playsInline
-            preload="auto"
-            onLoadedMetadata={(e) => {
-              e.target.volume = 0.35;
-            }}
-            onEnded={() => {
-              if (scoresDoneEmittedRef.current || !socket) return;
-              if (isScoresDebugActive() || !roomCode) return;
-              scoresDoneEmittedRef.current = true;
-              socket.emit("scoresDone");
-            }}
+        !trueFalseResultsPayload &&
+        scoresStage === "reveal" && (
+          <RoundResults
+            key={`results-${roundIndex}`}
+            players={players}
+            roundIndex={roundIndex}
+            videoSrc={scoresVideos?.afterResult || null}
+            onDone={finishResultsCheck}
           />
-        </div>
+        )}
+      {!isMobile() &&
+        isDisplay &&
+        gameState === GAME_PHASE.SCORES &&
+        !trueFalseStart &&
+        !trueFalseResultsPayload &&
+        (scoresStage === "afterRound" || scoresStage === "afterResult") && (
+        <CinemaClip
+          key={scoresStage}
+          layer="under"
+          volume={0.6}
+          src={scoresStage === "afterRound" ? scoresVideos?.afterRound : scoresVideos?.afterResult}
+          onDone={() => {
+            // after-round clip -> the ✓/✕ reveal -> the reaction clip -> on with the game
+            if (scoresStage === "afterRound") setScoresStage("reveal");
+            else emitScoresDone();
+          }}
+        />
       )}
       {!isMobile() &&
         isDisplay &&
@@ -1549,6 +1756,9 @@ function App() {
           socket={socket}
           myPlayerId={myPlayerId}
           namesById={playerNamesById}
+          slotsById={playerSlotsById}
+          livesById={playerLivesById}
+          contestantIds={trueFalseContestantIds}
           results={trueFalseResultsPayload}
           onVideoStartedAt={() => socket?.emit("trueFalseSync", { roundIndex })}
           onSceneDone={() => {
@@ -1564,6 +1774,7 @@ function App() {
         (trueFalseResultsPayload.minigameId || "trueFalse") === "trueFalse" && (
         <TrueFalseAftermath
           data={trueFalseResultsPayload}
+          slotsById={playerSlotsById}
           stylingDebug={isDevEnvironment() && readAftermathDebugFlag()}
           onComplete={() => {
             if (isDevEnvironment() && readAftermathDebugFlag()) return;
@@ -1572,49 +1783,53 @@ function App() {
           }}
         />
       )}
-      {!isMobile() && isDisplay && gameState === GAME_PHASE.QUESTION_ANNOUNCE && roundIndex === 1 && roundIntroVideo && (
-        <div className="round-video-overlay">
-          <video
-            ref={roundIntroVideoRef}
-            className={`round-video round-video-intro ${roundIntroVideo === "round1_intro" ? "round-video-visible" : "round-video-hidden"}`}
-            src="/assets/questions/video/introround1.mp4"
-            autoPlay
-            playsInline
-            preload="auto"
-          />
-          <video
-            ref={roundIntroQuestionVideoRef}
-            className={`round-video round-video-question ${roundIntroVideo === "round1_question" ? "round-video-visible" : "round-video-hidden"}`}
-            src="/assets/questions/video/question.mp4"
-            playsInline
-            preload="auto"
-          />
-        </div>
+      {!isMobile() && isDisplay && preRoundStage === "welcome" && (
+        <WelcomePlayers players={players} muted={musicMuted} onDone={() => setPreRoundStage("dark")} />
       )}
-      {!isMobile() && isDisplay && gameState === GAME_PHASE.QUESTION_ANNOUNCE && roundIndex === 2 && roundIntroVideo === "round2_intro" && (
-        <div className="round-video-overlay">
-          <video
-            ref={round2IntroVideoRef}
-            className="round-video round-video-intro round-video-visible"
-            src="/assets/questions/video/introround2.mp4"
-            autoPlay
-            playsInline
-            preload="auto"
-          />
-        </div>
+      {!isMobile() && isDisplay && preRoundStage === "dark" && <DarkPause onDone={finishPreRound} />}
+      {!isMobile() && isDisplay && gameState === GAME_PHASE.QUESTION_ANNOUNCE && roundGap && (
+        <DarkPause
+          key={`gap-${roundIndex}`}
+          ms={ROUND_GAP_MS}
+          onDone={() => {
+            roundGapDoneRef.current = true;
+            setRoundGap(false);
+          }}
+        />
+      )}
+      {!isMobile() && isDisplay && gameState === GAME_PHASE.QUESTION_ANNOUNCE && roundIntroVideo && (
+        <>
+          <CinemaClip key={roundIntroVideo} src={roundIntroVideo} fit="cover" onDone={finishAnnounce} />
+          {/* warm up the question video so the question scene starts without a stutter */}
+          {questionVideo && <video className="video-preload-only" src={questionVideo} preload="auto" muted aria-hidden />}
+        </>
       )}
       {!isMobile() &&
         isDisplay &&
         gameState === GAME_PHASE.QUESTION_ANNOUNCE &&
-        roundIndex >= 3 && <RoundIntro roundIndex={roundIndex} />}
+        !announceVideo &&
+        !roundGap &&
+        (roundIndex !== 1 || hasPlayedRulesVideo) && <RoundIntro roundIndex={roundIndex} />}
       {!isMobile() && isDisplay && gameState === GAME_PHASE.FINAL_BATTLE && (
-        <RoundIntro title="ФІНАЛЬНА БИТВА" label="Відео та правила — скоро" />
+        <FinalBattle
+          key={`final-${roomCode}`}
+          uiMode="display"
+          socket={socket}
+          intro={finalIntro}
+          myPlayerId={null}
+        />
       )}
       <div className={`app-inner ${!isMobile() ? "app-inner-over-video" : ""}`}>
 
       <section
         className={`players-panel compact ${!isDisplay ? "players-panel-player" : ""} ${
           gameState === GAME_PHASE.SCORES && !isMobile() ? "players-panel-scores" : ""
+        } ${
+          gameState === GAME_PHASE.FINAL_BATTLE ||
+          (gameState === GAME_PHASE.FINISHED && finalResult?.standings?.length) ||
+          (gameState === GAME_PHASE.SCORES && isDisplay) // the TV shows RoundResults instead
+            ? "players-panel-hidden"
+            : ""
         }`}
         style={!isMobile() ? { ["--players-count"]: Math.max(1, players.length) } : undefined}
       >
@@ -1626,8 +1841,8 @@ function App() {
             <li key={p.id} className="player-item">
               <span className="player-name">{p.name}</span>
               <img
-                className="player-sprite"
-                src={`/assets/images/Characters/alivecharacters/${
+                className={`player-sprite ${p.isGhost ? "player-sprite-ghost" : ""}`}
+                src={`/assets/images/Characters/${p.isGhost ? "deathcharacters" : "alivecharacters"}/${
                   p.characterSlot && p.characterSlot >= 1 && p.characterSlot <= 8
                     ? p.characterSlot
                     : (idx % 8) + 1
@@ -1649,6 +1864,7 @@ function App() {
 
       {isDisplay &&
         (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE) &&
+        (questionRevealed || gameState === GAME_PHASE.ANSWER_PHASE) &&
         (questionPlayData?.question || question) && (
           <section
             className={`question-play-screen question-play-screen-round1 question-hold-round1 ${
@@ -1659,7 +1875,7 @@ function App() {
               <TypewriterSubtitles
                 key={questionPlayData?.question?.id ?? `round-${questionPlayData?.roundIndex ?? roundIndex}`}
                 text={questionPlayData?.question?.text}
-                active={roundIndex === 1 ? round1SubtitleActive : true}
+                active={questionRevealed}
                 speed={60}
                 onComplete={handleSubtitlesComplete}
               />
@@ -1685,6 +1901,9 @@ function App() {
 
       {gameState === GAME_PHASE.ANSWER_PHASE && question && !isDisplay && (
         <section className="question-screen">
+          {players.find((p) => p.id === myPlayerId)?.isGhost && (
+            <div className="ghost-banner">👻 ТИ ПРИВИД — відповідай далі, але очки заморожені</div>
+          )}
           <div className="question-header">Раунд {question.index} з {question.total ?? TOTAL_ROUNDS}</div>
           <h2 className="question-text">{question.text}</h2>
           <div className="bomb-timer-wrap">
@@ -1708,7 +1927,11 @@ function App() {
           </div>
           {answerResult && !isMobile() && (
             <div className={`result-message ${answerResult.correct ? "correct" : "wrong"}`}>
-              {answerResult.correct ? "Правильно! +10 балів" : "Неправильно"}
+              {answerResult.correct
+                ? answerResult.scoreAwarded > 0
+                  ? `Правильно! +${answerResult.scoreAwarded} балів`
+                  : "Правильно! (привид — очки заморожені)"
+                : "Неправильно"}
             </div>
           )}
         </section>
@@ -1722,16 +1945,21 @@ function App() {
               {players.map((p, i) => (
                 <li key={p.id} className="score-item">
                   <span className="rank">{i + 1}.</span>
-                  <span className="name">{p.name}</span>
+                  <span className="name">
+                    {p.name}
+                    {p.isGhost ? " 👻" : ""}
+                  </span>
                   <span className="score">{p.score}</span>
                 </li>
               ))}
             </ol>
           </section>
 
+          {/* keep the minigame mounted for its results screen too: playersUpdate
+              (lives applied) has no lastCorrect, so that check alone would unmount it */}
           {(trueFalseStart && trueFalseContestantIds.length > 0
             ? true
-            : players.some((p) => p.lastCorrect === false)) && (
+            : !!trueFalseResultsPayload || players.some((p) => p.lastCorrect === false)) && (
             <MinigameHost
               minigameId={minigameId}
               key={`minigame-${roundIndex}-${minigameId}`}
@@ -1744,6 +1972,8 @@ function App() {
               socket={socket}
               myPlayerId={myPlayerId}
               namesById={playerNamesById}
+              slotsById={playerSlotsById}
+              livesById={playerLivesById}
               contestantIds={trueFalseContestantIds}
               results={trueFalseResultsPayload}
             />
@@ -1751,14 +1981,25 @@ function App() {
         </>
       )}
 
-      {gameState === GAME_PHASE.FINAL_BATTLE && isMobile() && (
-        <section className="mobile-wait-card final-battle-mobile">
-          <div className="mobile-wait-title">ФІНАЛЬНА БИТВА</div>
-          <div className="mobile-wait-subtitle">Дивіться на головний екран</div>
-        </section>
+      {!isMobile() && isDisplay && gameState === GAME_PHASE.FINISHED && finalResult?.standings?.length > 0 && !creditsDone && (
+        <FinalCredits result={finalResult} onDone={() => setCreditsDone(true)} />
       )}
 
-      {gameState === GAME_PHASE.FINISHED && (
+      {gameState === GAME_PHASE.FINAL_BATTLE && isMobile() && (
+        <FinalBattle
+          key={`final-m-${roomCode}`}
+          uiMode="mobile"
+          socket={socket}
+          intro={finalIntro}
+          myPlayerId={myPlayerId}
+        />
+      )}
+
+      {gameState === GAME_PHASE.FINISHED && finalResult?.standings?.length > 0 && (
+        <FinalResults result={finalResult} myPlayerId={isDisplay ? null : myPlayerId} onExit={withClick(handleExit)} />
+      )}
+
+      {gameState === GAME_PHASE.FINISHED && !(finalResult?.standings?.length > 0) && (
         <section className="final-screen">
           <h2>Фінальні результати</h2>
           <ol className="scores-list final">

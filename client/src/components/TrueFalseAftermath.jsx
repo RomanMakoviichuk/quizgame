@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./TrueFalseAftermath.css";
+import gameClock from "../game/gameClock";
 
 const HEART_DELAY_MS = 2500;
 
@@ -8,7 +9,13 @@ const HEART_DELAY_MS = 2500;
  * після початкового фрагменту ролика; сцена триває рівно стільки, скільки триває відео.
  * @param {boolean} [stylingDebug] — dev: зациклити відео, не викликати onComplete; бейдж з підказкою.
  */
-export default function TrueFalseAftermath({ data, onComplete, stylingDebug = false }) {
+const SPRITE = (slot) =>
+  `/assets/images/Characters/alivecharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+const DEAD_SPRITE = (slot) =>
+  `/assets/images/Characters/deathcharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/minigames/RPS/lose_${n}.mp3`);
+
+export default function TrueFalseAftermath({ data, onComplete, stylingDebug = false, slotsById = {} }) {
   const { minigameScores, namesById, livesById, contestantIds, loserIds } = data;
   const videoRef = useRef(null);
   const [showTable, setShowTable] = useState(false);
@@ -36,10 +43,10 @@ export default function TrueFalseAftermath({ data, onComplete, stylingDebug = fa
       if (v && v.currentTime >= tableAtSec) setShowTable(true);
     };
     v?.addEventListener("timeupdate", onTime);
-    const fallback = window.setTimeout(() => setShowTable(true), (tableAtSec + 0.4) * 1000);
+    const fallback = gameClock.setTimeout(() => setShowTable(true), (tableAtSec + 0.4) * 1000);
     return () => {
       v?.removeEventListener("timeupdate", onTime);
-      window.clearTimeout(fallback);
+      gameClock.clearTimeout(fallback);
     };
   }, [tableAtSec]);
 
@@ -50,8 +57,8 @@ export default function TrueFalseAftermath({ data, onComplete, stylingDebug = fa
         ? Math.max(0, (videoDuration - tableAtSec - 1.2) * 1000)
         : HEART_DELAY_MS * 2;
     const delayMs = Math.min(HEART_DELAY_MS, roomMs);
-    const t = window.setTimeout(() => setHeartPhase(true), delayMs);
-    return () => window.clearTimeout(t);
+    const t = gameClock.setTimeout(() => setHeartPhase(true), delayMs);
+    return () => gameClock.clearTimeout(t);
   }, [showTable, videoDuration, tableAtSec]);
 
   useEffect(() => {
@@ -78,6 +85,18 @@ export default function TrueFalseAftermath({ data, onComplete, stylingDebug = fa
   };
 
   const loseSet = useMemo(() => new Set(loserIds || []), [loserIds]);
+  const best = Math.max(1, ...rows.map((r) => r.score));
+
+  useEffect(() => {
+    if (!heartPhase || !loseSet.size) return;
+    try {
+      const a = new Audio(LOSE_SOUNDS[Math.floor(Math.random() * LOSE_SOUNDS.length)]);
+      a.volume = 0.8;
+      a.play().catch(() => {});
+    } catch {
+      /* audio unavailable */
+    }
+  }, [heartPhase, loseSet]);
 
   return (
     <div className="truefalse-aftermath-root" role="dialog" aria-label="Результати міні-гри">
@@ -101,7 +120,7 @@ export default function TrueFalseAftermath({ data, onComplete, stylingDebug = fa
         }}
         onEnded={stylingDebug ? undefined : finishScene}
         onError={() => {
-          window.setTimeout(() => {
+          gameClock.setTimeout(() => {
             if (!stylingDebug) finishScene();
           }, 500);
         }}
@@ -115,55 +134,43 @@ export default function TrueFalseAftermath({ data, onComplete, stylingDebug = fa
       )}
 
       {showTable && (
-        <div className="truefalse-aftermath-panel">
-          <h2 className="truefalse-aftermath-title">Результати «Правда / Брехня»</h2>
-          <p className="truefalse-aftermath-sub">Правильні відповіді в міні-грі</p>
-          <div className="truefalse-aftermath-table-scroll">
-            <table className="truefalse-aftermath-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Гравець</th>
-                  <th>Балів</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} className={loseSet.has(r.id) ? "truefalse-aftermath-row-risk" : ""}>
-                    <td>{r.rank}</td>
-                    <td>{r.name}</td>
-                    <td className="truefalse-aftermath-scorecell">{r.score}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="truefalse-aftermath-lives">
-            {rows.map((r) => {
+        <div className="tfa-panel">
+          <header className="tfa-brand">
+            <span className="tfa-t">ПРАВДА</span>
+            <span className="tfa-or">чи</span>
+            <span className="tfa-f">БРЕХНЯ</span>
+          </header>
+          <p className="tfa-sub">Підсумок · правильних відповідей</p>
+          <div className="tfa-rows">
+            {rows.map((r, i) => {
               const loses = loseSet.has(r.id);
+              const hit = heartPhase && loses;
               const n = Math.min(10, Math.max(0, r.lives));
               return (
                 <div
-                  key={`life-${r.id}`}
-                  className={`truefalse-aftermath-life-row ${
-                    heartPhase && loses ? "truefalse-aftermath-life-row--hit" : ""
-                  }`}
+                  key={r.id}
+                  className={`tfa-row ${loses ? "risk" : ""} ${hit ? "hit" : ""} ${i === 0 && !loses ? "lead" : ""}`}
+                  style={{ animationDelay: `${0.15 + i * 0.12}s` }}
                 >
-                  <span className="truefalse-aftermath-life-name">{r.name}</span>
-                  <span
-                    className="truefalse-aftermath-hearts"
-                    aria-label={`Життів: ${heartPhase && loses ? Math.max(0, r.lives - 1) : r.lives}`}
-                  >
-                    {Array.from({ length: n }).map((_, i) => (
-                      <span
-                        key={i}
-                        className={
-                          heartPhase && loses && i === n - 1 && n > 0
-                            ? "truefalse-aftermath-heart truefalse-aftermath-heart--lost"
-                            : "truefalse-aftermath-heart"
-                        }
-                      >
+                  <span className="tfa-rank">{i === 0 && !loses ? "👑" : r.rank}</span>
+                  <img
+                    className="tfa-sprite"
+                    src={hit && r.lives <= 1 ? DEAD_SPRITE(slotsById[r.id]) : SPRITE(slotsById[r.id])}
+                    alt=""
+                  />
+                  <div className="tfa-mid">
+                    <span className="tfa-name">{r.name}</span>
+                    <div className="tfa-bar">
+                      <div
+                        className="tfa-bar-fill"
+                        style={{ transform: `scaleX(${r.score / best})`, transitionDelay: `${0.4 + i * 0.12}s` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="tfa-score">{r.score}</span>
+                  <span className="tfa-hearts" aria-label={`Життів: ${hit ? Math.max(0, r.lives - 1) : r.lives}`}>
+                    {Array.from({ length: n }).map((_, k) => (
+                      <span key={k} className={`tfa-heart ${hit && k === n - 1 ? "lost" : ""}`}>
                         ❤
                       </span>
                     ))}
@@ -172,6 +179,11 @@ export default function TrueFalseAftermath({ data, onComplete, stylingDebug = fa
               );
             })}
           </div>
+          {heartPhase && loseSet.size > 0 && (
+            <p className="tfa-verdict">
+              💀 {rows.filter((r) => loseSet.has(r.id)).map((r) => r.name).join(", ")} — мінус життя!
+            </p>
+          )}
         </div>
       )}
     </div>

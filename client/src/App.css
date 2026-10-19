@@ -799,6 +799,23 @@ body {
   accent-color: #8b2020;
 }
 
+.category-list {
+  max-height: 48vh;
+  overflow-y: auto;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.category-check-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.category-count {
+  font-size: 0.8rem;
+  color: #9a7070;
+}
+
 .modal-back-btn {
   position: fixed;
   top: 1.5rem;
@@ -3184,4 +3201,52 @@ body {
   .menu-glowing-btn {
     font-size: 1em;
   }
+}
+
+/* a hidden <video> that only buffers the next clip */
+.video-preload-only {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* difficulty picker under the category list (TV menu) */
+.difficulty-heading {
+  margin: 0.6rem 0 0.4rem;
+  font-size: 1rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #c4a0a0;
+}
+.difficulty-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+  margin-bottom: 0.8rem;
+}
+.difficulty-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.55rem 0.4rem;
+  border: 1px solid rgba(196, 160, 160, 0.35);
+  border-radius: 12px;
+  background: rgba(20, 8, 8, 0.6);
+  color: #c4a0a0;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.difficulty-option:hover { transform: translateY(-1px); border-color: rgba(220, 120, 120, 0.7); }
+.difficulty-option b { font-size: 0.95rem; color: #f1dada; }
+.difficulty-option small { font-size: 0.72rem; opacity: 0.75; }
+.difficulty-icon { font-size: 1.3rem; line-height: 1; }
+.difficulty-option.selected {
+  border-color: #c0392b;
+  background: rgba(139, 32, 32, 0.55);
+  box-shadow: 0 0 14px rgba(192, 57, 43, 0.6);
 }

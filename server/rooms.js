@@ -3,6 +3,7 @@
  * every game. Fine for a single live event; see ARCHITECTURE.md for the trade-off.
  */
 const crypto = require("crypto");
+const clock = require("./clock");
 const {
   MAX_PLAYERS,
   CHARACTER_SLOTS,
@@ -21,13 +22,14 @@ function generateRoomCode() {
   return code;
 }
 
-function createRoom(displaySocketId, selectedDifficulty) {
+function createRoom(displaySocketId, categoryId, difficulty = "mixed") {
   const code = generateRoomCode();
   const room = {
     code,
     players: new Map(), // socketId -> player
     displaySocketId,
-    selectedDifficulty,
+    categoryId: categoryId || null, // chosen quiz category (content store id)
+    difficulty, // "easy" | "medium" | "hard" | "mixed" (questions.normalizeGameDifficulty)
 
     currentRoundIndex: 0,
     rounds: [], // filled by phases.startGame()
@@ -43,8 +45,20 @@ function createRoom(displaySocketId, selectedDifficulty) {
     roundAdvanced: false,
     scoresVideoDone: false,
 
+    // pause (server/clock.js): game time stands still while pausedAt is set
+    pausedAt: null,
+    pausedTotalMs: 0,
+    timers: new Set(),
+    deferredWhilePaused: [], // display handshakes that arrived during a pause
+    introStarted: false,
+
     // active minigame contest for the round just played (see minigames/)
     minigame: null,
+    minigameHistory: [], // ids of the minigames run this game, in order
+
+    // final race state (server/finalBattle.js) + its question deck
+    finalBattle: null,
+    finalDeck: [],
   };
   rooms.set(code, room);
   return room;
@@ -62,19 +76,16 @@ function clearRoomTimers(room) {
     "introTimer",
     "finalBattleTimer",
   ]) {
-    if (room[key]) {
-      clearTimeout(room[key]);
-      room[key] = null;
-    }
+    clock.cancel(room[key]);
+    room[key] = null;
   }
-  if (room.minigame?.timeoutHandle) {
-    clearTimeout(room.minigame.timeoutHandle);
+  if (room.minigame) {
+    clock.cancel(room.minigame.timeoutHandle);
+    clock.cancel(room.minigame.playTimer);
     room.minigame.timeoutHandle = null;
-  }
-  if (room.minigame?.playTimer) {
-    clearTimeout(room.minigame.playTimer);
     room.minigame.playTimer = null;
   }
+  clock.cancelAll(room);
 }
 
 function deleteRoom(roomCode) {
@@ -107,6 +118,9 @@ function addPlayer(room, socketId, rawName) {
     name: (rawName || "Гравець").trim().slice(0, 20) || "Гравець",
     score: 0,
     lives: LIVES_PER_PLAYER,
+    // 0 lives -> ghost: keeps answering, but the rating (score) is frozen
+    isGhost: false,
+    diedAtRound: null,
     hasAnswered: false,
     lastAnswerIndex: null,
     isAdmin: isFirstPlayer,
@@ -123,6 +137,7 @@ function serializePlayer(p) {
     name: p.name,
     score: p.score,
     lives: p.lives ?? LIVES_PER_PLAYER,
+    isGhost: !!p.isGhost,
     hasAnswered: p.hasAnswered || false,
     isAdmin: p.isAdmin || false,
     characterSlot: p.characterSlot ?? 1,

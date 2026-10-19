@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import "./TrueFalseMinigame.css";
+import gameClock from "../game/gameClock";
 
 const TOTAL_PLAY_SECONDS = 30;
 const FREEZE_SECONDS = 3;
@@ -326,7 +327,12 @@ export default function TrueFalseMinigame({
   useVideoClock,
   onVideoStartedAt,
   syncData, // { startedAtTs, serverTime, receivedAt } — server-generated for sync
+  socket,
+  namesById = {},
+  slotsById = {},
+  contestantIds = [],
 }) {
+  const isDisplay = uiMode === "display";
   const videoRef = useRef(null);
   const didVideoStartRef = useRef(false);
   const countdownStartedRef = useRef(false);
@@ -344,14 +350,14 @@ export default function TrueFalseMinigame({
   const [fallbackSyncData, setFallbackSyncData] = useState(null);
   useEffect(() => {
     if (uiMode !== "mobile" || !isActive || syncData) return;
-    const id = window.setTimeout(() => {
+    const id = gameClock.setTimeout(() => {
       setFallbackSyncData({
-        startedAtTs: Date.now(),
-        serverTime: Date.now(),
-        receivedAt: Date.now(),
+        startedAtTs: gameClock.now(),
+        serverTime: gameClock.now(),
+        receivedAt: gameClock.now(),
       });
     }, 2500);
-    return () => window.clearTimeout(id);
+    return () => gameClock.clearTimeout(id);
   }, [uiMode, isActive, syncData]);
 
   const resolvedSyncData = syncData ?? fallbackSyncData;
@@ -389,8 +395,8 @@ export default function TrueFalseMinigame({
     didVideoStartRef.current = false;
 
     const scheduleCountdownStep = (targetTs, fn) => {
-      const ms = Math.max(0, targetTs - (Date.now() + serverOffset));
-      return window.setTimeout(fn, ms);
+      const ms = Math.max(0, targetTs - (gameClock.now() + serverOffset));
+      return gameClock.setTimeout(fn, ms);
     };
 
     if (resolvedUseVideoClock) {
@@ -405,9 +411,9 @@ export default function TrueFalseMinigame({
         if (countdownStartedRef.current) return;
         countdownStartedRef.current = true;
         setCountdownNumber(3);
-        window.setTimeout(() => setCountdownNumber(2), 1000);
-        window.setTimeout(() => setCountdownNumber(1), 2000);
-        window.setTimeout(() => {
+        gameClock.setTimeout(() => setCountdownNumber(2), 1000);
+        gameClock.setTimeout(() => setCountdownNumber(1), 2000);
+        gameClock.setTimeout(() => {
           setCountdownNumber(null);
           setGameStarted(true);
         }, 3000);
@@ -427,7 +433,7 @@ export default function TrueFalseMinigame({
       return () => {
         v.removeEventListener("timeupdate", onTimeUpdate);
         try {
-          if (freezeTimeoutRef.current) window.clearTimeout(freezeTimeoutRef.current);
+          if (freezeTimeoutRef.current) gameClock.clearTimeout(freezeTimeoutRef.current);
         } catch {}
       };
     }
@@ -459,16 +465,16 @@ export default function TrueFalseMinigame({
         }),
       ];
       return () => {
-        ids.forEach((id) => window.clearTimeout(id));
+        ids.forEach((id) => gameClock.clearTimeout(id));
         try {
-          if (freezeTimeoutRef.current) window.clearTimeout(freezeTimeoutRef.current);
+          if (freezeTimeoutRef.current) gameClock.clearTimeout(freezeTimeoutRef.current);
         } catch {}
       };
     }
 
     return () => {
       try {
-        if (freezeTimeoutRef.current) window.clearTimeout(freezeTimeoutRef.current);
+        if (freezeTimeoutRef.current) gameClock.clearTimeout(freezeTimeoutRef.current);
       } catch {}
     };
   }, [isActive, roundIndex, resolvedUseVideoClock, resolvedSyncData, serverOffset]);
@@ -484,14 +490,14 @@ export default function TrueFalseMinigame({
     if (gameStartTs == null || serverOffset == null) return;
 
     const tick = () => {
-      const sn = Date.now() + serverOffset;
+      const sn = gameClock.now() + serverOffset;
       const elapsed = (sn - gameStartTs) / 1000;
       const left = Math.max(0, Math.ceil(TOTAL_PLAY_SECONDS - elapsed));
       setTimeLeft(left);
     };
     tick();
-    const id = window.setInterval(tick, 200);
-    return () => window.clearInterval(id);
+    const id = gameClock.setInterval(tick, 200);
+    return () => gameClock.clearInterval(id);
   }, [isActive, gameStarted, gameStartTs, serverOffset]);
 
   const shuffledQuestionsRef = useRef(null);
@@ -518,6 +524,24 @@ export default function TrueFalseMinigame({
 
   const currentQ = shuffledQuestions[questionIdx % shuffledQuestions.length];
 
+  // ---- phone: streak, flash, freeze countdown, live progress to the TV
+  const [streak, setStreak] = useState(0);
+  const [flash, setFlash] = useState(null); // { kind, n }
+  const [missed, setMissed] = useState(null); // the statement you got wrong + its truth
+  const [, setFrameTick] = useState(0);
+  const freezeUntilRef = useRef(0);
+
+  const sendProgress = (nextScore, frozen) => {
+    socket?.emit("minigameEvent", { name: "tf:progress", data: { score: nextScore, frozen } });
+  };
+
+  // re-render 4x/s while frozen so the thaw counter moves
+  useEffect(() => {
+    if (!isFrozen) return;
+    const id = gameClock.setInterval(() => setFrameTick((t) => t + 1), 250);
+    return () => gameClock.clearInterval(id);
+  }, [isFrozen]);
+
   const answer = (pickedIsTrue) => {
     if (!isActive) return;
     if (!canAnswer) return;
@@ -526,18 +550,52 @@ export default function TrueFalseMinigame({
     if (!currentQ) return;
 
     const correct = pickedIsTrue === currentQ.isTrue;
+    setFlash((f) => ({ kind: correct ? "correct" : "wrong", n: (f?.n || 0) + 1 }));
     if (correct) {
+      sfx("/assets/sounds/click-sound.mp3", 0.5);
+      setStreak((n) => n + 1);
       setScore((s) => s + 1);
       setQuestionIdx((i) => i + 1);
+      sendProgress(score + 1, false);
       return;
     }
 
+    sfx("/assets/sounds/beep.mp3", 0.35);
+    setStreak(0);
+    setMissed({ text: currentQ.text, isTrue: currentQ.isTrue });
     setIsFrozen(true);
-    freezeTimeoutRef.current = window.setTimeout(() => {
+    sendProgress(score, true);
+    freezeUntilRef.current = gameClock.now() + FREEZE_SECONDS * 1000;
+    freezeTimeoutRef.current = gameClock.setTimeout(() => {
       setIsFrozen(false);
+      setMissed(null);
       setQuestionIdx((i) => i + 1);
+      sendProgress(score, false);
     }, FREEZE_SECONDS * 1000);
   };
+
+  // ---- TV: live scores from the phones
+  const [live, setLive] = useState({});
+  useEffect(() => {
+    if (!socket || !isDisplay) return;
+    const onLive = (d) => setLive(d?.byId || {});
+    socket.on("trueFalse:live", onLive);
+    return () => socket.off("trueFalse:live", onLive);
+  }, [socket, isDisplay]);
+
+  // TV: 3-2-1 beeps and a ticking last 5 seconds
+  const beepRef = useRef(null);
+  const beepKey =
+    countdownNumber != null
+      ? `c${countdownNumber}`
+      : gameStarted && timeLeft > 0 && timeLeft <= 5
+      ? `e${timeLeft}`
+      : null;
+  useEffect(() => {
+    if (!isDisplay || !beepKey || beepRef.current === beepKey) return;
+    beepRef.current = beepKey;
+    sfx("/assets/sounds/beep.mp3", 0.45);
+  }, [isDisplay, beepKey]);
 
   // Fallback: if `onPlay` doesn't fire for some reason, emit a sync timestamp shortly after mount.
   useEffect(() => {
@@ -546,19 +604,33 @@ export default function TrueFalseMinigame({
     if (didVideoStartRef.current) return;
     if (!onVideoStartedAt) return;
 
-    const id = window.setTimeout(() => {
+    const id = gameClock.setTimeout(() => {
       if (didVideoStartRef.current) return;
       didVideoStartRef.current = true;
-      onVideoStartedAt(Date.now());
+      onVideoStartedAt(gameClock.now());
     }, 500);
-    return () => window.clearTimeout(id);
+    return () => gameClock.clearTimeout(id);
   }, [uiMode, isActive, onVideoStartedAt]);
 
+  const thawIn = isFrozen ? Math.max(1, Math.ceil((freezeUntilRef.current - gameClock.now()) / 1000)) : 0;
+  const instructing = isActive && !gameStarted && countdownNumber == null;
+  const Brand = ({ small }) => (
+    <header className={`tf-brand ${small ? "small" : ""}`}>
+      <span className="tf-word-true">ПРАВДА</span>
+      <span className="tf-or">чи</span>
+      <span className="tf-word-false">БРЕХНЯ</span>
+    </header>
+  );
+
   return (
-    <section className={`truefalse-root ${uiMode === "mobile" ? "truefalse-root-mobile" : ""}`}>
+    <section
+      className={`tf-root ${isDisplay ? "tf-display" : "tf-mobile"} ${
+        flash && !isDisplay ? `tf-flash-${flash.kind}` : ""
+      } ${isFrozen ? "tf-frozen" : ""}`}
+    >
       {resolvedShowVideoBg && (
         <video
-          className="truefalse-bg"
+          className="tf-video"
           ref={videoRef}
           src="/assets/minigames/truefalse.mp4"
           autoPlay
@@ -568,76 +640,239 @@ export default function TrueFalseMinigame({
           onPlay={() => {
             if (didVideoStartRef.current) return;
             didVideoStartRef.current = true;
-            onVideoStartedAt?.(Date.now());
+            onVideoStartedAt?.(gameClock.now());
           }}
         />
       )}
+      {isDisplay ? <div className="tf-vignette" /> : <div className="tf-stage-bg" />}
 
-      <div className="truefalse-overlay">
-        <div className="truefalse-topline">
-          {gameStarted && (
+      {/* ------------------------------------------------ TV */}
+      {isDisplay && (
+        <>
+          {Brand({ small: gameStarted })}
+
+          {instructing && (
             <>
-              <div className="truefalse-timer">
-                ⏱ {timeLeft}
-              </div>
-              {uiMode === "mobile" && (
-                <div className="truefalse-score-badge">
-                  ✓ {score}
+              <aside className="tf-side tf-side-left">
+                <div className="tf-rule" style={{ animationDelay: "0.4s" }}>
+                  <div className="tf-rule-head">
+                    <b className="t">ПРАВДА</b>
+                    <span>або</span>
+                    <b className="f">БРЕХНЯ</b>
+                  </div>
+                  <p>тисни на телефоні, поки не скінчиться час</p>
                 </div>
-              )}
+                <div className="tf-rule" style={{ animationDelay: "0.9s" }}>
+                  <div className="tf-rule-head">
+                    <b className="ok">+1</b>
+                  </div>
+                  <p>за кожну правильну відповідь</p>
+                </div>
+              </aside>
+              <aside className="tf-side tf-side-right">
+                <div className="tf-rule" style={{ animationDelay: "1.4s" }}>
+                  <div className="tf-rule-head">
+                    <b className="ice">❄ 3 с</b>
+                  </div>
+                  <p>помилка заморожує телефон</p>
+                </div>
+                <div className="tf-rule" style={{ animationDelay: "1.9s" }}>
+                  <div className="tf-rule-head">
+                    <b className="bad">💀</b>
+                  </div>
+                  <p>найменше балів — мінус життя</p>
+                </div>
+              </aside>
             </>
           )}
+
+          {gameStarted && (
+            <>
+              <TfTimer timeLeft={timeLeft} total={TOTAL_PLAY_SECONDS} />
+              <LiveBoard
+                ids={contestantIds}
+                live={live}
+                namesById={namesById}
+                slotsById={slotsById}
+                done={timeLeft <= 0}
+              />
+              {timeLeft <= 0 && <div className="tf-center-msg">Час вийшов! Рахуємо…</div>}
+            </>
+          )}
+
+          {!isActive && <div className="tf-center-msg">Очікуйте результатів…</div>}
+        </>
+      )}
+
+      {countdownNumber != null && (
+        <div className="tf-countdown" key={countdownNumber}>
+          {countdownNumber}
         </div>
+      )}
 
-        {countdownNumber != null && (
-          <div className="truefalse-countdown" aria-live="polite">
-            {countdownNumber}
-          </div>
-        )}
-
-        {!gameStarted && countdownNumber == null && isActive && (
-          <div className="truefalse-wait">
-            {uiMode === "mobile" ? "Дивіться на головний екран" : "Інструкція триває…"}
-          </div>
-        )}
-
-        {!isActive && (
-          <div className="truefalse-wait">
-            {uiMode === "mobile" ? "Очікуйте старту…" : "Очікуйте результатів конкурсу…"}
-          </div>
-        )}
-
-        {uiMode === "mobile" && gameStarted && currentQ && (
-          <div className="truefalse-card">
-            <div className="truefalse-question">{currentQ.text}</div>
-            <div className="truefalse-buttons">
-              <button
-                className="truefalse-btn truefalse-btn-true"
-                onClick={() => answer(true)}
-                disabled={!canAnswer || isFrozen}
-                type="button"
-              >
-                Правда
-              </button>
-              <button
-                className="truefalse-btn truefalse-btn-false"
-                onClick={() => answer(false)}
-                disabled={!canAnswer || isFrozen}
-                type="button"
-              >
-                Брехня
-              </button>
+      {/* ------------------------------------------------ phone */}
+      {!isDisplay && (
+        <div className="tf-phone">
+          {!isActive && <p className="tf-wait">Очікуйте старту…</p>}
+          {instructing && (
+            <div className="tf-phone-intro">
+              {Brand({})}
+              <p className="tf-wait">Слухай ведучого на головному екрані</p>
+              <ul className="tf-phone-rules">
+                <li>
+                  <b className="ok">+1</b> за правильну
+                </li>
+                <li>
+                  <b className="ice">❄ 3 с</b> заморозка за помилку
+                </li>
+                <li>
+                  <b className="bad">💀</b> найменше балів — мінус життя
+                </li>
+              </ul>
             </div>
-          </div>
-        )}
+          )}
 
-        {uiMode === "mobile" && isFrozen && gameStarted && canAnswer && (
-          <div className="truefalse-freeze" aria-live="polite">
-            ⛔ Заморожено
-          </div>
-        )}
-      </div>
+          {gameStarted && (
+            <>
+              <div className="tf-phone-bar">
+                <div
+                  className="tf-phone-bar-fill"
+                  style={{ transform: `scaleX(${Math.max(0, timeLeft) / TOTAL_PLAY_SECONDS})` }}
+                />
+              </div>
+              <div className="tf-phone-top">
+                <span className={`tf-phone-time ${timeLeft <= 5 ? "hot" : ""}`}>⏱ {timeLeft}</span>
+                <span className="tf-streak-slot">
+                  {streak >= 3 && (
+                    <span key={streak} className="tf-streak">
+                      🔥 {streak}
+                    </span>
+                  )}
+                </span>
+                <span className="tf-phone-score">✓ {score}</span>
+              </div>
+            </>
+          )}
+
+          {gameStarted && timeLeft <= 0 && (
+            <div className="tf-done">
+              <p className="tf-done-title">Час вийшов!</p>
+              <p className="tf-done-score">{score}</p>
+              <p className="tf-wait">правильних відповідей · результат на екрані</p>
+            </div>
+          )}
+
+          {gameStarted && timeLeft > 0 && currentQ && (
+            <>
+              <div className="tf-card" key={questionIdx}>
+                <span className="tf-card-q">{currentQ.text}</span>
+                {flash && (
+                  <span key={flash.n} className={`tf-float ${flash.kind}`}>
+                    {flash.kind === "correct" ? "+1" : "✕"}
+                  </span>
+                )}
+              </div>
+              <div className="tf-buzzers">
+                <button
+                  className="tf-buzzer tf-buzzer-true"
+                  onClick={() => answer(true)}
+                  disabled={!canAnswer || isFrozen}
+                  type="button"
+                >
+                  <span className="tf-buzzer-cap">✓</span>
+                  <span className="tf-buzzer-label">ПРАВДА</span>
+                </button>
+                <button
+                  className="tf-buzzer tf-buzzer-false"
+                  onClick={() => answer(false)}
+                  disabled={!canAnswer || isFrozen}
+                  type="button"
+                >
+                  <span className="tf-buzzer-cap">✕</span>
+                  <span className="tf-buzzer-label">БРЕХНЯ</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {isFrozen && gameStarted && timeLeft > 0 && canAnswer && (
+            <div className="tf-freeze" aria-live="polite">
+              <p className="tf-freeze-title">❄ ЗАМОРОЖЕНО</p>
+              <p className="tf-freeze-count" key={thawIn}>
+                {thawIn}
+              </p>
+              {missed && (
+                <p className="tf-freeze-truth">
+                  Насправді це{" "}
+                  <b className={missed.isTrue ? "t" : "f"}>{missed.isTrue ? "ПРАВДА" : "БРЕХНЯ"}</b>
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
 
+// ---------------------------------------------------------------- TV parts
+
+const SPRITE = (slot) =>
+  `/assets/images/Characters/alivecharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+
+function sfx(src, volume = 0.6) {
+  try {
+    const a = new Audio(src);
+    a.volume = volume;
+    a.play().catch(() => {});
+  } catch {
+    /* audio unavailable */
+  }
+}
+
+function TfTimer({ timeLeft, total }) {
+  const r = 17;
+  const c = 2 * Math.PI * r;
+  const frac = Math.max(0, Math.min(1, timeLeft / total));
+  return (
+    <div className={`tf-timer ${timeLeft <= 5 ? "hot" : ""}`}>
+      <svg viewBox="0 0 40 40">
+        <circle cx="20" cy="20" r={r} className="track" />
+        <circle cx="20" cy="20" r={r} className="bar" strokeDasharray={c} strokeDashoffset={c * (1 - frac)} />
+      </svg>
+      <span key={timeLeft <= 5 ? timeLeft : "t"}>{Math.max(0, timeLeft)}</span>
+    </div>
+  );
+}
+
+/** Contestants down both sides of the host: live score, ❄ while frozen, 👑 leader. */
+const LiveBoard = memo(function LiveBoard({ ids, live, namesById, slotsById, done }) {
+  const all = ids.length ? ids : Object.keys(live);
+  const ranked = [...all].sort((a, b) => (live[b]?.score ?? 0) - (live[a]?.score ?? 0));
+  const leader = ranked[0];
+  const half = Math.ceil(all.length / 2);
+  const cols = [all.slice(0, half), all.slice(half)];
+  return (
+    <>
+      {cols.map((col, ci) => (
+        <div key={ci} className={`tf-board tf-board-${ci ? "right" : "left"}`}>
+          {col.map((id) => {
+            const st = live[id] || { score: 0, frozen: false };
+            const lead = id === leader && st.score > 0;
+            return (
+              <div key={id} className={`tf-player ${st.frozen && !done ? "frozen" : ""} ${lead ? "lead" : ""}`}>
+                <img src={SPRITE(slotsById[id])} alt="" />
+                <span className="tf-player-name">{namesById[id] || "Гравець"}</span>
+                <span className="tf-player-score" key={st.score}>
+                  {st.score}
+                </span>
+                {st.frozen && !done && <span className="tf-player-ice">❄</span>}
+                {lead && <span className="tf-player-crown">👑</span>}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </>
+  );
+});

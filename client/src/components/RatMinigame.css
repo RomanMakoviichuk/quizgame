@@ -1,0 +1,604 @@
+@import url("https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Caveat:wght@600;700&display=swap");
+
+/* «Серед нас: КРИСА» — a classroom after school, one charger on the front desk */
+.rat-root {
+  --rat-display: "Unbounded", "Manrope", system-ui, sans-serif;
+  --rat-text: "Manrope", system-ui, sans-serif;
+  --rat-chalk: "Caveat", "Comic Sans MS", cursive;
+  --rat-red: #ff3b5c;
+  --rat-cyan: #7dfcff;
+  --rat-gold: #ffd36b;
+  --rat-green: #5fe08c;
+  --rat-ink: #0a0814;
+  --chalk: #f6f2e4;
+  --wood: linear-gradient(180deg, #a86a35, #7a4520 55%, #5a3015);
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2vh;
+  padding: 2vh 2vw;
+  overflow: hidden;
+  background: #120c08;
+  color: #f3eefc;
+  font-family: var(--rat-text);
+  text-align: center;
+}
+.rat-root img { user-select: none; -webkit-user-drag: none; }
+.rat-muted { margin: 0; max-width: 40rem; font-weight: 700; font-size: clamp(0.9rem, 2.4vh, 1.3rem); opacity: 0.92; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85); }
+
+/* ------------------------------------------------------------ the classroom */
+.rat-class {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center center;
+}
+.rat-class::after { /* vignette, so chalk and cards read well */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 55%, transparent 50%, rgba(0, 0, 0, 0.6) 100%);
+}
+.rat-class.tense { animation: rat-redlight 0.6s ease-in-out infinite alternate; }
+.rat-sunbeam {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 42vw;
+  height: 90vh;
+  background: linear-gradient(115deg, rgba(255, 190, 110, 0.3), rgba(255, 170, 90, 0.07) 45%, transparent 70%);
+  clip-path: polygon(0 0, 30% 0, 100% 100%, 40% 100%);
+  mix-blend-mode: screen;
+  animation: rat-beam 6s ease-in-out infinite alternate;
+}
+.rat-lampglow { position: absolute; left: 50%; top: -6vh; width: 50vw; height: 22vh; translate: -50% 0; border-radius: 50%; background: radial-gradient(ellipse, rgba(170, 220, 255, 0.28), transparent 70%); mix-blend-mode: screen; animation: rat-lamp 7s steps(1) infinite; }
+.rat-dust { position: absolute; left: 1vw; top: 10vh; width: 32vw; height: 75vh; pointer-events: none; }
+.rat-dust i {
+  position: absolute;
+  left: var(--x);
+  bottom: 0;
+  width: 0.6vh;
+  height: 0.6vh;
+  border-radius: 50%;
+  background: rgba(255, 225, 170, 0.85);
+  box-shadow: 0 0 0.8vh rgba(255, 210, 140, 0.9);
+  animation: rat-mote var(--t) linear infinite;
+  animation-delay: var(--d);
+}
+.rat-plane {
+  position: absolute;
+  left: 4vw;
+  top: 55vh;
+  width: 6vh;
+  aspect-ratio: 1.6;
+  background: linear-gradient(160deg, #ffffff, #d8d8e2);
+  clip-path: polygon(0 50%, 100% 0, 62% 100%, 50% 62%);
+  filter: drop-shadow(0 0.8vh 0.8vh rgba(0, 0, 0, 0.45));
+  opacity: 0;
+  animation: rat-plane 13s ease-in-out infinite 3s;
+}
+.rat-peek { position: absolute; right: 1vw; top: 46vh; font-size: 6vh; opacity: 0; animation: rat-peek 9s ease-in-out infinite 5s; }
+.rat-voting .rat-peek { animation-duration: 6s; }
+
+/* the charger and everything that happens to it: the middle zone of the screen */
+.rat-desk { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.rat-charger-spot { position: absolute; left: 50vw; top: 64vh; width: 13vw; margin-left: -6.5vw; aspect-ratio: 760 / 378; }
+.rat-charger { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 1vh 1vh rgba(0, 0, 0, 0.55)); }
+.rat-charger-spot.idle .rat-charger { animation: rat-glint 2.2s ease-in-out infinite alternate; }
+.rat-charger-glow { position: absolute; inset: -35% -15%; border-radius: 50%; background: radial-gradient(ellipse, rgba(125, 252, 255, 0.32), transparent 65%); mix-blend-mode: screen; animation: rat-pulse 1.6s ease-in-out infinite alternate; }
+/* team win: holy glow, sparkles, confetti */
+.rat-charger-spot.kept .rat-charger-glow { background: radial-gradient(ellipse, rgba(255, 220, 120, 0.6), rgba(95, 224, 140, 0.25) 45%, transparent 70%); }
+.rat-charger-spot.kept .rat-charger { animation: rat-holy 0.9s ease-in-out infinite alternate; }
+.rat-sparkle, .rat-smoke { position: absolute; font-style: normal; font-size: 4vh; pointer-events: none; }
+.rat-sparkle { animation: rat-twinkle 1.2s ease-in-out infinite; }
+.rat-sparkle.s1 { left: -10%; top: -40%; }
+.rat-sparkle.s2 { right: -6%; top: -55%; animation-delay: -0.4s; }
+.rat-sparkle.s3 { left: 40%; top: -85%; animation-delay: -0.8s; }
+.rat-sparkle.s4 { right: 30%; top: -30%; animation: rat-float-up 2s ease-out infinite; }
+.rat-confetti { position: absolute; left: 33vw; right: 33vw; top: 30vh; height: 50vh; overflow: hidden; }
+.rat-confetti i { position: absolute; top: -4%; left: var(--x); width: 0.9vh; height: 1.6vh; background: var(--c); animation: rat-confetti 3.2s linear infinite; animation-delay: var(--d); }
+/* the lone rat runs in, grabs the charger and runs off with it: same clock, same units (vw) */
+.rat-charger.carried { animation: rat-carried 2.6s linear forwards; }
+.rat-charger-spot.stolen .rat-charger-glow { animation: rat-fade 0.6s 1.3s forwards; }
+.rat-charger.ghost { filter: brightness(0) invert(1); opacity: 0; animation: rat-ghost 1.4s 2.7s ease-in-out infinite alternate; }
+.rat-missing { position: absolute; font-family: var(--rat-display); font-weight: 800; font-size: 6vh; color: var(--rat-gold); text-shadow: 0 0 1.4vh rgba(0, 0, 0, 0.8); opacity: 0; animation: rat-question 1.8s ease-in-out infinite; }
+.rat-missing.q1 { left: 0; top: -30%; animation-delay: 2.8s; }
+.rat-missing.q2 { left: 45%; top: -60%; animation-delay: 3.2s; }
+.rat-missing.q3 { right: 0; top: -25%; animation-delay: 3.6s; }
+.rat-note {
+  position: absolute;
+  left: 50%;
+  bottom: 125%;
+  width: 16vh;
+  margin-left: -8vh;
+  padding: 1vh 0.6vh;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #fff59a, #ffe466);
+  box-shadow: 0 0.8vh 1.4vh rgba(0, 0, 0, 0.45);
+  color: #3a2a00;
+  font-family: var(--rat-chalk);
+  font-weight: 700;
+  font-size: 3.2vh;
+  line-height: 0.95;
+  animation: rat-note 0.5s 2.8s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+.rat-note small { display: block; margin-top: 0.5vh; font-size: 0.6em; text-align: right; }
+.rat-thief { position: absolute; top: 63vh; left: 104vw; font-size: 9vh; line-height: 1; animation: rat-thief 2.6s linear forwards; }
+/* several rats: they run in and get caught (the charger stays) */
+.rat-runner { position: absolute; top: 69vh; font-size: 7vh; line-height: 1; animation: rat-run-l 1s ease-in forwards; animation-delay: calc(var(--i) * 0.1s); }
+.rat-runner.l { left: -10vw; --to: calc(34vw + var(--i) * 1.6vw); transform: scaleX(-1); }
+.rat-runner.r { left: 104vw; --to: calc(60vw - var(--i) * 1.6vw); animation-name: rat-run-r; }
+.rat-charger-spot.caught ~ .rat-runner { animation: rat-run-l 1s ease-in forwards, rat-dizzy 0.5s 1.6s ease-in-out infinite alternate; animation-delay: calc(var(--i) * 0.1s), calc(1.6s + var(--i) * 0.07s); }
+.rat-charger-spot.caught ~ .rat-runner.r { animation-name: rat-run-r, rat-dizzy; }
+.rat-stamp {
+  position: absolute;
+  left: 50vw;
+  top: 50vh;
+  translate: -50% -50%;
+  padding: 0.6vh 2.4vh;
+  border: 0.7vh solid #e0213f;
+  border-radius: 1.4vh;
+  font-family: var(--rat-display);
+  font-weight: 800;
+  font-size: 5.4vh;
+  color: #e0213f;
+  background: rgba(255, 240, 240, 0.9);
+  transform: rotate(-10deg);
+  animation: rat-stamp 0.45s 1.1s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+.rat-charger-spot.caught .rat-charger-glow { background: radial-gradient(ellipse, rgba(95, 224, 140, 0.45), transparent 65%); }
+/* everybody stole: a cartoon fight wrecks the charger */
+.rat-charger-spot.broken ~ .rat-runner { animation: rat-run-l 1s ease-in forwards; }
+.rat-charger-spot.broken ~ .rat-runner.r { animation-name: rat-run-r; }
+.rat-charger-spot.broken .rat-charger { animation: rat-wreck 2.6s ease-out forwards; }
+.rat-charger-spot.broken .rat-charger-glow { background: radial-gradient(ellipse, rgba(255, 59, 92, 0.55), transparent 65%); animation: rat-alarm-blink 0.35s steps(2) infinite; }
+.rat-smoke { opacity: 0; animation: rat-smoke 2.2s ease-out infinite 2.6s; }
+.rat-smoke.m1 { left: 10%; top: -50%; }
+.rat-smoke.m2 { left: 45%; top: -40%; animation-delay: 3s; }
+.rat-smoke.m3 { right: 10%; top: -60%; animation-delay: 3.4s; }
+.rat-fight {
+  position: absolute;
+  left: 50vw;
+  top: 69vh;
+  width: 26vw;
+  height: 30vh;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(235, 228, 215, 0.96) 40%, rgba(200, 190, 175, 0.7) 60%, transparent 72%);
+  opacity: 0;
+  animation: rat-fight 2.4s 0.9s ease-in-out forwards;
+}
+.rat-fight span { position: absolute; font-size: 5vh; animation: rat-jitter 0.18s linear infinite; }
+.rat-fight span:nth-child(1) { left: 20%; top: 20%; }
+.rat-fight span:nth-child(2) { right: 18%; top: 15%; animation-delay: -0.05s; }
+.rat-fight span:nth-child(3) { left: 30%; bottom: 15%; animation-delay: -0.1s; }
+.rat-fight span:nth-child(4) { right: 28%; bottom: 20%; animation-delay: -0.15s; }
+
+/* ------------------------------------------------------------ the chalkboard (drawn)
+   Size per phase: rules 44vh, the vote 30vh, the reveal 24vh. The text sizes
+   are picked so every line fits its board — nothing gets cut. */
+.rat-chalkboard {
+  position: absolute !important;
+  left: 50%;
+  top: 2.5vh;
+  z-index: 3 !important;
+  width: min(54vw, 96vh);
+  height: 30vh;
+  translate: -50% 0;
+  padding: 1vh;
+  box-sizing: border-box;
+  border-radius: 1vh;
+  background: var(--wood);
+  box-shadow: 0 1.6vh 3.4vh rgba(0, 0, 0, 0.6), inset 0 0.3vh 0 rgba(255, 220, 170, 0.35);
+  animation: rat-drop 0.6s cubic-bezier(.3, 1.4, .5, 1) both;
+}
+.rat-prep .rat-chalkboard { width: min(60vw, 108vh); height: 44vh; }
+.rat-reveal .rat-chalkboard { width: min(50vw, 90vh); height: 24vh; }
+.rat-slate {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0.5vh;
+  background: linear-gradient(170deg, #2b5442, #1f4536 60%, #1a3a2e);
+  box-shadow: inset 0 0 2.4vh rgba(0, 0, 0, 0.5);
+}
+.rat-slate-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8vh;
+  padding: 1.6vh 2.4vh;
+  box-sizing: border-box;
+  font-family: var(--rat-chalk);
+  font-weight: 700;
+  color: var(--chalk);
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.6);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+.rat-slate-content > * { max-width: 100%; animation: rat-write 0.6s 0.2s ease-out both; }
+.rat-slate-content > :nth-child(2) { animation-delay: 0.4s; }
+.rat-slate-content > :nth-child(3) { animation-delay: 0.6s; }
+.rat-slate-content > :nth-child(4) { animation-delay: 0.8s; }
+.rat-slate-content .big { font-size: 4.6vh; line-height: 1.05; }
+.rat-slate-content .big.host { font-size: 4.2vh; }
+.rat-slate-content span { font-size: 3vh; }
+.rat-slate-content small { font-size: 2.2vh; opacity: 0.85; }
+.rat-slate-content .title { font-size: 4.2vh; }
+.rat-slate-content .howto { font-size: 2.5vh; }
+.rat-slate-content u { text-decoration: none; border-bottom: 0.22vh solid currentColor; }
+.rat-slate-content u.good { color: #b9ffcf; }
+.rat-slate-content u.rat { color: #ffe08a; }
+.rat-slate-content u.bad { color: #ffb0bc; }
+.rat-slate-content .tally { font-size: 3.8vh; }
+.rat-slate-content .tally b { font-size: 1.2em; color: #fff3a6; }
+.rat-reveal .rat-slate-content .big { font-size: 4.2vh; }
+.rat-slate-content .verdict.trust { color: #b9ffcf; }
+.rat-slate-content .verdict.rat { color: #ffe08a; }
+.rat-slate-content .verdict.manyRats { color: #a8ffcf; }
+.rat-slate-content .verdict.allRats { color: #ffb0bc; }
+.rat-rulelist { list-style: none; margin: 0.2vh 0; padding: 0; display: flex; flex-direction: column; gap: 0.3vh; text-align: left; }
+.rat-rulelist li { display: grid; grid-template-columns: 7vh 1fr; align-items: center; gap: 1vh; font-size: 2.6vh; }
+.rat-rulelist li i { font-style: normal; font-size: 2vh; white-space: nowrap; letter-spacing: -0.15em; }
+.rat-rulelist li span { font-size: inherit !important; }
+.rat-chalk-dots { display: inline-flex; align-items: center; gap: 0.8vh; font-size: 2.8vh !important; }
+.rat-chalk-dots i { width: 2vh; height: 2vh; border-radius: 50%; border: 0.3vh solid var(--chalk); box-sizing: border-box; transition: background 0.3s; }
+.rat-chalk-dots i.on { background: var(--chalk); box-shadow: 0 0 1vh rgba(255, 255, 255, 0.6); animation: rat-pop 0.35s cubic-bezier(.3, 1.6, .5, 1); }
+/* the eraser sweeps the old writing away on every change */
+.rat-eraser-wipe {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -25%;
+  width: 22%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08) 40%, rgba(255, 255, 255, 0.12) 60%, transparent);
+  animation: rat-eraser 0.45s ease-in forwards;
+  pointer-events: none;
+}
+.rat-tray { position: absolute; left: 6%; right: 6%; bottom: -1.1vh; height: 1.4vh; border-radius: 0.4vh; background: var(--wood); box-shadow: 0 0.8vh 1.2vh rgba(0, 0, 0, 0.5); }
+.rat-tray .chalk { position: absolute; bottom: 0.8vh; height: 0.8vh; width: 3.6vh; border-radius: 0.4vh; background: #f4f1e6; }
+.rat-tray .chalk.c1 { left: 12%; }
+.rat-tray .chalk.c2 { left: 18%; width: 2.4vh; background: #ffd0dc; }
+.rat-tray .chalk.c3 { left: 22%; width: 2.8vh; background: #fff3a6; }
+.rat-tray .eraser { position: absolute; right: 14%; bottom: 0.8vh; width: 7vh; height: 2vh; border-radius: 0.5vh; background: linear-gradient(180deg, #8b6b4a 0 45%, #3a3a44 45%); }
+
+/* ------------------------------------------------------------ the alarm clock (drawn) */
+.rat-alarm { position: absolute !important; right: 3vw; top: 4vh; z-index: 3 !important; width: 21vh; display: flex; flex-direction: column; align-items: center; animation: rat-drop 0.6s 0.2s cubic-bezier(.3, 1.4, .5, 1) both; }
+.rat-alarm svg { width: 100%; height: auto; filter: drop-shadow(0 1.4vh 1.6vh rgba(0, 0, 0, 0.6)); overflow: visible; }
+/* the second hand ticks like a real one: a quick jump with a little bounce */
+.rat-alarm .sec { transform-origin: 60px 72px; transform-box: view-box; transition: transform 0.18s cubic-bezier(.3, 1.8, .5, 1); }
+.rat-alarm b {
+  margin-top: -0.6vh;
+  padding: 0.3vh 1.4vh;
+  border-radius: 1vh;
+  background: #14121c;
+  border: 0.3vh solid #3a3646;
+  font-family: var(--rat-display);
+  font-weight: 800;
+  font-size: 4.2vh;
+  color: #ff6b7d;
+  text-shadow: 0 0 1.2vh rgba(255, 70, 90, 0.8);
+}
+.rat-alarm.hot svg { animation: rat-ring 0.16s linear infinite; }
+.rat-alarm.hot .bells, .rat-alarm.done .bells { animation: rat-bells 0.1s linear infinite; transform-origin: 60px 20px; transform-box: view-box; }
+.rat-alarm.done .hammer { animation: rat-bells 0.06s linear infinite; transform-origin: 60px 18px; transform-box: view-box; }
+.rat-alarm.hot b { animation: rat-pop 0.35s cubic-bezier(.3, 1.6, .5, 1); }
+.rat-alarm.done svg { animation: rat-ring 0.12s linear infinite; }
+.rat-alarm.done b { font-size: 2.6vh; color: var(--rat-gold); }
+
+/* ------------------------------------------------------------ HUD */
+.rat-display.rat-prep, .rat-display.rat-voting { justify-content: flex-end; padding-bottom: 2vh; }
+.rat-display > .rat-lineup, .rat-display > .rat-getready { position: relative; z-index: 3; }
+.rat-getready {
+  margin: 0;
+  padding: 0.6vh 1.6vw;
+  border-radius: 999px;
+  background: rgba(10, 6, 4, 0.75);
+  font-family: var(--rat-display);
+  font-weight: 700;
+  font-size: clamp(1rem, 3vh, 1.8rem);
+  color: var(--rat-gold);
+  animation: rat-pulse 0.8s ease-in-out infinite alternate;
+}
+.rat-countdown {
+  position: fixed !important;
+  inset: 0;
+  z-index: 50 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-family: var(--rat-display);
+  font-weight: 800;
+  font-size: min(34vh, 24rem);
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: 0.8vh var(--rat-ink);
+  paint-order: stroke fill;
+  text-shadow: 0 0 6vh rgba(255, 59, 92, 0.9), 0 1vh 3vh rgba(0, 0, 0, 0.8);
+  animation: rat-count 1s ease-out;
+}
+/* the class: participants in the front row (no hint of anyone's choice) */
+.rat-lineup { display: flex; justify-content: center; gap: 1.2vw; }
+.rat-student { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.3vh; animation: rat-rise 0.5s ease-out both; animation-delay: calc(var(--i) * 0.08s); }
+.rat-student img { height: clamp(3rem, 13vh, 8rem); width: auto; filter: drop-shadow(0 0.8vh 1vh rgba(0, 0, 0, 0.75)); animation: rat-fidget 2.4s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.37s); }
+.rat-student span { padding: 0.15vh 0.8vw; border-radius: 999px; background: rgba(0, 0, 0, 0.72); font-weight: 800; font-size: clamp(0.7rem, 1.8vh, 1rem); }
+.rat-lineup.tense .rat-student img { animation: rat-shiver 0.15s linear infinite; }
+.rat-sweat { position: absolute; top: -1vh; right: 0; font-style: normal; font-size: 2.6vh; animation: rat-drip 0.9s ease-in infinite; }
+
+/* ------------------------------------------------------------ reveal: cork boards with polaroids */
+.rat-display.rat-reveal { justify-content: flex-end; padding-bottom: 2.4vh; }
+.rat-cork {
+  position: absolute !important;
+  z-index: 3 !important;
+  top: 31vh;
+  max-height: 54vh;
+  width: 30vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1vh;
+  padding: 1.2vh 1vw;
+  box-sizing: border-box;
+  border-radius: 1vh;
+  border: 1vh solid transparent;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(0, 0, 0, 0.12) 0 2px, transparent 3px) 0 0 / 14px 14px,
+    radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.08) 0 1px, transparent 2px) 0 0 / 11px 11px,
+    linear-gradient(160deg, #c99862, #a87745) padding-box,
+    var(--wood) border-box;
+  box-shadow: 0 1.6vh 3vh rgba(0, 0, 0, 0.55);
+  animation: rat-rise 0.5s ease-out both;
+}
+.rat-cork.keep { left: 2vw; }
+.rat-cork.steal { right: 2vw; }
+.rat-cork h3 { margin: 0; padding: 0.3vh 1.2vw; border-radius: 0.6vh; background: #fdfbf3; color: #2a2a33; font-family: var(--rat-display); font-weight: 800; font-size: clamp(0.85rem, 2.4vh, 1.4rem); transform: rotate(-1.5deg); box-shadow: 0 0.4vh 0.8vh rgba(0, 0, 0, 0.35); }
+.rat-cork h3 span { margin-left: 0.3em; font-size: 1.4em; }
+.rat-cork.keep h3 span { color: #1f6fb8; }
+.rat-cork.steal h3 span { color: #d0102e; }
+.rat-cork-empty { margin: 1vh 0; padding: 0.6vh 1.6vh; background: #fff59a; color: #3a2a00; font-family: var(--rat-chalk); font-weight: 700; font-size: 3.2vh; transform: rotate(-3deg); box-shadow: 0 0.6vh 1vh rgba(0, 0, 0, 0.4); animation: rat-pin 0.45s cubic-bezier(.3, 1.6, .5, 1) both; }
+.rat-cork-cards { display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: 1.2vh 0.8vw; }
+.rat-polaroid {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2vh;
+  width: clamp(4.2rem, 11vh, 7rem);
+  padding: 0.7vh 0.5vh 0.6vh;
+  background: #fdfbf3;
+  color: #2a2a33;
+  box-shadow: 0 0.6vh 1.2vh rgba(0, 0, 0, 0.45);
+  transform: rotate(var(--r));
+  animation: rat-pin 0.45s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+.rat-polaroid .pin { position: absolute; top: -0.8vh; width: 1.6vh; height: 1.6vh; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff8a9a, #c0102a 70%); box-shadow: 0 0.3vh 0.4vh rgba(0, 0, 0, 0.5); }
+.rat-polaroid.keep .pin { background: radial-gradient(circle at 35% 35%, #8ad8ff, #1f6fb8 70%); }
+.rat-polaroid img { width: 100%; height: clamp(2.6rem, 7.5vh, 5rem); object-fit: contain; background: linear-gradient(180deg, #2c3a44, #1b252c); }
+.rat-polaroid b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--rat-chalk); font-size: clamp(0.9rem, 2.4vh, 1.3rem); }
+.rat-polaroid i { font-style: normal; font-size: clamp(0.6rem, 1.4vh, 0.8rem); opacity: 0.75; }
+.rat-polaroid em { position: absolute; top: 1.1vh; right: 0.9vh; padding: 0.1vh 0.6vh; border-radius: 0.6vh; background: rgba(60, 4, 12, 0.88); font-style: normal; font-family: var(--rat-display); font-weight: 800; font-size: 1.6vh; color: #ff8a9a; animation: rat-pop 0.45s cubic-bezier(.3, 1.6, .5, 1) both; }
+.rat-polaroid.lost img { filter: grayscale(0.8) brightness(0.7); }
+.rat-polaroid.won { box-shadow: 0 0 2.4vh rgba(255, 211, 107, 0.9); animation: rat-pin 0.45s both, rat-bounce 0.7s 0.5s ease-in-out infinite; }
+.rat-crown { position: absolute; top: -3.4vh; font-size: 3.2vh; }
+.rat-verdict {
+  position: relative;
+  z-index: 3;
+  max-width: 92vw;
+  padding: 1.3vh 2.2vw;
+  border-radius: 2vh;
+  font-family: var(--rat-display);
+  font-weight: 800;
+  font-size: clamp(1rem, 3.2vh, 2rem);
+  line-height: 1.25;
+  animation: rat-slam 0.6s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+.rat-verdict.good, .rat-verdict.caught { background: rgba(10, 60, 30, 0.92); border: 0.3vh solid var(--rat-green); color: #c8ffd9; box-shadow: 0 0 5vh rgba(95, 224, 140, 0.4); }
+.rat-verdict.rat { background: rgba(60, 40, 0, 0.94); border: 0.3vh solid var(--rat-gold); color: #fff0c4; box-shadow: 0 0 5vh rgba(255, 211, 107, 0.45); }
+.rat-verdict.bad { background: rgba(60, 6, 14, 0.94); border: 0.3vh solid var(--rat-red); color: #ffd0d8; box-shadow: 0 0 5vh rgba(255, 59, 92, 0.45); }
+
+/* ------------------------------------------------------------ phone (one screen, no scrolling) */
+.rat-mobile {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  height: 100dvh;
+  box-sizing: border-box;
+  justify-content: flex-start;
+  gap: clamp(0.35rem, 1.3vh, 0.7rem);
+  padding: clamp(0.5rem, 1.6vh, 0.9rem) 0.8rem clamp(0.6rem, 2vh, 1rem);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.rat-mobile > :not(.rat-phone-bg):not(.rat-countdown) { position: relative; z-index: 2; }
+.rat-phone-bg { position: absolute; inset: -14px; z-index: 0; background-size: cover; background-position: 50% 55%; filter: blur(3px) brightness(0.42) saturate(1.15); }
+.rat-mobile.rat-phone-prep,
+.rat-mobile:not(.rat-vote):not(.rat-locked) { justify-content: center; }
+/* a little chalkboard with the title */
+.rat-phone-board {
+  flex: none;
+  padding: 0.35rem;
+  border-radius: 10px;
+  background: var(--wood);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.55);
+}
+.rat-phone-board .rat-head { padding: 0.35rem 1.4rem 0.45rem; border-radius: 6px; background: linear-gradient(160deg, #2f5a45, #183a2d); }
+.rat-head { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.rat-kicker { margin: 0; font-family: var(--rat-chalk); font-weight: 700; font-size: clamp(0.95rem, 2.8vh, 1.2rem); letter-spacing: 0.25em; color: var(--chalk); }
+.rat-title {
+  margin: 0.1rem 0 0;
+  font-family: var(--rat-display);
+  font-weight: 800;
+  font-size: clamp(1.4rem, 5vh, 2.2rem);
+  letter-spacing: 0.05em;
+  color: var(--rat-red);
+  -webkit-text-stroke: 1.5px #2a0510;
+  paint-order: stroke fill;
+  text-shadow: 0 0 14px rgba(255, 59, 92, 0.6);
+}
+.rat-title span { -webkit-text-stroke: 0; text-shadow: none; }
+.rat-head.small .rat-title { font-size: clamp(1.2rem, 4.2vh, 1.8rem); }
+.rat-mobile .rat-countdown { font-size: min(9rem, 30vh); }
+.rat-phone-charger { flex: none; width: min(54vw, 12rem); filter: drop-shadow(0 0 14px rgba(125, 252, 255, 0.45)) drop-shadow(0 8px 10px rgba(0, 0, 0, 0.6)); animation: rat-hover 2.4s ease-in-out infinite alternate; }
+.rat-phone-rules { width: 100%; max-width: 24rem; padding: 0.5rem 0.7rem; box-sizing: border-box; border-radius: 12px; background: linear-gradient(160deg, rgba(47, 90, 69, 0.92), rgba(24, 58, 45, 0.92)); border: 3px solid #7a4520; font-family: var(--rat-chalk); color: var(--chalk); }
+.rat-phone-rules .rat-rulelist { gap: 0.15rem; margin: 0; }
+.rat-phone-rules .rat-rulelist li { grid-template-columns: 2.9rem 1fr; gap: 0.35rem; font-size: clamp(0.92rem, 2.6vh, 1.08rem); line-height: 1.1; }
+.rat-phone-rules .rat-rulelist li i { font-size: 0.72rem; }
+.rat-phone-rules u { text-decoration: none; border-bottom: 2px solid currentColor; }
+.rat-phone-rules u.good { color: #b9ffcf; }
+.rat-phone-rules u.rat { color: #ffe08a; }
+.rat-phone-rules u.bad { color: #ffb0bc; }
+.rat-pitch { margin: 0; max-width: 24rem; padding: 0.35rem 0.8rem; border-radius: 12px; background: rgba(24, 58, 45, 0.85); border: 2px solid rgba(122, 69, 32, 0.9); font-family: var(--rat-chalk); font-weight: 700; font-size: clamp(1rem, 2.9vh, 1.2rem); line-height: 1.15; color: var(--chalk); }
+.rat-phone-top { flex: none; width: 100%; display: flex; justify-content: space-between; align-items: center; padding-right: 3.4rem; box-sizing: border-box; } /* room for the admin's pause button */
+.rat-phone-time, .rat-phone-total { padding: 0.2rem 0.7rem; border-radius: 999px; background: rgba(0, 0, 0, 0.6); font-family: var(--rat-display); font-weight: 800; font-size: clamp(0.85rem, 2.6vh, 1.1rem); }
+.rat-phone-total { font-family: var(--rat-text); font-size: clamp(0.75rem, 2.1vh, 0.9rem); opacity: 0.9; }
+.rat-phone-time.hot { color: var(--rat-red); animation: rat-pulse 0.5s ease-in-out infinite alternate; }
+
+.rat-choices { flex: 1; min-height: 0; max-height: 46vh; width: 100%; max-width: 26rem; display: grid; grid-template-rows: 1fr 1fr; gap: clamp(0.5rem, 1.6vh, 0.8rem); }
+.rat-choice {
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 0.8rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  text-align: left;
+  font-family: var(--rat-text);
+  cursor: pointer;
+  transition: transform 80ms ease, box-shadow 0.2s, border-color 0.2s, filter 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.rat-choice.steal { background: linear-gradient(160deg, #ff5a74, #b0102e 60%, #5e0718); box-shadow: 0 6px 0 #3d0410, 0 0 22px rgba(255, 59, 92, 0.35); }
+.rat-choice.keep { background: linear-gradient(160deg, #4fdcff, #1866b8 60%, #0b2f63); box-shadow: 0 6px 0 #06203f, 0 0 22px rgba(70, 217, 255, 0.35); }
+.rat-choice:active { transform: translateY(3px) scale(0.98); }
+.rat-choice-icon { grid-row: 1 / 3; font-size: clamp(2rem, 7vh, 3rem); line-height: 1; }
+.rat-choice.steal .rat-choice-icon { animation: rat-sneak 1.6s ease-in-out infinite; }
+.rat-choice b { font-family: var(--rat-display); font-weight: 800; font-size: clamp(1.05rem, min(6.2vw, 4vh), 1.5rem); line-height: 1.05; letter-spacing: 0.01em; overflow-wrap: anywhere; }
+.rat-choice small { font-weight: 700; font-size: clamp(0.75rem, 2.1vh, 0.92rem); opacity: 0.9; }
+.rat-choices:has(.picked) .rat-choice:not(.picked) { filter: grayscale(0.6) brightness(0.55); }
+.rat-choice.picked { border-color: #fff; transform: scale(1.02); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5), 0 0 26px rgba(255, 255, 255, 0.35); }
+.rat-confirm {
+  flex: none;
+  width: 100%;
+  max-width: 26rem;
+  padding: clamp(0.65rem, 2.1vh, 0.95rem);
+  border: none;
+  border-radius: 999px;
+  font-family: var(--rat-display);
+  font-weight: 800;
+  font-size: clamp(0.9rem, 2.7vh, 1.1rem);
+  color: var(--rat-ink);
+  background: var(--rat-gold);
+  box-shadow: 0 5px 0 #8a6a17;
+  cursor: pointer;
+}
+.rat-confirm:disabled { background: rgba(255, 255, 255, 0.14); color: rgba(255, 255, 255, 0.7); box-shadow: none; }
+.rat-confirm:not(:disabled) { animation: rat-pulse 0.7s ease-in-out infinite alternate; }
+
+.rat-lock-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  margin: auto 0;
+  width: 100%;
+  max-width: 22rem;
+  box-sizing: border-box;
+  padding: 1.2rem 1rem;
+  border-radius: 18px;
+  border: 6px solid #7a4520;
+  background: linear-gradient(160deg, #2f5a45, #183a2d);
+  font-family: var(--rat-chalk);
+  color: var(--chalk);
+  animation: rat-pop 0.45s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+.rat-lock-icon { font-size: 2.4rem; }
+.rat-lock-card b { font-weight: 700; font-size: 1.7rem; line-height: 1; }
+.rat-lock-choice { padding: 0.25rem 1rem; border-radius: 999px; font-family: var(--rat-display); font-weight: 800; font-size: 0.95rem; }
+.rat-lock-choice.steal { background: rgba(255, 59, 92, 0.3); color: #ffc2cc; }
+.rat-lock-choice.keep { background: rgba(70, 217, 255, 0.25); color: #c4f5ff; }
+.rat-lock-card small { font-size: 1.1rem; opacity: 0.8; }
+
+.rat-big { margin: 0; font-family: var(--rat-display); font-weight: 800; font-size: clamp(1.25rem, 4.6vh, 2rem); line-height: 1.15; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.5); animation: rat-pop 0.45s cubic-bezier(.3, 1.6, .5, 1) both; }
+.rat-big.good { color: var(--rat-green); }
+.rat-big.bad { color: var(--rat-red); }
+.rat-mobile.lost .rat-phone-bg { filter: blur(3px) brightness(0.3) sepia(1) hue-rotate(-40deg) saturate(3); }
+.rat-mobile.won .rat-phone-bg { filter: blur(3px) brightness(0.35) sepia(1) hue-rotate(70deg) saturate(2); }
+.rat-mychoice { margin: 0; font-weight: 700; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8); }
+.rat-mychoice b.steal { color: #ff9aae; }
+.rat-mychoice b.keep { color: #9fefff; }
+.rat-life { margin: 0; font-family: var(--rat-display); font-weight: 800; font-size: 2.4rem; color: #ff5b6b; animation: rat-pop 0.5s 0.2s cubic-bezier(.3, 1.6, .5, 1) both; }
+.rat-lives { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.55rem 1.4rem; border-radius: 16px; background: rgba(0, 0, 0, 0.55); border: 2px solid rgba(255, 120, 130, 0.45); }
+.rat-lives span { font-weight: 800; font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.85; }
+.rat-lives b { font-size: 1.7rem; letter-spacing: 0.2rem; color: #ff4d5e; text-shadow: 0 0 14px rgba(255, 60, 80, 0.8); }
+p.rat-lives.dead { margin: 0; font-weight: 800; color: #ffd0d4; }
+.rat-counts { margin: 0; font-family: var(--rat-display); font-weight: 700; font-size: 1.05rem; opacity: 0.9; }
+
+/* ------------------------------------------------------------ keyframes */
+@keyframes rat-redlight { from { box-shadow: inset 0 0 0 rgba(255, 0, 40, 0); } to { box-shadow: inset 0 0 14vh rgba(255, 0, 40, 0.35); } }
+@keyframes rat-beam { from { opacity: 0.75; } to { opacity: 1; } }
+@keyframes rat-lamp { 0%, 86%, 90%, 94%, 100% { opacity: 1; } 88%, 92% { opacity: 0.15; } }
+@keyframes rat-mote { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(4vw, -70vh); opacity: 0; } }
+@keyframes rat-plane {
+  0%, 2% { opacity: 0; transform: translate(0, 0) rotate(-14deg); }
+  4% { opacity: 1; }
+  22% { transform: translate(86vw, -30vh) rotate(6deg); opacity: 1; }
+  24%, 100% { transform: translate(92vw, -26vh) rotate(24deg); opacity: 0; }
+}
+@keyframes rat-peek { 0%, 70%, 100% { opacity: 0; transform: translateX(4vh); } 76%, 90% { opacity: 1; transform: translateX(0) rotate(-8deg); } 83% { transform: translateX(0) rotate(6deg); } }
+@keyframes rat-glint { from { filter: brightness(1) drop-shadow(0 0 0 rgba(125, 252, 255, 0)); } to { filter: brightness(1.12) drop-shadow(0 0 1.6vh rgba(125, 252, 255, 0.8)); } }
+@keyframes rat-holy { from { filter: brightness(1.1) drop-shadow(0 0 1.4vh rgba(255, 220, 120, 0.8)); transform: translateY(0); } to { filter: brightness(1.35) drop-shadow(0 0 3.6vh rgba(255, 220, 120, 1)); transform: translateY(-8%); } }
+@keyframes rat-carried { 0%, 46% { transform: none; } 52% { transform: translate(0, -18%) rotate(-5deg); } 100% { transform: translate(-65vw, -18%) rotate(-8deg); } }
+@keyframes rat-ghost { from { opacity: 0.15; } to { opacity: 0.4; } }
+@keyframes rat-question { 0% { opacity: 0; transform: translateY(0) scale(0.6); } 30% { opacity: 1; transform: translateY(-20%) scale(1.1); } 100% { opacity: 0; transform: translateY(-80%) scale(1); } }
+@keyframes rat-thief { 0% { left: 104vw; } 40% { left: 56vw; } 43% { left: 56vw; transform: translateY(-14%); } 46% { left: 56vw; transform: none; } 100% { left: -9vw; } }
+@keyframes rat-note { 0% { transform: rotate(-30deg) scale(0); opacity: 0; } 100% { transform: rotate(7deg) scale(1); opacity: 1; } }
+@keyframes rat-run-l { from { left: -10vw; } to { left: var(--to); } }
+@keyframes rat-run-r { from { left: 104vw; } to { left: var(--to); } }
+@keyframes rat-dizzy { from { rotate: -14deg; } to { rotate: 14deg; } }
+@keyframes rat-stamp { 0% { transform: rotate(-12deg) scale(3); opacity: 0; } 100% { transform: rotate(-12deg) scale(1); opacity: 1; } }
+@keyframes rat-fight { 0% { opacity: 0; transform: scale(0.4); } 15%, 80% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.3); } }
+@keyframes rat-jitter { 0% { transform: translate(0, 0); } 33% { transform: translate(6px, -4px); } 66% { transform: translate(-5px, 3px); } 100% { transform: translate(0, 0); } }
+@keyframes rat-wreck { 0%, 40% { transform: none; filter: none; } 60% { transform: rotate(-12deg) translateY(-20%); } 100% { transform: rotate(8deg) translateY(4%); filter: grayscale(1) brightness(0.45); } }
+@keyframes rat-twinkle { 0%, 100% { transform: scale(0.6); opacity: 0.4; } 50% { transform: scale(1.2); opacity: 1; } }
+@keyframes rat-float-up { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-120%); opacity: 0; } }
+@keyframes rat-confetti { from { transform: translateY(0) rotate(0); } to { transform: translateY(55vh) rotate(720deg); } }
+@keyframes rat-smoke { 0% { opacity: 0; transform: translateY(0) scale(0.6); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-140%) scale(1.4); } }
+@keyframes rat-write { from { clip-path: inset(-0.4em 100% -0.4em -0.4em); opacity: 0.4; } to { clip-path: inset(-0.4em -0.6em -0.4em -0.4em); opacity: 1; } } /* the slanted chalk font overhangs its box: never clip the glyphs */
+@keyframes rat-eraser { from { left: -25%; opacity: 1; } to { left: 105%; opacity: 0.6; } }
+@keyframes rat-drop { 0% { transform: translateY(-40%); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes rat-ring { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-7deg); } 75% { transform: rotate(7deg); } }
+@keyframes rat-bells { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(10deg); } }
+@keyframes rat-fidget { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-4px) rotate(2deg); } }
+@keyframes rat-shiver { 0%, 100% { translate: 0 0; } 25% { translate: 2px -1px; } 75% { translate: -2px 1px; } }
+@keyframes rat-drip { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(2.4vh); opacity: 0; } }
+@keyframes rat-sneak { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(8px) rotate(-6deg); } }
+@keyframes rat-alarm-blink { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
+@keyframes rat-fade { to { opacity: 0; } }
+@keyframes rat-pin { 0% { transform: rotate(var(--r)) translateY(-40%) scale(1.3); opacity: 0; } 100% { transform: rotate(var(--r)); opacity: 1; } }
+@keyframes rat-pulse { from { transform: scale(1); opacity: 0.85; } to { transform: scale(1.05); opacity: 1; } }
+@keyframes rat-hover { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+@keyframes rat-pop { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes rat-rise { 0% { transform: translateY(24px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes rat-count { 0% { transform: scale(1.8); opacity: 0; } 30% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.92); opacity: 1; } }
+@keyframes rat-bounce { 0%, 100% { translate: 0 0; } 50% { translate: 0 -1vh; } }
+@keyframes rat-slam { 0% { transform: scale(2.2); opacity: 0; } 60% { transform: scale(0.95); opacity: 1; } 100% { transform: scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rat-root * { animation: none !important; transition: none !important; }
+}

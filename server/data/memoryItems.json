@@ -1,0 +1,10 @@
+[
+  { "id": "banana", "name": "Банан", "image": "banana.png" },
+  { "id": "cap", "name": "Кепка", "image": "cap.png" },
+  { "id": "cucumber", "name": "Огірок", "image": "cucumber.png" },
+  { "id": "gun", "name": "Пістолет", "image": "gun.png" },
+  { "id": "wrench", "name": "Гайковий ключ", "image": "key.png" },
+  { "id": "orange", "name": "Апельсин", "image": "orange.png" },
+  { "id": "plunger", "name": "Вантуз", "image": "plunger.png" },
+  { "id": "cone", "name": "Дорожній конус", "image": "road cone.png" }
+]

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import "./HorrorTimer.css";
+import gameClock from "../game/gameClock";
 
 /**
  * Хоррор-тематичний таймер: жирні білі цифри + мілісекунди.
@@ -15,16 +16,16 @@ export default function HorrorTimer({ timeLeft, questionId, totalSeconds = 15 })
   useEffect(() => {
     if (questionId && questionId !== questionIdRef.current) {
       questionIdRef.current = questionId;
-      startTimeRef.current = Date.now();
+      startTimeRef.current = gameClock.now();
     }
   }, [questionId]);
 
   useEffect(() => {
     if (!questionId || timeLeft < 0) return;
-    if (!startTimeRef.current) startTimeRef.current = Date.now();
+    if (!startTimeRef.current) startTimeRef.current = gameClock.now();
 
     const tick = () => {
-      const elapsed = (Date.now() - startTimeRef.current) / 1000;
+      const elapsed = (gameClock.now() - startTimeRef.current) / 1000;
       const remaining = Math.max(0, totalSeconds - elapsed);
       const sec = Math.floor(remaining);
       const msVal = Math.floor((remaining - sec) * 100);
@@ -32,8 +33,8 @@ export default function HorrorTimer({ timeLeft, questionId, totalSeconds = 15 })
     };
 
     tick();
-    const id = setInterval(tick, 50);
-    return () => clearInterval(id);
+    const id = gameClock.setInterval(tick, 50);
+    return () => gameClock.clearInterval(id);
   }, [questionId, timeLeft, totalSeconds]);
 
   if (timeLeft < 0) return null;

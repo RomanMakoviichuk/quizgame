@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./TypewriterSubtitles.css";
+import gameClock from "../game/gameClock";
 
 /**
  * Horror-style subtitles with typewriter effect.
@@ -19,22 +20,22 @@ export default function TypewriterSubtitles({ text, speed = 80, active, onComple
     }
     setDisplayed("");
     let i = 0;
-    const id = setInterval(() => {
+    const id = gameClock.setInterval(() => {
       if (i >= safeText.length) {
-        clearInterval(id);
+        gameClock.clearInterval(id);
         onComplete?.();
         return;
       }
       const nextChar = safeText[i];
       if (typeof nextChar !== "string") {
-        clearInterval(id);
+        gameClock.clearInterval(id);
         onComplete?.();
         return;
       }
       setDisplayed((prev) => prev + nextChar);
       i++;
     }, speed);
-    return () => clearInterval(id);
+    return () => gameClock.clearInterval(id);
   }, [safeText, active, speed]);
 
   if (!safeText) return null;

@@ -1,8 +1,10 @@
 /**
- * "Матем-Раш" — fast mental-arithmetic minigame.
+ * "Тупоматика" (id: mathRush) — fast mental-arithmetic minigame.
  *
  * Trigger: at least ONE player got the quiz question wrong.
  * Participants: EVERYONE plays (the failers get a chance to save themselves).
+ * Scoring: +1 for a right answer, -1 for a wrong one (the score may go below 0,
+ * so blind tapping never pays).
  * Life loss: exactly one player — the lowest total score (ties broken by pace).
  *
  * Server-authoritative: the server generates the shared question pool, validates
@@ -21,7 +23,7 @@ const CONFIG = {
   MIN_NUMBER: Number(process.env.MATH_RUSH_MIN) || 5,
   MAX_NUMBER: Number(process.env.MATH_RUSH_MAX) || 20,
   // reading time for the on-screen instruction + a 3-2-1 countdown at the end
-  PREP_MS: Number(process.env.MATH_RUSH_PREP_MS) || 11000,
+  PREP_MS: Number(process.env.MATH_RUSH_PREP_MS) || 15000,
   PLAY_MS: Number(process.env.MATH_RUSH_PLAY_MS) || 30000, // answering window
   POOL_SIZE: 40,
 };
@@ -126,7 +128,7 @@ function onSync(mg, nowTs, ctx) {
   for (const id of mg.contestantIds) {
     ctx.emitPlayer(id, "mathRush:question", questionFor(mg, id));
   }
-  ctx.scheduleResolve(mg.playEndAt - Date.now() + 400);
+  ctx.scheduleResolve(mg.playEndAt - ctx.now() + 400);
 }
 
 function onClientEvent(mg, playerId, name, data, ctx) {
@@ -143,7 +145,10 @@ function onClientEvent(mg, playerId, name, data, ctx) {
   const q = mg.pool[st.cursor % mg.pool.length];
   const correct = Number(data.choice) === q.correctIndex;
   if (correct) st.score += 1;
-  else st.wrong += 1;
+  else {
+    st.score -= 1; // a wrong answer costs a point
+    st.wrong += 1;
+  }
   st.answered += 1;
   st.lastAt = now;
   st.cursor += 1;
@@ -181,6 +186,27 @@ function resolveLosers(mg) {
   return [tied[0]];
 }
 
+/**
+ * The rating bonus goes to a single clear winner: highest score, ties broken by
+ * fewer wrong answers, then the earlier final answer, then lower playerId.
+ * Nobody scored, or fewer than two players -> no winner.
+ */
+function resolveWinner(mg) {
+  const ids = mg.contestantIds || [];
+  if (ids.length < 2) return null;
+  const best = Math.max(...ids.map((id) => mg.mr[id].score));
+  if (best <= 0) return null;
+  const tied = ids.filter((id) => mg.mr[id].score === best);
+  tied.sort((x, y) => {
+    const A = mg.mr[x];
+    const B = mg.mr[y];
+    if (A.wrong !== B.wrong) return A.wrong - B.wrong;
+    if (A.lastAt !== B.lastAt) return A.lastAt - B.lastAt;
+    return x < y ? -1 : 1;
+  });
+  return tied[0];
+}
+
 function buildResults(mg) {
   const scores = snapshot(mg);
   const loser = (mg.pendingLoserIds || [])[0];
@@ -214,5 +240,6 @@ module.exports = {
   onSync,
   onClientEvent,
   resolveLosers,
+  resolveWinner,
   buildResults,
 };
