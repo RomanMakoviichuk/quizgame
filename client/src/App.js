@@ -30,11 +30,18 @@ import gameClock from "./game/gameClock";
 import PauseOverlay from "./components/PauseOverlay";
 import { playKillAndDeath, preloadDeathSounds } from "./game/deathSounds";
 
+// The game server serves this page itself (production build on :3001, or a
+// domain through a tunnel/proxy), so it is the same origin. Only the CRA dev
+// server (:3000) talks to the game server on :3001.
 const SOCKET_URL =
   process.env.REACT_APP_SERVER_URL ||
-  (typeof window !== "undefined"
-    ? `http://${window.location.hostname}:3001`
-    : "http://localhost:3001");
+  (typeof window === "undefined"
+    ? "http://localhost:3001"
+    : window.location.port === "3000"
+      ? `${window.location.protocol}//${window.location.hostname}:3001`
+      : window.location.origin);
+// what the lobby tells the players to open on their phones
+const JOIN_HOST = typeof window === "undefined" ? "" : window.location.host;
 
 const isMobile = () =>
   typeof window !== "undefined" &&
@@ -1497,7 +1504,7 @@ function App() {
             <div className="lobby-ui-overlay">
               <p className="lobby-wait-text">
                 Переходьте на{" "}
-                <span className="lobby-wait-highlight">site.fun</span>
+                <span className="lobby-wait-highlight">{JOIN_HOST}</span>
                 <br />
                 якщо не боїтесь!
               </p>
