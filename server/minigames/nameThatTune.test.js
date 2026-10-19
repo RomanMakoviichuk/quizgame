@@ -242,9 +242,9 @@ test("through phases: lives are taken once, only from the losers", (t) => {
   }));
   room.currentRoundIndex = 0;
   room.gameState = GAME_STATE.ANSWER_PHASE;
-  ps.forEach((p, i) => {
+  ps.forEach((p) => {
     p.hasAnswered = true;
-    p.lastAnswerIndex = i === 0 ? 2 : 0; // one wrong -> everybody plays
+    p.lastAnswerIndex = 2; // 5 alive (> 4): only the wrong ones play — here everybody is wrong
   });
   const prev = process.env.MINIGAME_DEMO;
   process.env.MINIGAME_DEMO = "tune";
@@ -255,7 +255,7 @@ test("through phases: lives are taken once, only from the losers", (t) => {
   phases.emitScores(room);
   const mg = room.minigame;
   assert.equal(mg.minigameId, "tune");
-  assert.equal(mg.contestantIds.length, 5, "every living player plays");
+  assert.equal(mg.contestantIds.length, 5, "all five were wrong: all five play");
   phases.startMinigame(room);
   phases.syncMinigame(room);
   // pretend the 5 rounds were played

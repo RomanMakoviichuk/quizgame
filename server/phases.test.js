@@ -109,21 +109,21 @@ test("a living player's correct answer adds 10, a wrong one adds 0", (t) => {
   assert.equal(res[1].data.scoreAwarded, 0);
 });
 
-test("a ghost keeps answering, but its rating stays frozen", (t) => {
+test("a ghost keeps answering and scores half the points", (t) => {
   const { io, phases, room, players, cleanup } = setup(2);
   t.after(cleanup);
   players[0].score = 30;
   players[0].isGhost = true;
   players[0].lives = 0;
   phases.submitAnswer(room, "sock0", 0);
-  assert.equal(players[0].hasAnswered, true); // the answer is accepted…
-  assert.equal(players[0].score, 30); // …but scores nothing
+  assert.equal(players[0].hasAnswered, true);
+  assert.equal(players[0].score, 35); // 30 + half of 10
   const res = events(io, "answerResult")[0].data;
   assert.equal(res.correct, true);
-  assert.equal(res.scoreAwarded, 0);
+  assert.equal(res.scoreAwarded, 5);
   assert.equal(res.isGhost, true);
-  assert.equal(phases.awardScore(players[0], 1), 0);
-  assert.equal(players[0].score, 30);
+  assert.equal(phases.awardScore(players[0], 5), 3); // half, rounded up
+  assert.equal(players[0].score, 38);
 });
 
 // ------------------------------------------------------------------- lives
@@ -154,7 +154,7 @@ test("a life lost above zero keeps the player alive", (t) => {
   assert.equal(players[1].isGhost, false);
 });
 
-test("minigame points: winner +10, other survivors +5, losers 0 — once; a ghost gets nothing", (t) => {
+test("minigame points: winner +10, other survivors +5, losers 0 — once; a ghost gets half", (t) => {
   const { phases, room, players, cleanup } = setup(3);
   t.after(cleanup);
   fakeResolvedMinigame(room, { winner: players[2].id, losers: [players[0].id] });
@@ -168,7 +168,7 @@ test("minigame points: winner +10, other survivors +5, losers 0 — once; a ghos
   players[1].isGhost = true;
   fakeResolvedMinigame(room, { winner: players[1].id });
   phases.applyMinigameLives(room);
-  assert.equal(players[1].score, 0);
+  assert.equal(players[1].score, 5); // a ghost: half of the winner's 10
   assert.equal(players[2].score, 5); // survived, not the winner this time
 });
 
@@ -363,19 +363,86 @@ test("final: a departing player is no longer waited for", (t) => {
   assert.equal(events(io, "finalStepResult").length, 1);
 });
 
-test("everyone answered early: the round still runs the whole timer", (t) => {
-  const { ANSWER_TIMER_MS } = require("./config");
+test("everyone answered: the round ends right away", (t) => {
   const { io, phases, room, players, cleanup } = setup(2);
   t.after(cleanup);
   t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
   room.gameState = GAME_STATE.QUESTION_PLAY;
   phases.startAnswerPhase(room);
   phases.submitAnswer(room, "sock0", 0);
+  assert.equal(room.gameState, GAME_STATE.ANSWER_PHASE); // one still to answer
   phases.submitAnswer(room, "sock1", 1);
-  t.mock.timers.tick(ANSWER_TIMER_MS - 1);
-  assert.equal(room.gameState, GAME_STATE.ANSWER_PHASE);
-  assert.equal(events(io, "scores").length, 0);
-  t.mock.timers.tick(1);
   assert.equal(room.gameState, GAME_STATE.SCORES);
+  assert.equal(events(io, "scores").length, 1);
   assert.equal(players[0].score, 10);
+});
+
+test("4 or fewer alive: everyone plays the minigame, but only the wrong ones can lose a life", (t) => {
+  const { io, phases, room, players, cleanup } = setup(3);
+  t.after(cleanup);
+  const prev = process.env.MINIGAME_DEMO;
+  process.env.MINIGAME_DEMO = "rat";
+  t.after(() => {
+    if (prev === undefined) delete process.env.MINIGAME_DEMO;
+    else process.env.MINIGAME_DEMO = prev;
+  });
+  // P0 wrong, P1 and P2 right
+  players.forEach((p, i) => {
+    p.hasAnswered = true;
+    p.lastAnswerIndex = i === 0 ? 2 : 0;
+  });
+  phases.emitScores(room);
+  const mg = room.minigame;
+  assert.equal(mg.minigameId, "rat");
+  assert.deepEqual([...mg.contestantIds].sort(), players.map((p) => p.id).sort(), "everyone plays");
+  assert.deepEqual([...mg.protectedIds].sort(), [players[1].id, players[2].id].sort());
+  // everybody steals -> in the minigame everybody loses
+  phases.startMinigame(room);
+  phases.syncMinigame(room);
+  mg.rat.voteStartAt = require("./clock").now(room) - 1; // open the vote window now
+  for (const p of players) phases.handleMinigameEvent(room, p.id, "rat:vote", { choice: "steal" });
+  phases.resolveMinigame(room);
+  const res = events(io, "trueFalseResults")[0].data;
+  assert.deepEqual(res.loserIds, [players[0].id], "only the wrong one is told they lose a life");
+  phases.applyMinigameLives(room);
+  assert.equal(players[0].lives, LIVES_PER_PLAYER - 1);
+  assert.equal(players[1].lives, LIVES_PER_PLAYER, "answered right: protected");
+  assert.equal(players[2].lives, LIVES_PER_PLAYER, "answered right: protected");
+  assert.equal(players[1].score, 0, "lost the minigame: no minigame points");
+});
+
+test("more than 4 alive: only the wrong ones play", (t) => {
+  const { phases, room, players, cleanup } = setup(5);
+  t.after(cleanup);
+  const prev = process.env.MINIGAME_DEMO;
+  process.env.MINIGAME_DEMO = "rat";
+  t.after(() => {
+    if (prev === undefined) delete process.env.MINIGAME_DEMO;
+    else process.env.MINIGAME_DEMO = prev;
+  });
+  players.forEach((p, i) => {
+    p.hasAnswered = true;
+    p.lastAnswerIndex = i < 2 ? 2 : 0; // P0, P1 wrong
+  });
+  phases.emitScores(room);
+  assert.deepEqual([...room.minigame.contestantIds].sort(), [players[0].id, players[1].id].sort());
+  assert.deepEqual(room.minigame.protectedIds, []);
+});
+
+test("more than 4 alive: an everyone-plays minigame (the bomb) also takes only the wrong ones", (t) => {
+  const { phases, room, players, cleanup } = setup(6);
+  t.after(cleanup);
+  const prev = process.env.MINIGAME_DEMO;
+  process.env.MINIGAME_DEMO = "hotBomb";
+  t.after(() => {
+    if (prev === undefined) delete process.env.MINIGAME_DEMO;
+    else process.env.MINIGAME_DEMO = prev;
+  });
+  players.forEach((p, i) => {
+    p.hasAnswered = true;
+    p.lastAnswerIndex = i < 3 ? 2 : 0; // P0..P2 wrong
+  });
+  phases.emitScores(room);
+  assert.equal(room.minigame.minigameId, "hotBomb");
+  assert.deepStrictEqual([...room.minigame.contestantIds].sort(), players.slice(0, 3).map((p) => p.id).sort());
 });

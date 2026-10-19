@@ -209,14 +209,15 @@ test("through phases: lives taken once, max one per player, winner +1, ghosts ha
   const phases = createPhases(io);
   const room = rooms.createRoom("display-sock", "cat");
   t.after(() => rooms.deleteRoom(room.code));
-  const ps = [0, 1, 2, 3].map((i) => rooms.addPlayer(room, `s${i}`, `P${i}`));
+  // 5 players (more than SMALL_GAME_MAX_PLAYERS): only the wrong ones play
+  const ps = [0, 1, 2, 3, 4].map((i) => rooms.addPlayer(room, `s${i}`, `P${i}`));
   room.rounds = Array.from({ length: TOTAL_ROUNDS }, (_, i) => ({
     roundIndex: i + 1,
     question: { id: `q${i}`, text: `Q${i}`, options: ["a", "b", "c", "d"], correctIndex: 0 },
   }));
   room.currentRoundIndex = 0;
   room.gameState = GAME_STATE.ANSWER_PHASE;
-  // three wrong, one right; P0 is on the last life
+  // three wrong, two right; P0 is on the last life
   ps.forEach((p, i) => {
     p.hasAnswered = true;
     p.lastAnswerIndex = i < 3 ? 2 : 0;

@@ -30,7 +30,7 @@ const FINAL_SCENE_MS = 11000;
 const CLIP_VOLUME = 0.95;
 // lounge music under the whole minigame (TV); it ducks out while a clip plays
 const BED_MUSIC = "/assets/minigames/Name That Tune/background.mp3";
-const BED_VOLUME = 0.32;
+const BED_VOLUME = 1; // level set by game/loudness.js
 const BED_DUCK_MS = 900; // fade out when a clip starts
 const BED_RISE_MS = 1800; // fade back in when the clip is over
 

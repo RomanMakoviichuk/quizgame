@@ -58,7 +58,7 @@ const TICK_MS = 250; // countdown / timer ring refresh — no need for more // 1
 
 const MUSIC = "/assets/minigames/RPS/background.mp3";
 const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/minigames/RPS/lose_${n}.mp3`);
-const MUSIC_VOLUME = 0.35;
+const MUSIC_VOLUME = 1; // level set by game/loudness.js
 
 // Lose sounds come from a shuffled bag: all four play before any repeats.
 let loseBag = [];

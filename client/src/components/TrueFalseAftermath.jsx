@@ -110,7 +110,7 @@ export default function TrueFalseAftermath({ data, onComplete, stylingDebug = fa
         loop={stylingDebug}
         onLoadedMetadata={(e) => {
           const el = e.target;
-          el.volume = 0.45;
+          el.volume = 1; // the host's voice: its level is set by game/loudness.js
           const d = el.duration;
           if (Number.isFinite(d) && d > 0) {
             setVideoDuration(d);

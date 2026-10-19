@@ -98,7 +98,7 @@ export default function RoundResults({ players = [], roundIndex = 1, scoreCorrec
           playsInline
           aria-hidden
           onLoadedMetadata={(e) => {
-            e.target.volume = 0.6;
+            e.target.volume = 1;
           }}
           onEnded={() => tryClose("clip")}
           onError={() => tryClose("clip")}

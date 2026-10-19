@@ -27,7 +27,7 @@ import { createTugFx } from "../game/tugFx";
 const ASSET = "/assets/minigames/tug%20of%20war";
 const ARENA = `${ASSET}/web/arena.webp`;
 const MUSIC = `${ASSET}/background.mp3`; // the whole minigame
-const MUSIC_VOLUME = 0.32;
+const MUSIC_VOLUME = 1; // level set by game/loudness.js
 
 const okSlot = (slot) => (slot >= 1 && slot <= 8 ? slot : 1);
 const PULLER = (team, slot) => `${ASSET}/web/${team}_${okSlot(slot)}.webp`;
@@ -507,6 +507,14 @@ export default function TugOfWarMinigame({
     beepRef.current = beepKey;
     sfx(beepKey.startsWith("go") ? "/assets/sounds/bell.mp3" : "/assets/sounds/beep.mp3", 0.5);
   }, [isDisplay, beepKey]);
+  // a cheer every time a team wins a round (draws stay quiet)
+  const roundsDone = st?.rounds?.length || 0;
+  const roundCheerRef = useRef(0);
+  useEffect(() => {
+    if (!isDisplay || roundsDone <= roundCheerRef.current) return;
+    roundCheerRef.current = roundsDone;
+    if (lastRound && lastRound.winner !== "draw") sfx("/assets/sounds/happy.mp3", 1);
+  }, [isDisplay, roundsDone, lastRound]);
   useEffect(() => {
     if (!isDisplay || st?.phase !== "done" || endSoundRef.current) return;
     endSoundRef.current = true;

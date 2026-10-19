@@ -41,6 +41,8 @@ const ROWS_BOTTOM = 93;
 const MAX_ROWS = 4;
 const stripW = (exit) => (TRACK_RIGHT - TRACK_LEFT) / (exit + 1);
 const stripLeft = (i, exit) => TRACK_LEFT + i * stripW(exit);
+// the winner's run into the door before the winner card (see .fb-racer-escaped in the CSS)
+const ESCAPE_SCENE_MS = 4800;
 const cellX = (cell, exit) => stripLeft(Math.max(0, Math.min(exit, cell)), exit) + stripW(exit) / 2;
 /**
  * Strips 0..darkness are death. The black body of the shadow covers strips
@@ -356,6 +358,19 @@ function DisplayScene({ race, stage, introPart, countNum, question, timeLeft, an
   const correctText =
     result && question && stage !== "question" ? question.options?.[result.correctIndex] : null;
 
+  // the escape: the winner reaches the door, jumps for joy ("СВОБОДА!"), runs into
+  // the light, the doorway flashes — only then the winner card (ESCAPE_SCENE_MS)
+  const escaped = stage === "done" && race.ending === "escaped" && !!winner;
+  const [winCardShown, setWinCardShown] = useState(false);
+  useEffect(() => {
+    if (!escaped) {
+      setWinCardShown(false);
+      return undefined;
+    }
+    const t = gameClock.setTimeout(() => setWinCardShown(true), ESCAPE_SCENE_MS);
+    return () => gameClock.clearTimeout(t);
+  }, [escaped]);
+
   return (
     <div className={`fb-scene fb-stage-${stage} ${race.ending ? `fb-ending-${race.ending}` : ""}`}>
       <audio ref={audio.ambient} src="/assets/sounds/final_background.mp3" loop preload="auto" />
@@ -454,8 +469,9 @@ function DisplayScene({ race, stage, introPart, countNum, question, timeLeft, an
                     <StitchMark kind="wrong" />
                   </span>
                 ))}
+              {escaped && p.id === winner.id && <span className="fb-escape-shout">СВОБОДА!</span>}
               <span className="fb-racer-floor" />
-              <img className="fb-racer-sprite" src={spriteOf(p)} alt="" />
+              <img className="fb-racer-sprite" src={p.status === "escaped" ? aliveSprite(p.characterSlot) : spriteOf(p)} alt="" />
               <span className="fb-racer-name">
                 {p.wasGhost && p.status === "racing" ? "👻 " : ""}
                 {p.name}
@@ -553,7 +569,8 @@ function DisplayScene({ race, stage, introPart, countNum, question, timeLeft, an
       )}
 
       {/* ------------------------------------------------ endings */}
-      {stage === "done" && race.ending === "escaped" && winner && <WinnerScene winner={winner} />}
+      {escaped && <div className="fb-escape-flash" aria-hidden />}
+      {escaped && winCardShown && <WinnerScene winner={winner} />}
       {stage === "done" && race.ending === "all_consumed" && (
         <div className="fb-overlay fb-overlay-lose">
           <div className="fb-title">
@@ -739,7 +756,7 @@ const CREDIT_ROLES = [
  * Calls onDone when the roll finishes (or on "Пропустити").
  */
 const CREDITS_MUSIC = "/assets/sounds/End Game/background.mp3";
-const CREDITS_VOLUME = 0.7;
+const CREDITS_VOLUME = 1; // level set by game/loudness.js
 
 export function FinalCredits({ result, onDone }) {
   const standings = result?.standings || [];

@@ -17,9 +17,10 @@
  *
  * Moves (all checked here; the phone can't fake them):
  *   hb:word   { seq, text }      holder names an animal on the required letter
- *   hb:target { seq, targetId }  holder picks who gets the bomb (before or
- *                                after the word; a correct word passes at once
- *                                if a target is already picked)
+ *   hb:target { seq, targetId }  pick who gets the bomb next (can be done in
+ *                                advance); a correct word passes the bomb AT
+ *                                ONCE — to that pick, or else to the next
+ *                                player round the circle
  * `seq` is the bomb's pass counter: a move made for an older bomb (after a
  * pass or an explosion) is dropped, so a word and an explosion arriving at the
  * same moment, or a resent event, can never act twice.
@@ -82,6 +83,17 @@ function onStart(mg) {
 }
 
 const active = (mg) => mg.contestantIds.filter((id) => !mg.hb.out.includes(id) && !mg.hb.left.includes(id));
+
+/** The next player still in the game after `from`, going round the circle. */
+function nextAfter(mg, from) {
+  const ring = mg.contestantIds.filter((id) => id === from || active(mg).includes(id));
+  const i = ring.indexOf(from);
+  for (let k = 1; k <= ring.length; k++) {
+    const id = ring[(i + k) % ring.length];
+    if (id !== from) return id;
+  }
+  return null;
+}
 
 function publicState(mg, now) {
   const s = mg.hb;
@@ -260,9 +272,12 @@ function onClientEvent(mg, playerId, name, data, ctx) {
   s.letter = words.chainLetter(res.key, s.used);
   ctx.emitPlayer(playerId, "hb:accept", { seq, word: res.word });
 
+  // a right word passes the bomb at once: to the player picked in advance, else the next one round the circle
   const pre = s.target[playerId];
   if (pre && pass(mg, ctx, playerId, pre)) return;
-  s.awaitingTarget = true;
+  const next = nextAfter(mg, playerId);
+  if (next && pass(mg, ctx, playerId, next)) return;
+  s.awaitingTarget = true; // nobody else to take it (cannot really happen with 2+ players)
   broadcast(mg, ctx, { accepted: { by: playerId, word: res.word } });
 }
 

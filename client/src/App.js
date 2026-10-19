@@ -16,7 +16,8 @@ const GAME_DIFFICULTIES = [
   { id: "mixed", icon: "📈", label: "Наростаюча", hint: "від легких до складних" },
 ];
 const ROUND_GAP_MS = 2000; // rounds 2-9: a pause in the dark before the round announcement
-const MINIGAME_GAP_MS = 3000; // a pause in the dark between the round's results and its minigame
+const MINIGAME_GAP_MS = 3000;
+const PHONE_MG_RESULT_MS = 6500; // phone: how long a minigame's result screen stays // a pause in the dark between the round's results and its minigame
 const QUESTION_REVEAL_MS = 2500; // the question scene's video plays alone this long before the question appears
 import DarkPause from "./components/DarkPause";
 import RoundResults from "./components/RoundResults";
@@ -40,8 +41,8 @@ const SOCKET_URL =
     : window.location.port === "3000"
       ? `${window.location.protocol}//${window.location.hostname}:3001`
       : window.location.origin);
-// what the lobby tells the players to open on their phones
-const JOIN_HOST = typeof window === "undefined" ? "" : window.location.host;
+// the game's public address: shown on the main menu and in the lobby (players open it on their phones)
+const PUBLIC_SITE = process.env.REACT_APP_PUBLIC_HOST || "whoiswho.top";
 
 const isMobile = () =>
   typeof window !== "undefined" &&
@@ -367,6 +368,9 @@ function App() {
   const resultSoundPlayedRef = useRef(false);
 
   const myPlayerId = playerId ?? players?.[0]?.id ?? null;
+  const myPlayer = players.find((p) => p.id === myPlayerId) || null;
+  // phone: after a minigame's result has been shown for a while, back to "my" screen
+  const [phoneMgDone, setPhoneMgDone] = useState(false);
   const playerNamesById = useMemo(() => Object.fromEntries(players.map((p) => [p.id, p.name])), [players]);
   const playerSlotsById = useMemo(
     () => Object.fromEntries(players.map((p) => [p.id, p.characterSlot])),
@@ -654,7 +658,7 @@ function App() {
     const audio = menuAudioRef.current;
     if (!audio || !musicStarted) return;
     audio.loop = true;
-    audio.volume = musicMuted ? 0 : 0.1;
+    audio.volume = musicMuted ? 0 : 1; // level set by game/loudness.js
     audio.muted = musicMuted;
     if (screen === "menu" || screen === "lobby") {
       audio.play().catch(() => {});
@@ -988,6 +992,21 @@ function App() {
     }
     socket?.emit("questionAnnounceDone");
   }
+
+  // Phone: the minigame's own result screen stays PHONE_MG_RESULT_MS, then the phone goes
+  // back to the player's screen (character, lives, points) while the TV finishes its scene.
+  useEffect(() => {
+    if (!isMobile() || isDisplay) return undefined;
+    if (!trueFalseResultsPayload) {
+      setPhoneMgDone(false);
+      return undefined;
+    }
+    const t = gameClock.setTimeout(() => setPhoneMgDone(true), PHONE_MG_RESULT_MS);
+    return () => gameClock.clearTimeout(t);
+  }, [trueFalseResultsPayload, isDisplay]);
+  useEffect(() => {
+    if (trueFalseStart) setPhoneMgDone(false);
+  }, [trueFalseStart]);
 
   // a new round: its announcement hasn't run yet (declared first: runs before the effect below)
   useEffect(() => {
@@ -1360,6 +1379,9 @@ function App() {
         )}
         {/* Без overlay затемнення для головного меню */}
         <div className="main-menu">
+          <a className="menu-site" href={`https://${PUBLIC_SITE}`} onClick={(e) => e.preventDefault()}>
+            {PUBLIC_SITE}
+          </a>
 
           {!connected && <p className="menu-hint">Очікування з&apos;єднання з сервером...</p>}
           {!isMobile() && (
@@ -1504,7 +1526,7 @@ function App() {
             <div className="lobby-ui-overlay">
               <p className="lobby-wait-text">
                 Переходьте на{" "}
-                <span className="lobby-wait-highlight">{JOIN_HOST}</span>
+                <span className="lobby-wait-highlight">{PUBLIC_SITE}</span>
                 <br />
                 якщо не боїтесь!
               </p>
@@ -1672,6 +1694,7 @@ function App() {
 
   {screen === "game" && (
     <div
+      style={isMobile() ? { backgroundImage: "url(/assets/images/background-mobile.jpg)", backgroundSize: "cover", backgroundPosition: "center" } : undefined}
       className={`app ${!isMobile() ? "app-game-with-video" : "app-game-mobile app-mobile-bg"} ${
         !isMobile() &&
         isDisplay &&
@@ -1700,7 +1723,7 @@ function App() {
             const isQuestionPhase =
               isDisplay &&
               (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE);
-            e.target.volume = isQuestionPhase ? 0.35 : 0.1;
+            e.target.volume = isQuestionPhase ? 1 : 0.1; // the host speaks over the question video
           }}
         />
       )}
@@ -1737,7 +1760,7 @@ function App() {
         <CinemaClip
           key={scoresStage}
           layer="under"
-          volume={0.6}
+          volume={1}
           src={scoresStage === "afterRound" ? scoresVideos?.afterRound : scoresVideos?.afterResult}
           onDone={() => {
             // after-round clip -> the ✓/✕ reveal -> the reaction clip -> on with the game
@@ -1827,6 +1850,40 @@ function App() {
         />
       )}
       <div className={`app-inner ${!isMobile() ? "app-inner-over-video" : ""}`}>
+      {isMobile() && !isDisplay && myPlayer && gameState !== GAME_PHASE.FINAL_BATTLE && gameState !== GAME_PHASE.FINISHED && (
+        <header className={`m-me ${myPlayer.isGhost ? "ghost" : ""}`}>
+          <img
+            className="m-me-sprite"
+            src={`/assets/images/Characters/${myPlayer.isGhost ? "deathcharacters" : "alivecharacters"}/${
+              myPlayer.characterSlot >= 1 && myPlayer.characterSlot <= 8 ? myPlayer.characterSlot : 1
+            }.png`}
+            alt=""
+          />
+          <div className="m-me-info">
+            <b className="m-me-name">{myPlayer.name}</b>
+            <span className="m-me-lives">
+              {myPlayer.isGhost
+                ? "👻 привид"
+                : "❤".repeat(Math.max(0, Math.min(10, Number.isFinite(Number(myPlayer.lives)) ? Number(myPlayer.lives) : 3)))}
+            </span>
+          </div>
+          <div className="m-me-score">
+            <small>Бали</small>
+            <b>{myPlayer.score ?? 0}</b>
+          </div>
+        </header>
+      )}
+      {isMobile() &&
+        !isDisplay &&
+        (gameState === GAME_PHASE.QUESTION_ANNOUNCE || gameState === GAME_PHASE.QUESTION_PLAY) && (
+          <section className="m-wait">
+            <p className="m-wait-round">
+              Раунд {roundIndex} з {TOTAL_ROUNDS}
+            </p>
+            <p className="m-wait-big">👀 Дивись на екран</p>
+            <p className="m-wait-hint">Варіанти відповіді з&apos;являться тут за мить</p>
+          </section>
+        )}
 
       <section
         className={`players-panel compact ${!isDisplay ? "players-panel-player" : ""} ${
@@ -1909,7 +1966,7 @@ function App() {
       {gameState === GAME_PHASE.ANSWER_PHASE && question && !isDisplay && (
         <section className="question-screen">
           {players.find((p) => p.id === myPlayerId)?.isGhost && (
-            <div className="ghost-banner">👻 ТИ ПРИВИД — відповідай далі, але очки заморожені</div>
+            <div className="ghost-banner">👻 ТИ ПРИВИД — відповідай далі: бали нараховуються наполовину</div>
           )}
           <div className="question-header">Раунд {question.index} з {question.total ?? TOTAL_ROUNDS}</div>
           <h2 className="question-text">{question.text}</h2>
@@ -1927,17 +1984,22 @@ function App() {
                 className={getOptionClass(idx)}
                 onClick={() => { playClickSound(); handleAnswer(idx); }}
                 disabled={selectedAnswer !== null}
+                data-picked={selectedAnswer === idx ? "1" : undefined}
               >
-                {opt}
+                <span className="opt-letter">{"ABCD"[idx]}</span>
+                <span className="opt-text">{opt}</span>
               </button>
             ))}
           </div>
+          {isMobile() && selectedAnswer !== null && (
+            <p className="m-answer-locked">✅ Відповідь прийнято — чекаємо інших</p>
+          )}
           {answerResult && !isMobile() && (
             <div className={`result-message ${answerResult.correct ? "correct" : "wrong"}`}>
               {answerResult.correct
                 ? answerResult.scoreAwarded > 0
                   ? `Правильно! +${answerResult.scoreAwarded} балів`
-                  : "Правильно! (привид — очки заморожені)"
+                  : "Правильно! (привид — половина балів)"
                 : "Неправильно"}
             </div>
           )}
@@ -1950,7 +2012,7 @@ function App() {
             <h2>Бали після раунду</h2>
             <ol className="scores-list">
               {players.map((p, i) => (
-                <li key={p.id} className="score-item">
+                <li key={p.id} className={`score-item ${p.id === myPlayerId ? "me" : ""}`}>
                   <span className="rank">{i + 1}.</span>
                   <span className="name">
                     {p.name}
@@ -1962,11 +2024,9 @@ function App() {
             </ol>
           </section>
 
-          {/* keep the minigame mounted for its results screen too: playersUpdate
-              (lives applied) has no lastCorrect, so that check alone would unmount it */}
-          {(trueFalseStart && trueFalseContestantIds.length > 0
-            ? true
-            : !!trueFalseResultsPayload || players.some((p) => p.lastCorrect === false)) && (
+          {/* the minigame takes the phone only once it has really started (until then the
+              phone shows the scores), and keeps it for its result screen for a while */}
+          {!phoneMgDone && ((trueFalseStart && trueFalseContestantIds.length > 0) || !!trueFalseResultsPayload) && (
             <MinigameHost
               minigameId={minigameId}
               key={`minigame-${roundIndex}-${minigameId}`}

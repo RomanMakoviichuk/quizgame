@@ -9,7 +9,7 @@
  *     -> round 1: fixed timer            -> startAnswerPhase()
  *     -> rounds 2-10: "questionPlayDone" -> startAnswerPhase()
  *   ANSWER_PHASE       emit "answerPhase" + 15s timer
- *     -> the timer runs out (also when everyone answered early) -> checkAnswers() -> emitScores()
+ *     -> all answered OR timeout         -> checkAnswers() -> emitScores()
  *   SCORES            emit "scores"; a minigame contest is armed here
  *     -> display: "scoresDone"           -> handleScoresDone()
  *          - minigame pending  -> startMinigame()
@@ -20,8 +20,8 @@
  *     -> loop: "finalQuestion" -> answers / 10s -> "finalStepResult"
  *     -> someone escaped / darkness took everyone -> FINISHED emit "gameFinished"
  *
- * Rating: only awardScore() changes player.score, and it is a no-op for ghosts
- * (lives hit 0 in applyMinigameLives) — that is the whole "frozen rating" rule.
+ * Rating: only awardScore() changes player.score; a ghost (lives hit 0 in
+ * applyMinigameLives) gets GHOST_SCORE_SHARE (half) of every award.
  *
  * Exported as a factory so `io` is injected, not global.
  */
@@ -31,6 +31,8 @@ const {
   SCORE_CORRECT,
   MINIGAME_WIN_BONUS,
   MINIGAME_SAFE_POINTS,
+  SMALL_GAME_MAX_PLAYERS,
+  GHOST_SCORE_SHARE,
   LIVES_PER_PLAYER,
   ANSWER_TIMER_MS,
   ROUND1_ANSWER_DELAY_MS,
@@ -60,10 +62,12 @@ module.exports = function createPhases(io) {
   }
 
   /** The only way the rating changes. Ghosts are frozen. Returns points awarded. */
+  /** Every rating change. A ghost (lost all lives) still scores, but only half (rounded up). */
   function awardScore(player, points) {
-    if (!player || player.isGhost || !(points > 0)) return 0;
-    player.score += points;
-    return points;
+    if (!player || !(points > 0)) return 0;
+    const gained = player.isGhost ? Math.ceil(points * GHOST_SCORE_SHARE) : points;
+    player.score += gained;
+    return gained;
   }
 
   // ---------------------------------------------------------------- round flow
@@ -139,7 +143,7 @@ module.exports = function createPhases(io) {
     room.questionTimer = clock.schedule(room, () => checkAnswers(room), ANSWER_TIMER_MS);
   }
 
-  /** The answer timer ran out: on to the results (never earlier — the screen timer is the round). */
+  /** Everyone answered, or the answer timer ran out: on to the results. */
   function checkAnswers(room) {
     if (room.gameState !== GAME_STATE.ANSWER_PHASE) return;
     if (room.questionTimer) {
@@ -175,7 +179,9 @@ module.exports = function createPhases(io) {
     });
     to(room).emit("playersUpdate", { players: getPlayersList(room) });
     to(room).emit("answerBeep");
-    // everyone answered? still wait for the timer on the screen
+
+    // everyone answered: the round ends right away
+    if ([...room.players.values()].every((p) => p.hasAnswered)) checkAnswers(room);
   }
 
   function emitScores(room) {
@@ -435,10 +441,25 @@ module.exports = function createPhases(io) {
     const living = [...room.players.values()].filter((p) => !p.isGhost);
     if (living.length < 2) return;
 
+    // A minigame only follows a round somebody got wrong.
+    const wrong = (p) => !(p.hasAnswered && p.lastAnswerIndex === correctIndex);
+    if (!living.some(wrong)) return;
+
+    // Small game (<= SMALL_GAME_MAX_PLAYERS alive): everybody plays — each module
+    // sees every living player as "wrong", so all of them take part — but the
+    // ones who answered right are protected: the minigame can't take their life.
+    // Bigger game: only the wrong ones play — also in the minigames that would
+    // otherwise take everybody alive (bomb, tune, math rush).
+    const everyonePlays = living.length <= SMALL_GAME_MAX_PLAYERS;
+    const protectedIds = everyonePlays ? living.filter((p) => !wrong(p)).map((p) => p.id) : [];
+    const pool = everyonePlays
+      ? living.map((p) => ({ ...p, hasAnswered: true, lastAnswerIndex: (correctIndex + 1) % 4 }))
+      : living.filter(wrong);
+
     room.minigameHistory ??= [];
     for (const def of minigames.selectForRound(roundIndex, room.minigameHistory)) {
       const contest = def.buildContest({
-        players: living,
+        players: pool,
         correctIndex,
         roundIndex,
       });
@@ -453,6 +474,7 @@ module.exports = function createPhases(io) {
         syncReceived: false,
         livesApplied: false,
         pendingLoserIds: [],
+        protectedIds, // answered the round right: can't lose a life in this minigame
         startedAtTs: null,
         timeoutHandle: null,
         playTimer: null,
@@ -543,7 +565,10 @@ module.exports = function createPhases(io) {
       mg.playTimer = null;
     }
     mg.resolved = true;
-    mg.pendingLoserIds = mg.def.resolveLosers(mg) || [];
+    // who lost the minigame (for the rating) / who actually loses a life (not the protected)
+    mg.minigameLoserIds = mg.def.resolveLosers(mg) || [];
+    const shielded = new Set(mg.protectedIds || []);
+    mg.pendingLoserIds = mg.minigameLoserIds.filter((id) => !shielded.has(id));
     mg.pendingWinnerId = mg.def.resolveWinner?.(mg) || null;
 
     const namesById = {};
@@ -584,7 +609,7 @@ module.exports = function createPhases(io) {
 
     // rating: the winner +MINIGAME_WIN_BONUS, every other contestant who kept their life +MINIGAME_SAFE_POINTS
     if (mg.pendingWinnerId) awardScore(playerById(mg.pendingWinnerId), MINIGAME_WIN_BONUS);
-    const losers = new Set(mg.pendingLoserIds);
+    const losers = new Set(mg.minigameLoserIds || mg.pendingLoserIds);
     for (const id of mg.contestantIds || []) {
       if (id === mg.pendingWinnerId || losers.has(id)) continue;
       awardScore(playerById(id), MINIGAME_SAFE_POINTS);

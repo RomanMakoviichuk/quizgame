@@ -40,13 +40,18 @@ module.exports = {
   TOTAL_ROUNDS: 9, // 9 quiz rounds, then the final battle
   MIN_QUESTIONS_PER_GAME: 9, // a category needs at least this many active questions
   LIVES_PER_PLAYER: 3,
-  SCORE_CORRECT: 10, // live players only; a ghost's rating is frozen
+  SCORE_CORRECT: 10,
+  GHOST_SCORE_SHARE: 0.5, // a player who lost all lives keeps playing for half the points
   // The rating sums everything: quiz answers + minigame results.
   MINIGAME_WIN_BONUS: 10, // the minigame's single winner (resolveWinner)
   MINIGAME_SAFE_POINTS: 5, // every other contestant who kept their life
+  // Who plays the minigames: with this many living players or fewer EVERYONE plays,
+  // but only those who got the round's question wrong can lose a life in it; with
+  // more, only the players who got it wrong play.
+  SMALL_GAME_MAX_PLAYERS: 4,
 
   // Timings (ms)
-  ANSWER_TIMER_MS: 15000, // the round always runs the whole timer, even when everyone has answered
+  ANSWER_TIMER_MS: 15000, // ends earlier when everyone has answered
   INTRO_DURATION_MS: 180000, // hard cap on the cinematic intro
   ROUND1_ANSWER_DELAY_MS: 6000, // round 1: fixed delay from question start to answer phase (2.5s scene + the text)
 

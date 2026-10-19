@@ -5,7 +5,7 @@ const { MINIGAMES, selectForRound } = require("./index");
 const ids = (list) => list.map((d) => d.ID);
 const ALL = ids(MINIGAMES);
 
-test("every minigame is a candidate, tug of war (RARE) first while unplayed", () => {
+test("a fresh game: every minigame is a candidate, tug of war (RARE) first", () => {
   for (let k = 0; k < 20; k++) {
     const list = ids(selectForRound(1, []));
     assert.strictEqual(list[0], "tugOfWar");
@@ -13,11 +13,11 @@ test("every minigame is a candidate, tug of war (RARE) first while unplayed", ()
   }
 });
 
-test("played minigames go after the unplayed ones, least recent first", () => {
+test("a played minigame is never offered again while others are unplayed", () => {
   const history = ["tugOfWar", "rat", "tune"];
   const list = ids(selectForRound(4, history));
-  assert.deepStrictEqual(list.slice(-3), ["tugOfWar", "rat", "tune"]);
-  assert.deepStrictEqual([...list.slice(0, -3)].sort(), ALL.filter((id) => !history.includes(id)).sort());
+  assert.ok(history.every((id) => !list.includes(id)), list.join());
+  assert.deepStrictEqual([...list].sort(), ALL.filter((id) => !history.includes(id)).sort());
 });
 
 test("the unplayed ones come in random order", () => {
@@ -26,23 +26,26 @@ test("the unplayed ones come in random order", () => {
   assert.ok(firsts.size >= 3, `only ${[...firsts]}`);
 });
 
-test("a whole game: no repeats until all have run, the previous round's game never first", () => {
+test("a whole game: all 8 once, then a new cycle that never starts with the previous one", () => {
   const history = [];
   for (let round = 1; round <= ALL.length + 4; round++) {
     const list = ids(selectForRound(round, history));
     history.push(list[0]); // pretend the first candidate's trigger always holds
   }
-  assert.deepStrictEqual([...history.slice(0, ALL.length)].sort(), [...ALL].sort());
+  assert.deepStrictEqual([...history.slice(0, ALL.length)].sort(), [...ALL].sort(), "no repeats in the first cycle");
+  assert.notStrictEqual(history[ALL.length], history[ALL.length - 1]);
   for (let i = 1; i < history.length; i++) assert.notStrictEqual(history[i], history[i - 1]);
-  // after a full cycle: the oldest one comes back first
-  assert.deepStrictEqual(history.slice(ALL.length, ALL.length + 4), history.slice(0, 4));
 });
 
 test("a skipped trigger (odd count) keeps tug of war first for later rounds", () => {
-  // round 1: tug's buildContest returned null, something else ran
   const list = ids(selectForRound(2, ["rps"]));
   assert.strictEqual(list[0], "tugOfWar");
-  assert.strictEqual(list.at(-1), "rps");
+  assert.ok(!list.includes("rps"));
+});
+
+test("only one minigame left unplayed: it is the only candidate (no repeat as a fallback)", () => {
+  const history = ALL.filter((id) => id !== "memory");
+  assert.deepStrictEqual(ids(selectForRound(8, history)), ["memory"]);
 });
 
 test("MINIGAME_DEMO forces one minigame (+ mathRush fallback)", () => {

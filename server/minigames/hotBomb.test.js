@@ -134,17 +134,15 @@ test("no moves count during the countdown", () => {
   assert.equal(h.s().chain.length, 1); // the start word
 });
 
-test("right word + target passes the bomb, re-rolls the fuse and the letter", () => {
+test("a right word passes the bomb at once to the next player round the circle, re-rolls fuse and letter", () => {
   const h = harness(["A", "B", "C"]);
+  const ring = ["A", "B", "C"];
   const holder = h.s().holder;
-  const other = ["A", "B", "C"].find((x) => x !== holder);
+  const next = ring[(ring.indexOf(holder) + 1) % ring.length];
   const seq = h.s().seq;
   const w = validWord(h);
   h.word(holder, w.toUpperCase() + "  ");
-  assert.equal(h.s().awaitingTarget, true);
-  assert.equal(h.s().holder, holder);
-  h.target(holder, other);
-  assert.equal(h.s().holder, other);
+  assert.equal(h.s().holder, next, "no waiting for a pick");
   assert.equal(h.s().seq, seq + 1);
   assert.equal(h.s().awaitingTarget, false);
   assert.ok(h.s().used.has(w));
@@ -200,18 +198,19 @@ test("flood guard: attempts closer than MIN_WORD_GAP_MS are ignored", () => {
   assert.equal(h.toPlayer.filter(([, ev]) => ev === "hb:reject").length, 1);
 });
 
-test("only the holder may answer; target rules: not yourself, not out, not unknown", () => {
+test("only the holder may answer; a pick of yourself / an unknown player is ignored", () => {
   const h = harness(["A", "B", "C"]);
+  const ring = ["A", "B", "C"];
   const holder = h.s().holder;
-  const others = ["A", "B", "C"].filter((x) => x !== holder);
+  const others = ring.filter((x) => x !== holder);
   h.word(others[0], validWord(h));
   assert.equal(h.s().chain.length, 1);
-  h.word(holder, validWord(h));
   h.target(holder, holder);
   h.target(holder, "ZZZ");
-  assert.equal(h.s().holder, holder);
-  h.target(holder, others[1]);
-  assert.equal(h.s().holder, others[1]);
+  const far = ring[(ring.indexOf(holder) + 2) % ring.length]; // not the next one
+  h.target(holder, far);
+  h.word(holder, validWord(h));
+  assert.equal(h.s().holder, far, "the pick wins over the circle order");
 });
 
 test("explosion: holder loses exactly one life, is out, the bomb restarts elsewhere", () => {

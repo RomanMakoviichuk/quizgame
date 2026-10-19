@@ -28,7 +28,7 @@ const DIR = "/assets/minigames/rat";
 const ROOM_BG = `${DIR}/web/classroom.webp`;
 const CHARGER = `${DIR}/web/charger.webp`;
 const MUSIC = `${DIR}/background.mp3`;
-const MUSIC_VOLUME = 0.3;
+const MUSIC_VOLUME = 1; // level set by game/loudness.js
 // the k-th decision plays k.mp3 — the same sound whatever was chosen, so nothing leaks
 const DECISION_SOUND = (k) => `${DIR}/${((k - 1) % 8) + 1}.mp3`;
 const DECISION_VOLUME = 0.32; // decisions are a background cue, quieter than the music

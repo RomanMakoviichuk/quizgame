@@ -13,7 +13,7 @@ import "./WelcomePlayers.css";
  */
 export const WELCOME_MS = 10000;
 const MUSIC = "/assets/sounds/mainmenu.mp3";
-const MUSIC_VOLUME = 0.45;
+const MUSIC_VOLUME = 1; // level set by game/loudness.js
 const FADE_OUT_MS = 1200;
 
 const sprite = (slot) => `/assets/images/Characters/alivecharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
@@ -75,7 +75,7 @@ export default function WelcomePlayers({ players = [], onDone, muted = false }) 
 
   return (
     <div className="wp-root" style={{ "--wp-ms": `${WELCOME_MS}ms` }}>
-      <div className="wp-burlap" style={{ backgroundImage: "url(/assets/images/background.png)" }} aria-hidden />
+      <div className="wp-burlap" style={{ backgroundImage: "url(/assets/images/background-mobile.jpg)" }} aria-hidden />
       <div className="wp-light" aria-hidden />
 
       <header className="wp-head">

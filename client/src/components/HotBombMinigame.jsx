@@ -38,7 +38,7 @@ const EXAMPLE = ["тигр", "рись", "сова", "антилопа"];
  */
 const HB_SOUND_DIR = "/assets/minigames/bomb";
 const HB_MUSIC = `${HB_SOUND_DIR}/background.mp3`; // quiet bed under the whole minigame
-const HB_MUSIC_VOLUME = 0.14;
+const HB_MUSIC_VOLUME = 1; // level set by game/loudness.js
 const HB_SOUNDS = {
   fuse: "timer.mp3", // loop while the fuse burns (louder + faster as the danger grows)
   pass: "change player.mp3", // the bomb flies to the next player

@@ -16,14 +16,13 @@
  *   tune      — 1+ player wrong, every living player plays (5 song rounds)
  *   mathRush  — 1+ player wrong
  *
- * Order of the candidates (no repeats until every minigame has been played):
+ * Candidates — a minigame NEVER repeats while there are unplayed ones:
  *   1. RARE minigames not played yet — a narrow trigger gets its chance the
  *      first time it holds (e.g. «Перетягни канат» on an even count);
- *   2. every other minigame not played yet, in random order;
- *   3. the played ones, least recently played first, the previous round's
- *      minigame last — only reached when nothing new can run (more rounds than
- *      minigames, or the unplayed ones need more wrong players).
- * Every minigame is always in the list, so one runs whenever any can.
+ *   2. every other minigame not played yet, in random order.
+ * If none of the unplayed ones can run this round, there is no minigame this
+ * round (rather than a repeat). Only once every minigame has been played does
+ * a new cycle start (random, never the previous round's minigame).
  *
  * Adding a minigame: require it and put it in MINIGAMES. Export `RARE = true`
  * when its trigger is narrow and it should jump the queue while unplayed.
@@ -55,16 +54,18 @@ function selectForRound(roundIndex, history = [], rng = Math.random) {
   const forced = REGISTRY[process.env.MINIGAME_DEMO];
   if (forced) return forced === mathRush ? [mathRush] : [forced, mathRush];
 
-  const lastPlayed = new Map(); // id -> position of its latest run in history
-  history.forEach((id, i) => lastPlayed.set(id, i));
-
-  const fresh = MINIGAMES.filter((def) => !lastPlayed.has(def.ID));
+  // the current cycle: what has been played since the last time all of them ran
+  const cycle = history.slice(Math.floor(history.length / MINIGAMES.length) * MINIGAMES.length);
+  const inCycle = new Set(cycle);
+  const fresh = MINIGAMES.filter((def) => !inCycle.has(def.ID));
+  if (fresh.length === MINIGAMES.length && history.length) {
+    // a new cycle: everything again in random order, except the previous round's minigame
+    const last = history[history.length - 1];
+    return shuffle(MINIGAMES.filter((d) => d.ID !== last), rng);
+  }
   const rare = fresh.filter((def) => def.RARE);
   const rest = shuffle(fresh.filter((def) => !def.RARE), rng);
-  const played = MINIGAMES.filter((def) => lastPlayed.has(def.ID)).sort(
-    (a, b) => lastPlayed.get(a.ID) - lastPlayed.get(b.ID)
-  );
-  return [...shuffle(rare, rng), ...rest, ...played];
+  return [...shuffle(rare, rng), ...rest];
 }
 
 function get(id) {

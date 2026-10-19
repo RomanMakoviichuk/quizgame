@@ -17,7 +17,7 @@ import { COLOR_IDS, MEMORY_COLORS, TintedItem, preloadTints, tintedUrl } from ".
  */
 
 const MUSIC = "/assets/minigames/items/background.mp3";
-const MUSIC_VOLUME = 0.3;
+const MUSIC_VOLUME = 1; // level set by game/loudness.js
 const SPRITE = (slot) => `/assets/images/Characters/alivecharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
 const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/minigames/RPS/lose_${n}.mp3`);
 const TICK_MS = 100;
