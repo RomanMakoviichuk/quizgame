@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { io } from "socket.io-client";
 import HorrorTimer from "./components/HorrorTimer";
 import TypewriterSubtitles from "./components/TypewriterSubtitles";
@@ -1368,6 +1368,21 @@ function App() {
     socket.emit("addBot", {}, (r) => r?.error && setBotError(r.error));
   };
   const handleRemoveBot = (id) => socket?.emit("removeBot", { playerId: id });
+
+  // TV -> server handshakes of a minigame. The minigames restart their "sync" (0.3 s) and
+  // "scene done" (~9 s) timers whenever these props change, so they keep one identity:
+  // inline arrows changed on every render, and a busy TV could push the results timer
+  // back again and again — the game then waited forever.
+  const roundIndexRef = useRef(roundIndex);
+  roundIndexRef.current = roundIndex;
+  const minigameSyncCb = useCallback(
+    () => socket?.emit("trueFalseSync", { roundIndex: roundIndexRef.current }),
+    [socket]
+  );
+  const minigameSceneDoneCb = useCallback(() => {
+    setTrueFalseResultsPayload(null);
+    socket?.emit("trueFalseResultsSceneDone");
+  }, [socket]);
   // TEST MODE: straight from the lobby into the final (made-up ratings, a few ghosts)
   const handleTestFinal = () => isAdmin && socket?.emit("debugStartFinal");
 
@@ -2049,11 +2064,8 @@ function App() {
           livesById={playerLivesById}
           contestantIds={trueFalseContestantIds}
           results={trueFalseResultsPayload}
-          onVideoStartedAt={() => socket?.emit("trueFalseSync", { roundIndex })}
-          onSceneDone={() => {
-            setTrueFalseResultsPayload(null);
-            socket?.emit("trueFalseResultsSceneDone");
-          }}
+          onVideoStartedAt={minigameSyncCb}
+          onSceneDone={minigameSceneDoneCb}
         />
       )}
       {!isMobile() &&

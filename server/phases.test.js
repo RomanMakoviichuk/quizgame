@@ -446,3 +446,49 @@ test("more than 4 alive: an everyone-plays minigame (the bomb) also takes only t
   assert.equal(room.minigame.minigameId, "hotBomb");
   assert.deepStrictEqual([...room.minigame.contestantIds].sort(), players.slice(0, 3).map((p) => p.id).sort());
 });
+
+test("a silent TV never hangs the game: every handshake has a fallback", (t) => {
+  const { io, phases, room, cleanup } = setup(3);
+  t.after(cleanup);
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
+
+  // a round everybody got wrong -> results with a minigame next; the TV says nothing from here on
+  room.gameState = GAME_STATE.QUESTION_PLAY;
+  phases.startAnswerPhase(room);
+  t.mock.timers.tick(20_000); // answer window runs out, nobody answered
+  assert.equal(room.gameState, GAME_STATE.SCORES);
+  assert.ok(room.minigame, "a minigame is armed");
+
+  t.mock.timers.tick(120_000); // no "scoresDone"
+  assert.equal(events(io, "trueFalseStart").length, 1, "the minigame starts anyway");
+  t.mock.timers.tick(30_000); // no "trueFalseSync"
+  assert.equal(events(io, "trueFalseSync").length, 1, "the minigame clock starts anyway");
+  t.mock.timers.tick(room.minigame.def.TOTAL_DURATION_MS); // hard stop
+  assert.equal(events(io, "trueFalseResults").length, 1);
+  t.mock.timers.tick(60_000); // no "trueFalseResultsSceneDone"
+  assert.equal(room.minigame, null, "lives applied, minigame cleared");
+  assert.equal(room.gameState, GAME_STATE.QUESTION_ANNOUNCE);
+  assert.equal(room.currentRoundIndex, 1);
+
+  t.mock.timers.tick(60_000); // no "questionAnnounceDone"
+  assert.equal(room.gameState, GAME_STATE.QUESTION_PLAY);
+  t.mock.timers.tick(60_000); // no "questionPlayDone"
+  assert.equal(room.gameState, GAME_STATE.ANSWER_PHASE);
+});
+
+test("a TV that answers in time cancels the fallback (no double moves)", (t) => {
+  const { io, phases, room, cleanup } = setup(2);
+  t.after(cleanup);
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
+  room.gameState = GAME_STATE.SCORES;
+  room.minigame = null;
+  room.currentRoundIndex = 0;
+  room.roundAdvanced = false;
+  phases.advanceRound(room); // -> announce round 2
+  phases.emitQuestionPlay(room); // the TV answered at once
+  phases.startAnswerPhase(room);
+  const announces = events(io, "questionAnnounce").length;
+  t.mock.timers.tick(200_000);
+  assert.equal(events(io, "questionAnnounce").length, announces);
+  assert.equal(events(io, "questionPlay").length, 1);
+});

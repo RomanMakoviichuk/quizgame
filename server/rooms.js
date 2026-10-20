@@ -40,6 +40,7 @@ function createRoom(displaySocketId, categoryId, difficulty = "mixed") {
     preAnswerTimer: null,
     introTimer: null,
     finalBattleTimer: null,
+    stallTimer: null, // phases.js: fallback when the TV never answers a handshake
 
     // per-round flags
     roundAdvanced: false,
@@ -75,6 +76,7 @@ function clearRoomTimers(room) {
     "preAnswerTimer",
     "introTimer",
     "finalBattleTimer",
+    "stallTimer",
   ]) {
     clock.cancel(room[key]);
     room[key] = null;

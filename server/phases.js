@@ -63,6 +63,42 @@ module.exports = function createPhases(io) {
 
   /** The only way the rating changes. Ghosts are frozen. Returns points awarded. */
   /** Every rating change. A ghost (lost all lives) still scores, but only half (rounded up). */
+  // ------------------------------------------------------------- the TV handshakes
+  //
+  // The TV moves the round on ("questionAnnounceDone", "scoresDone",
+  // "trueFalseSync", "trueFalseResultsSceneDone"…). If one never comes — the TV
+  // froze, reloaded mid-scene, its tab was throttled — the game used to wait
+  // forever. Every such wait now arms one generous fallback (game clock, so the
+  // admin pause stops it too) that moves on by itself and says so in the log.
+  const STALL_MS = {
+    questionAnnounceDone: 60000,
+    firstAnnounceDone: 150000, // round 1: the welcome of every player comes first
+    questionPlayDone: 60000,
+    scoresDone: 120000, // after-round clip, the reveal board, the reaction clip
+    trueFalseSync: 30000,
+    trueFalseResultsSceneDone: 60000,
+  };
+
+  function step(room, what) {
+    if (process.env.NODE_ENV === "test" || process.env.NODE_TEST_CONTEXT) return;
+    console.log(`[game] room ${room.code} round ${room.currentRoundIndex + 1}: ${what}`);
+  }
+
+  function watchTv(room, what, fn, ms = STALL_MS[what]) {
+    unwatchTv(room);
+    room.stallTimer = clock.schedule(room, () => {
+      room.stallTimer = null;
+      if (!(process.env.NODE_ENV === "test" || process.env.NODE_TEST_CONTEXT))
+        console.warn(`[stall] room ${room.code}: no "${what}" from the TV after ${ms / 1000}s — moving on without it`);
+      fn();
+    }, ms);
+  }
+
+  function unwatchTv(room) {
+    if (room.stallTimer) clock.cancel(room.stallTimer);
+    room.stallTimer = null;
+  }
+
   function awardScore(player, points) {
     if (!player || !(points > 0)) return 0;
     const gained = player.isGhost ? Math.ceil(points * GHOST_SCORE_SHARE) : points;
@@ -96,6 +132,12 @@ module.exports = function createPhases(io) {
     const roundIndex = room.currentRoundIndex + 1;
     // dev/demo (MINIGAME_DEMO): the TV skips the rules and round intro videos
     const skipIntroVideos = !!process.env.MINIGAME_DEMO;
+    step(room, "announce");
+    watchTv(
+      room,
+      roundIndex === 1 ? "firstAnnounceDone" : "questionAnnounceDone",
+      () => room.gameState === GAME_STATE.QUESTION_ANNOUNCE && emitQuestionPlay(room)
+    );
     to(room).emit("questionAnnounce", {
       roundIndex,
       skipIntroVideos,
@@ -109,6 +151,9 @@ module.exports = function createPhases(io) {
     if (!roundData?.question) return emitScores(room);
 
     room.gameState = GAME_STATE.QUESTION_PLAY;
+    step(room, "question");
+    if (room.currentRoundIndex === 0) unwatchTv(room); // round 1 runs on its own timer
+    else watchTv(room, "questionPlayDone", () => room.gameState === GAME_STATE.QUESTION_PLAY && startAnswerPhase(room));
     to(room).emit("questionPlay", {
       roundIndex: room.currentRoundIndex + 1,
       question: roundData.question,
@@ -135,6 +180,8 @@ module.exports = function createPhases(io) {
     if (!roundData?.question) return emitScores(room);
 
     room.gameState = GAME_STATE.ANSWER_PHASE;
+    unwatchTv(room);
+    step(room, "answers open");
     room.answerEndsAt = clock.now(room) + ANSWER_TIMER_MS; // for a phone that comes back mid-question
     resetPlayersAnswered(room);
     to(room).emit("playersUpdate", { players: getPlayersList(room) }); // fresh "answered" marks on the TV
@@ -210,6 +257,8 @@ module.exports = function createPhases(io) {
     const q = roundData?.question;
     const answer = q ? { question: q.text, index: correctIndex, text: q.options?.[correctIndex] ?? "" } : null;
     to(room).emit("scores", { players: playersList, roundIndex, videos, minigameNext: !!room.minigame, answer });
+    step(room, `results (${room.minigame ? `then ${room.minigame.minigameId}` : "no minigame"})`);
+    watchTv(room, "scoresDone", () => room.gameState === GAME_STATE.SCORES && !room.scoresVideoDone && handleScoresDone(room));
   }
 
   function advanceRound(room) {
@@ -249,6 +298,8 @@ module.exports = function createPhases(io) {
     if (room.gameState === GAME_STATE.FINAL_BATTLE || room.gameState === GAME_STATE.FINISHED)
       return;
     room.gameState = GAME_STATE.FINAL_BATTLE;
+    unwatchTv(room); // the final has its own fallbacks
+    step(room, "final");
     const race = finalBattle.createRace([...room.players.values()]);
     race.stage = "intro";
     room.finalBattle = race;
@@ -388,6 +439,8 @@ module.exports = function createPhases(io) {
       room.finalBattleTimer = null;
     }
     room.gameState = GAME_STATE.FINISHED;
+    unwatchTv(room);
+    step(room, "game over");
     const race = opts.ending ? null : room.finalBattle;
     to(room).emit("gameFinished", {
       players: getPlayersList(room).sort((a, b) => b.score - a.score),
@@ -526,6 +579,8 @@ module.exports = function createPhases(io) {
     const mg = room.minigame;
     if (!mg || mg.resolved || mg.startEmitted) return;
     mg.startEmitted = true;
+    step(room, `minigame ${mg.minigameId} starts`);
+    watchTv(room, "trueFalseSync", () => syncMinigame(room));
 
     to(room).emit("trueFalseStart", {
       minigameId: mg.minigameId,
@@ -548,6 +603,8 @@ module.exports = function createPhases(io) {
     const mg = room.minigame;
     if (!mg || mg.resolved || mg.syncReceived) return;
     mg.syncReceived = true;
+    unwatchTv(room);
+    step(room, `minigame ${mg.minigameId} running`);
     const now = clock.now(room);
     mg.startedAtTs = now;
     to(room).emit("trueFalseSync", { startedAtTs: now, serverTime: now });
@@ -603,6 +660,8 @@ module.exports = function createPhases(io) {
       mg.playTimer = null;
     }
     mg.resolved = true;
+    unwatchTv(room); // (a minigame that ends before its sync: the sync wait is over)
+    watchTv(room, "trueFalseResultsSceneDone", () => room.gameState === GAME_STATE.SCORES && applyMinigameLives(room));
     // who lost the minigame (for the rating) / who actually loses a life (not the protected)
     mg.minigameLoserIds = mg.def.resolveLosers(mg) || [];
     const shielded = new Set(mg.protectedIds || []);
@@ -642,6 +701,8 @@ module.exports = function createPhases(io) {
     const mg = room.minigame;
     if (!mg || !mg.resolved || mg.livesApplied) return;
     mg.livesApplied = true;
+    unwatchTv(room);
+    step(room, `minigame ${mg.minigameId} over (lost a life: ${mg.pendingLoserIds.length})`);
 
     const playerById = (id) => [...room.players.values()].find((p) => p.id === id);
 
@@ -672,6 +733,7 @@ module.exports = function createPhases(io) {
   /** Display finished the score video. */
   function handleScoresDone(room) {
     if (room.gameState !== GAME_STATE.SCORES) return;
+    unwatchTv(room);
     room.scoresVideoDone = true;
 
     const mg = room.minigame;
