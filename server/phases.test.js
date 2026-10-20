@@ -492,3 +492,20 @@ test("a TV that answers in time cancels the fallback (no double moves)", (t) => 
   assert.equal(events(io, "questionAnnounce").length, announces);
   assert.equal(events(io, "questionPlay").length, 1);
 });
+
+test("a minigame's hard stop counts from its sync, not from its start", (t) => {
+  const { io, phases, room, cleanup } = setup(3);
+  t.after(cleanup);
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
+  room.gameState = GAME_STATE.QUESTION_PLAY;
+  phases.startAnswerPhase(room);
+  t.mock.timers.tick(20_000); // nobody answered -> a minigame
+  phases.handleScoresDone(room); // the TV's results are over: the minigame starts
+  const total = room.minigame.def.TOTAL_DURATION_MS;
+  t.mock.timers.tick(5_000); // the TV takes 5 s to load its video
+  phases.syncMinigame(room);
+  t.mock.timers.tick(total - 1_000); // past "start + total", still inside "sync + total"
+  assert.equal(events(io, "trueFalseResults").length, 0, "not cut short");
+  t.mock.timers.tick(2_000);
+  assert.equal(events(io, "trueFalseResults").length, 1);
+});

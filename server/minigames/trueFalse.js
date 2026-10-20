@@ -32,9 +32,9 @@ function loadStatements(file = STATEMENTS_FILE) {
   }
 }
 
-// 12s until the 3-2-1 starts + 3s countdown + 30s round + slack — the server
-// fallback that force-resolves the contest if a phone never reports.
-const TOTAL_DURATION_MS = 46000;
+// 12s until the 3-2-1 starts + 3s countdown + 30s round + slack for the scores to
+// arrive — the server fallback (counted from the sync) if a phone never reports.
+const TOTAL_DURATION_MS = 50000;
 
 const MIN_CONTESTANTS = 2;
 

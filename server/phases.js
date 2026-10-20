@@ -604,6 +604,11 @@ module.exports = function createPhases(io) {
     if (!mg || mg.resolved || mg.syncReceived) return;
     mg.syncReceived = true;
     unwatchTv(room);
+    // the minigame's own clock starts now (its 3-2-1, its round): so does its hard stop.
+    // Counted from the start event it fired too early whenever the TV took a moment to
+    // load its video — e.g. «Правда/Брехня» closed before the phones sent their scores.
+    if (mg.timeoutHandle) clock.cancel(mg.timeoutHandle);
+    mg.timeoutHandle = clock.schedule(room, () => resolveMinigame(room), mg.def.TOTAL_DURATION_MS);
     step(room, `minigame ${mg.minigameId} running`);
     const now = clock.now(room);
     mg.startedAtTs = now;
