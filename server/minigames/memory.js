@@ -112,7 +112,9 @@ function makeRound(items = ITEMS, count = CONFIG.COUNT, paletteSize = COLORS.len
       return { id: it.id, name: it.name, src: it.src, fallback: it.fallback, color: pick(allowed.length ? allowed : palette) };
     });
   // keep the palette in the canonical order (blue, red, green, yellow) for the buttons
-  return { lineup, mode: pick(MODES), palette: COLORS.filter((c) => palette.includes(c)) };
+  // dev: MEMORY_MODE=color|order always deals that task (to check one screen)
+  const mode = MODES.includes(process.env.MEMORY_MODE) ? process.env.MEMORY_MODE : pick(MODES);
+  return { lineup, mode, palette: COLORS.filter((c) => palette.includes(c)) };
 }
 
 // ---------------------------------------------------------------- contest
