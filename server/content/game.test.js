@@ -214,3 +214,15 @@ test("difficulty: unknown values fall back to mixed", () => {
   assert.equal(normalizeGameDifficulty("nightmare"), "mixed");
   assert.equal(normalizeGameDifficulty(undefined), "mixed");
 });
+
+test("pickRoundsByDifficulty takes questions played before only when nothing else is left", () => {
+  const qs = Array.from({ length: 12 }, (_, i) => ({
+    id: `q${i}`,
+    text: `Q${i}`,
+    difficulty: "easy",
+    answers: [{ text: "a", isCorrect: true }, { text: "b" }, { text: "c" }, { text: "d" }],
+  }));
+  const played = new Set(qs.slice(0, 3).map((q) => q.id));
+  const { rounds } = pickRoundsByDifficulty(qs, "easy", 9, played);
+  assert.ok(rounds.every((r) => !played.has(r.question.id)));
+});

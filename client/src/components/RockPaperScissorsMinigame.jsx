@@ -53,8 +53,8 @@ const RULES = Object.keys(VERBS).map((k) => k.split(">"));
 const ruleText = (w, l) => `${FIGHTERS[w].name} ${VERBS[`${w}>${l}`]} ${FIGHTERS[l].acc}`;
 
 const JUDGE_DELAY_MS = 1500; // cards flip first, then the verdict lands
-const RULE_SPOTLIGHT_MS = 2600;
-const TICK_MS = 250; // countdown / timer ring refresh — no need for more // 10 rules x 2.6s fit the 30s rules screen
+const RULE_SPOTLIGHT_MS = 2000; // 10 rules x 2s fit the 20s rules screen
+const TICK_MS = 250; // countdown / timer ring refresh — no need for more
 
 const MUSIC = "/assets/minigames/RPS/background.mp3";
 const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/minigames/RPS/lose_${n}.mp3`);

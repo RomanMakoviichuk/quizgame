@@ -58,7 +58,7 @@ function Verdict({ ok }) {
   );
 }
 
-export default function RoundResults({ players = [], roundIndex = 1, scoreCorrect = 10, videoSrc = null, onDone }) {
+export default function RoundResults({ players = [], roundIndex = 1, scoreCorrect = 10, videoSrc = null, answer = null, onDone }) {
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
   const list = players.slice(0, 8);
@@ -133,6 +133,15 @@ export default function RoundResults({ players = [], roundIndex = 1, scoreCorrec
       <p className="rr-ribbon">
         Раунд {roundIndex} <span>·</span> Перевірка відповідей
       </p>
+      {answer?.text && (
+        <div className="rr-answer">
+          <small>Правильна відповідь</small>
+          <b>
+            <i>{"ABCD"[answer.index] || "✓"}</i>
+            {answer.text}
+          </b>
+        </div>
+      )}
 
       <div className="rr-thread" aria-hidden />
       <div className="rr-tags">

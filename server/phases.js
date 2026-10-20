@@ -206,7 +206,10 @@ module.exports = function createPhases(io) {
     const videos = media.roundVideos(room, playersList);
     // armed first, so the display knows a minigame follows (a pause in the dark before it)
     armMinigame(room, correctIndex, roundIndex);
-    to(room).emit("scores", { players: playersList, roundIndex, videos, minigameNext: !!room.minigame });
+    // the right answer, shown on the TV results board and on the phones
+    const q = roundData?.question;
+    const answer = q ? { question: q.text, index: correctIndex, text: q.options?.[correctIndex] ?? "" } : null;
+    to(room).emit("scores", { players: playersList, roundIndex, videos, minigameNext: !!room.minigame, answer });
   }
 
   function advanceRound(room) {
@@ -288,14 +291,14 @@ module.exports = function createPhases(io) {
     finalBattle.beginStep(race, q.correctIndex);
     race.stage = "question";
     const now = clock.now(room);
-    to(room).emit("finalQuestion", {
+    race.question = {
       step: race.step,
       text: q.text,
       options: q.options,
       endsAt: now + FINAL.ANSWER_MS,
       answerMs: FINAL.ANSWER_MS,
-      serverNow: now,
-    });
+    };
+    to(room).emit("finalQuestion", { ...race.question, serverNow: now });
     setFinalTimer(room, () => resolveFinalStep(room), FINAL.ANSWER_MS);
   }
 
@@ -339,6 +342,24 @@ module.exports = function createPhases(io) {
     if (race.stage !== "question") return;
     const nobodyLeft = race.participants.every((p) => p.status !== "racing" || p.disconnected);
     if (nobodyLeft || finalBattle.allAnswered(race)) resolveFinalStep(room);
+  }
+
+  /**
+   * The final as one phone should see it right now — for a phone that reloaded or
+   * lost its connection mid-final and missed "finalBattle" / "finalQuestion".
+   */
+  function finalSnapshot(room, playerId) {
+    const race = room.finalBattle;
+    if (room.gameState !== GAME_STATE.FINAL_BATTLE || !race) return null;
+    const open = race.stage === "question" && race.open && race.question;
+    const mine = open ? race.answers.get(playerId) : null;
+    return {
+      stage: race.stage,
+      ...finalBattle.publicState(race),
+      question: open ? race.question : null,
+      myAnswer: mine ? Number(mine.answerIndex) : null,
+      serverNow: clock.now(room),
+    };
   }
 
   /** Final standings when the game ends without a race (everyone died before it). */
@@ -511,6 +532,7 @@ module.exports = function createPhases(io) {
       roundIndex: mg.roundIndex,
       contestantIds: mg.contestantIds,
       mode: mg.mode,
+      ...(mg.def.startPayload?.(mg) || {}),
     });
 
     if (!mg.timeoutHandle) {
@@ -679,13 +701,20 @@ module.exports = function createPhases(io) {
     }
     const mg = room.minigame;
     if (room.gameState === GAME_STATE.SCORES && mg && mg.startEmitted && !mg.resolved) {
-      snap.minigame = { minigameId: mg.minigameId, roundIndex: mg.roundIndex, contestantIds: mg.contestantIds, mode: mg.mode };
+      snap.minigame = {
+        minigameId: mg.minigameId,
+        roundIndex: mg.roundIndex,
+        contestantIds: mg.contestantIds,
+        mode: mg.mode,
+        ...(mg.def.startPayload?.(mg) || {}),
+      };
     }
     return snap;
   }
 
   return {
     resumeSnapshot,
+    finalSnapshot,
     minigameCtxFor: (room) => minigameCtx(room),
     handleMinigameDeparture,
     startGame,

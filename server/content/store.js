@@ -363,13 +363,14 @@ function createStore(filePath) {
 
   /**
    * Server-side paginated / filtered list for the admin table.
-   *   { categoryId, status: "active"|"inactive"|"all", search, page, pageSize, sort }
+   *   { categoryId, status: "active"|"inactive"|"all", difficulty: ""|"easy"|"medium"|"hard", search, page, pageSize, sort }
    */
   function listQuestions(opts = {}) {
     ensureLoaded();
     const {
       categoryId = null,
       status = "all",
+      difficulty = "",
       search = "",
       page = 1,
       pageSize = 25,
@@ -381,6 +382,8 @@ function createStore(filePath) {
       if (categoryId && q.categoryId !== categoryId) return false;
       if (status === "active" && !q.isActive) return false;
       if (status === "inactive" && q.isActive) return false;
+      // questions without a difficulty count as medium (as in the game)
+      if (difficulty && (q.difficulty || "medium") !== difficulty) return false;
       if (needle) {
         const hay = (
           q.text +
@@ -395,6 +398,8 @@ function createStore(filePath) {
     const catName = (cid) =>
       (data.categories.find((c) => c.id === cid) || {}).name || "—";
 
+    const DIFF_RANK = { easy: 0, medium: 1, hard: 2 };
+    const diffRank = (q) => DIFF_RANK[q.difficulty] ?? 1;
     const sorters = {
       created_desc: (a, b) => (a.createdAt < b.createdAt ? 1 : -1),
       created_asc: (a, b) => (a.createdAt > b.createdAt ? 1 : -1),
@@ -402,6 +407,8 @@ function createStore(filePath) {
       category_asc: (a, b) =>
         catName(a.categoryId).localeCompare(catName(b.categoryId), "uk"),
       order_asc: (a, b) => (a.order || 0) - (b.order || 0),
+      difficulty_asc: (a, b) => diffRank(a) - diffRank(b) || (a.order || 0) - (b.order || 0),
+      difficulty_desc: (a, b) => diffRank(b) - diffRank(a) || (a.order || 0) - (b.order || 0),
     };
     items.sort(sorters[sort] || sorters.created_desc);
 

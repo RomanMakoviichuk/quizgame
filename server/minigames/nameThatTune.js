@@ -37,6 +37,8 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
+const usage = require("../content/usage");
+
 const ID = "tune";
 const AUDIO_DIR = path.join(__dirname, "..", "..", "client", "public", "assets", "minigames", "Name That Tune", "songs");
 const AUDIO_URL_PREFIX = "/assets/minigames/Name%20That%20Tune"; // blocked in server.js
@@ -186,7 +188,11 @@ function roundFor(song, catalog) {
 
 function onStart(mg) {
   const catalog = loadCatalog();
-  const picked = shuffle(catalog).slice(0, CONFIG.ROUNDS + CONFIG.SPARE_SONGS);
+  // songs not played before first (content/usage.js); spares are recorded only if they play
+  const rounds = usage.draw("tune", catalog, CONFIG.ROUNDS, { idOf: (s) => s.file });
+  const spares = usage
+    .draw("tune", catalog.filter((s) => !rounds.includes(s)), CONFIG.SPARE_SONGS, { idOf: (s) => s.file, record: false });
+  const picked = [...rounds, ...spares];
   mg.tune = {
     catalog,
     rounds: picked.slice(0, CONFIG.ROUNDS).map((s) => roundFor(s, catalog)),
@@ -358,6 +364,7 @@ function onDisplayEvent(mg, name, data, ctx) {
   // nobody is punished for a broken clip: replay the round with a spare song, or void it
   const spare = t.spares.shift();
   if (spare) {
+    usage.mark("tune", [spare.file], t.catalog.map((s) => s.file));
     t.rounds[i] = roundFor(spare, t.catalog);
     ctx.emitAll("tune:retry", { index: i, message: "Пісня не завантажилась — грає інша!", serverNow: ctx.now() });
     ctx.setTimer(() => startRound(mg, i, ctx), 1500);

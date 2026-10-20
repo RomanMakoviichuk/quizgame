@@ -164,6 +164,7 @@ function serializePlayer(p) {
     isAdmin: p.isAdmin || false,
     characterSlot: p.characterSlot ?? 1,
     disconnected: !!p.disconnected,
+    isBot: !!p.isBot,
   };
 }
 

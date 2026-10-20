@@ -223,6 +223,40 @@ export default function FinalBattle({ uiMode = "display", socket, intro, myPlaye
     };
   }, [socket, clock]);
 
+  // phone: catch up with the race on mount and after every reconnect — a phone that
+  // reloaded or dropped out (an iPhone with its screen off) missed the intro and the
+  // open question, and without the line-up it could not find itself in the race
+  useEffect(() => {
+    if (!socket || isDisplay) return undefined;
+    const sync = () =>
+      socket.emit("finalSync", {}, (d) => {
+        if (!d || !Array.isArray(d.participants)) return;
+        clock.sync(d.serverNow);
+        setRace({
+          exit: d.exit,
+          darkness: d.darkness,
+          step: d.step,
+          participants: d.participants,
+          winnerId: d.winnerId,
+          ending: d.ending,
+        });
+        if (d.question) {
+          setStage("question");
+          setQuestion((q) => (q?.step === d.question.step ? q : d.question));
+          setMyAnswer(Number.isInteger(d.myAnswer) ? d.myAnswer : null);
+          setPendingAnswer(null);
+          setResult(null);
+        } else if (d.stage === "reveal" || d.stage === "done") {
+          setStage(d.stage);
+        }
+      });
+    sync();
+    // after a reconnect the session is resumed first (App), then we ask
+    const onConnect = () => setTimeout(sync, 400);
+    socket.on("connect", onConnect);
+    return () => socket.off("connect", onConnect);
+  }, [socket, isDisplay, clock]);
+
   // ------------------------------------------------------------ display intro
   useEffect(() => {
     if (!isDisplay || stage !== "intro") return undefined;

@@ -12,7 +12,7 @@
  *     POST   /api/admin/categories
  *     PUT    /api/admin/categories/:id
  *     DELETE /api/admin/categories/:id?force=1
- *     GET    /api/admin/questions?category=&status=&search=&page=&pageSize=&sort=
+ *     GET    /api/admin/questions?category=&status=&difficulty=&search=&page=&pageSize=&sort=
  *     GET    /api/admin/questions/:id
  *     POST   /api/admin/questions
  *     PUT    /api/admin/questions/:id
@@ -127,6 +127,7 @@ router.get("/api/admin/questions", (req, res) => {
   const result = store.listQuestions({
     categoryId: req.query.category || null,
     status: req.query.status || "all",
+    difficulty: req.query.difficulty || "",
     search: req.query.search || "",
     page: Number(req.query.page) || 1,
     pageSize: Number(req.query.pageSize) || 25,

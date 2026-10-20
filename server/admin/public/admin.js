@@ -301,7 +301,8 @@
     return out;
   }
 
-  var qState = { page: 1, pageSize: 25, search: "", category: "", status: "all", sort: "created_desc" };
+  var qState = { page: 1, pageSize: 25, search: "", category: "", status: "all", difficulty: "", sort: "created_desc" };
+  var DIFF_LABELS = { easy: "легка", medium: "середня", hard: "складна" };
 
   function viewQuestions() {
     var qp = parseQuery();
@@ -328,9 +329,15 @@
       ].map(function (o) {
         return h("option", { value: o[0], text: o[1], selected: o[0] === qState.status ? "selected" : false });
       }));
+      var diffSelect = h("select", {}, [
+        ["", "Усі складності"], ["easy", "Легкі"], ["medium", "Середні"], ["hard", "Складні"],
+      ].map(function (o) {
+        return h("option", { value: o[0], text: o[1], selected: o[0] === qState.difficulty ? "selected" : false });
+      }));
       var sortSelect = h("select", {}, [
         ["created_desc", "Спочатку нові"], ["created_asc", "Спочатку старі"],
         ["text_asc", "За текстом (А-Я)"], ["category_asc", "За категорією"], ["order_asc", "За порядком"],
+        ["difficulty_asc", "За складністю (легкі → складні)"], ["difficulty_desc", "За складністю (складні → легкі)"],
       ].map(function (o) {
         return h("option", { value: o[0], text: o[1], selected: o[0] === qState.sort ? "selected" : false });
       }));
@@ -339,11 +346,12 @@
         qState.search = searchInput.value;
         qState.category = catSelect.value;
         qState.status = statusSelect.value;
+        qState.difficulty = diffSelect.value;
         qState.sort = sortSelect.value;
         qState.page = 1;
         loadRows();
       }, 250);
-      [searchInput, catSelect, statusSelect, sortSelect].forEach(function (el) {
+      [searchInput, catSelect, statusSelect, diffSelect, sortSelect].forEach(function (el) {
         el.addEventListener("input", apply);
         el.addEventListener("change", apply);
       });
@@ -352,6 +360,7 @@
         h("div", { class: "grow" }, [label("Пошук"), searchInput]),
         h("div", {}, [label("Категорія"), catSelect]),
         h("div", {}, [label("Статус"), statusSelect]),
+        h("div", {}, [label("Складність"), diffSelect]),
         h("div", {}, [label("Сортування"), sortSelect]),
       ]));
 
@@ -360,7 +369,7 @@
 
       function loadRows() {
         var params = new URLSearchParams({
-          category: qState.category, status: qState.status, search: qState.search,
+          category: qState.category, status: qState.status, difficulty: qState.difficulty, search: qState.search,
           page: qState.page, pageSize: qState.pageSize, sort: qState.sort,
         });
         api("GET", "/api/admin/questions?" + params.toString()).then(function (res) {
@@ -370,7 +379,7 @@
             return h("tr", {}, [
               h("td", {}, [
                 h("div", { text: q.text }),
-                h("div", { class: "hint", text: q.difficulty ? "складність: " + q.difficulty : "" }),
+                h("div", { class: "hint", text: "складність: " + (DIFF_LABELS[q.difficulty] || "середня (не вказана)") }),
               ]),
               h("td", { text: q.categoryName }),
               h("td", { text: correct }),

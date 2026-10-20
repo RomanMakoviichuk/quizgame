@@ -513,7 +513,7 @@ export default function TugOfWarMinigame({
   useEffect(() => {
     if (!isDisplay || roundsDone <= roundCheerRef.current) return;
     roundCheerRef.current = roundsDone;
-    if (lastRound && lastRound.winner !== "draw") sfx("/assets/sounds/happy.mp3", 1);
+    if (lastRound && lastRound.winner !== "draw") sfx("/assets/minigames/rat/happy.mp3", 1);
   }, [isDisplay, roundsDone, lastRound]);
   useEffect(() => {
     if (!isDisplay || st?.phase !== "done" || endSoundRef.current) return;

@@ -13,6 +13,7 @@
  */
 const store = require("./content/store");
 const { cryptoShuffle } = require("./content/util");
+const usage = require("./content/usage");
 const { TOTAL_ROUNDS, MIN_QUESTIONS_PER_GAME, FINAL, GAME_DIFFICULTIES, DEFAULT_GAME_DIFFICULTY } = require("./config");
 
 const NOT_ENOUGH_MESSAGE = "У цій категорії недостатньо питань для гри.";
@@ -70,17 +71,24 @@ function roundPlan(difficulty, count) {
   return Array.from({ length: count }, (_, i) => ["easy", "medium", "hard"][Math.min(2, Math.floor((i * 3) / count))]);
 }
 
+const levelOf = (q) => (PREFERENCE[q.difficulty] ? q.difficulty : "medium");
+
 /**
  * Pure helper (unit-tested): like pickRounds, but every round takes a random
  * unused question of its wanted difficulty, falling back to the nearest one.
+ * `playedIds`: questions played in earlier games — taken only when a pool has
+ * nothing else left.
  */
-function pickRoundsByDifficulty(questions, difficulty, count) {
+function pickRoundsByDifficulty(questions, difficulty, count, playedIds = new Set()) {
   if (!Array.isArray(questions) || questions.length < count) {
     return { error: NOT_ENOUGH_MESSAGE, available: questions ? questions.length : 0 };
   }
-  const level = (q) => (PREFERENCE[q.difficulty] ? q.difficulty : "medium");
+  const level = levelOf;
   const pools = { easy: [], medium: [], hard: [] };
-  for (const q of cryptoShuffle(questions)) pools[level(q)].push(q);
+  // pop() takes from the end: played ones first in the array, new ones last
+  const shuffled = cryptoShuffle(questions);
+  for (const q of [...shuffled.filter((x) => playedIds.has(x.id)), ...shuffled.filter((x) => !playedIds.has(x.id))])
+    pools[level(q)].push(q);
   const chosen = roundPlan(normalizeGameDifficulty(difficulty), count).map((want) => {
     const from = PREFERENCE[want].find((d) => pools[d].length > 0);
     return pools[from].pop();
@@ -113,7 +121,19 @@ function getRounds(categoryId, difficulty = DEFAULT_GAME_DIFFICULTY) {
     return { error: "Категорія недоступна для гри." };
   }
   const questions = store.getPlayableQuestions(categoryId);
-  return pickRoundsByDifficulty(questions, difficulty, TOTAL_ROUNDS);
+  // no repeats between games (content/usage.js): one log per category + difficulty,
+  // each starts over once all its questions have been played
+  const kind = (level) => `quiz:${categoryId}:${level}`;
+  const played = new Set(["easy", "medium", "hard"].flatMap((l) => [...usage.usedSet(kind(l))]));
+  const result = pickRoundsByDifficulty(questions, difficulty, TOTAL_ROUNDS, played);
+  if (result.rounds) {
+    const byId = new Map(questions.map((q) => [q.id, q]));
+    for (const l of ["easy", "medium", "hard"]) {
+      const ids = result.rounds.map((r) => r.question.id).filter((id) => levelOf(byId.get(id) || {}) === l);
+      if (ids.length) usage.mark(kind(l), ids, questions.filter((q) => levelOf(q) === l).map((q) => q.id));
+    }
+  }
+  return result;
 }
 
 /**

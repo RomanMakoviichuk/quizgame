@@ -30,3 +30,7 @@ yarn-error.log*
 
 # runtime state: which "РАУНД N" clip played last (server/media.js)
 /server/data/round-announce.json
+
+# runtime state: which questions / statements / songs were already played (server/content/usage.js)
+/server/content/usage.json
+/server/content/usage.json.tmp

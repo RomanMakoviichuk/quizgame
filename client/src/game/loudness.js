@@ -9,6 +9,7 @@ export const TARGET_DB = {
   voice: -14, // the host / narration in videos: always the loudest thing in the game
   sfx: -22, // short effects
   music: -26, // background music beds: well under the voice (and ducked further while it speaks)
+  fanfare: -20, // victory stings (minigame triumph, a tug round won): the music steps back for them
 };
 
 export const MEASURED_DB = {
@@ -132,9 +133,11 @@ export const MEASURED_DB = {
 const isMusic = (p) =>
   /\/background\.mp3$|\/mainmenu\.mp3$|final_background\.mp3$|\/intro\/intro\.mp3$|background-sound-material\.mp3$/i.test(p);
 const isVoice = (p) => /\.mp4$/i.test(p) || /\/questions\/audio\//i.test(p);
+const isFanfare = (p) => /\/sounds\/win\.mp3$|\/rat\/happy\.mp3$/i.test(p);
 
 export function kindOf(path) {
   if (isMusic(path)) return "music";
+  if (isFanfare(path)) return "fanfare";
   if (isVoice(path)) return "voice";
   return "sfx";
 }
@@ -147,7 +150,7 @@ function pathOf(src) {
   }
 }
 
-/** The kind of what an element plays ("voice" | "music" | "sfx"; the tune game's songs count as music). */
+/** The kind of what an element plays ("voice" | "music" | "fanfare" | "sfx"; the tune game's songs count as music). */
 export function kindOfSrc(src) {
   const path = pathOf(src);
   if (path.startsWith("/tune/")) return "music";

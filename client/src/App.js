@@ -320,6 +320,7 @@ function App() {
   const [introStarted, setIntroStarted] = useState(false);
   const pausedMediaRef = useRef([]);
   const [joinError, setJoinError] = useState("");
+  const [tabClosed, setTabClosed] = useState(false); // main menu "Вийти" when the tab can't close
   // phone join: "form" (code + name) -> "character" (pick a doll) -> joined
   const [joinStep, setJoinStep] = useState("form");
   const [takenSlots, setTakenSlots] = useState([]);
@@ -430,6 +431,8 @@ function App() {
   const [minigameId, setMinigameId] = useState("trueFalse");
   const [trueFalseStart, setTrueFalseStart] = useState(false);
   const [trueFalseContestantIds, setTrueFalseContestantIds] = useState([]);
+  const [trueFalseStatements, setTrueFalseStatements] = useState(null); // «Правда/Брехня»: from the server
+  const [roundAnswer, setRoundAnswer] = useState(null); // { question, index, text } — shown after the round
   const [trueFalseSyncData, setTrueFalseSyncData] = useState(null); // { startedAtTs, serverTime, receivedAt }
   /** Після міні-гри: дані для сцени з aftermg.mp4 + таблиця + втрата життя */
   const [trueFalseResultsPayload, setTrueFalseResultsPayload] = useState(null);
@@ -573,6 +576,7 @@ function App() {
         if (r.minigame) {
           setMinigameId(r.minigame.minigameId);
           setTrueFalseContestantIds(r.minigame.contestantIds || []);
+          setTrueFalseStatements(Array.isArray(r.minigame.statements) ? r.minigame.statements : null);
           setTrueFalseResultsPayload(null);
           setTrueFalseStart(true);
         }
@@ -734,13 +738,13 @@ function App() {
     audio.loop = true;
     audio.volume = musicMuted ? 0 : 1; // level set by game/loudness.js
     audio.muted = musicMuted;
-    if (screen === "menu" || screen === "lobby") {
+    if ((screen === "menu" || screen === "lobby") && !tabClosed) {
       audio.play().catch(() => {});
     } else {
       audio.pause();
     }
     return () => audio.pause();
-  }, [screen, musicStarted, musicMuted]);
+  }, [screen, musicStarted, musicMuted, tabClosed]);
 
   useEffect(() => {
     const onFsChange = () => {
@@ -893,6 +897,7 @@ function App() {
         setShowRoundResultIcons(false);
         setScoresTransitioning(false);
         setScoresVideos(d.videos || null);
+        setRoundAnswer(d.answer || null);
         setMinigameNext(!!d.minigameNext);
         setMinigameGap(false);
         setScoresStage(d.videos?.afterRound ? "afterRound" : "reveal");
@@ -902,6 +907,7 @@ function App() {
       setMinigameId(d?.minigameId || "trueFalse");
       setTrueFalseStart(true);
       setTrueFalseContestantIds(d?.contestantIds || []);
+      setTrueFalseStatements(Array.isArray(d?.statements) ? d.statements : null);
       setTrueFalseSyncData(null);
     });
     socket.on("trueFalseSync", (d) => {
@@ -947,6 +953,11 @@ function App() {
     socket.on("gameResumed", () => {
       applyResume();
     });
+    // the admin ended the game from the pause screen: TV -> main menu, phones -> join
+    socket.on("gameAborted", (d) => {
+      resetToStart();
+      if (isMobile()) setJoinError(d?.by ? `${d.by} завершив гру` : "Гру завершено");
+    });
     socket.on("gameError", (d) => {
       const msg = d?.message || "Не вдалося розпочати гру.";
       setGameState(GAME_PHASE.WAITING);
@@ -971,6 +982,7 @@ function App() {
       socket.off("gameFinished");
       socket.off("gamePaused");
       socket.off("gameResumed");
+      socket.off("gameAborted");
       socket.off("answerBeep");
       socket.off("categorySelected");
       socket.off("gameError");
@@ -1345,6 +1357,15 @@ function App() {
     });
   };
 
+  // TEST MODE: the admin adds bots to the lobby (server/bots.js)
+  const [botError, setBotError] = useState("");
+  const handleAddBot = () => {
+    if (!socket || !isAdmin) return;
+    setBotError("");
+    socket.emit("addBot", {}, (r) => r?.error && setBotError(r.error));
+  };
+  const handleRemoveBot = (id) => socket?.emit("removeBot", { playerId: id });
+
   const handleStartGame = () => {
     if (!socket || !isAdmin) return;
     if (!isMobile()) knifeSliceRef.current?.play().catch(() => {});
@@ -1375,10 +1396,19 @@ function App() {
   };
 
   const handleExit = () => {
+    if (socket && roomCode) socket.emit("leaveRoom");
+    resetToStart();
+  };
+
+  /** Back to the start screen (TV: main menu, phone: join), all game state dropped. */
+  function resetToStart() {
     clearSession(); // left on purpose: no coming back to this seat
     if (gameClock.isPaused()) applyResume();
     setIntroStarted(false);
-    if (socket && roomCode) socket.emit("leaveRoom");
+    setGameState(GAME_PHASE.WAITING);
+    setTrueFalseStart(false);
+    setTrueFalseResultsPayload(null);
+    setQuestionPlayData(null);
     setScreen(isMobile() ? "join" : "menu");
     setRoomCode("");
     setPlayers([]);
@@ -1392,6 +1422,18 @@ function App() {
     setIsAdmin(false);
     setRulesActiveMobile(false);
     setShowIntroFade(false);
+  }
+
+  // main menu "Вийти": close the tab. Browsers only let a page close a tab that was
+  // opened by a script or never navigated; otherwise a goodbye screen stays.
+  const handleCloseTab = () => {
+    try {
+      if (document.fullscreenElement) document.exitFullscreen?.();
+    } catch {
+      /* not fullscreen */
+    }
+    window.close();
+    setTimeout(() => setTabClosed(true), 300);
   };
 
 
@@ -1442,7 +1484,17 @@ function App() {
         isDisplay={isDisplay}
         onPause={() => socket?.emit("pauseGame")}
         onResume={() => socket?.emit("resumeGame")}
+        onAbort={() => socket?.emit("abortGame")}
       />
+      {tabClosed && (
+        <div className="tab-closed" role="dialog" aria-modal="true">
+          <p className="tab-closed-title">Дякуємо за гру!</p>
+          <p className="tab-closed-hint">Браузер не дозволив сайту закрити вкладку сам — закрийте її (Ctrl+W)</p>
+          <button type="button" className="tab-closed-back" onClick={() => setTabClosed(false)}>
+            Повернутися в меню
+          </button>
+        </div>
+      )}
       {/* All game audio lives on the display / desktop screen only — the phone
           controllers are silent. Do not render these on mobile. */}
       {!isMobile() && (
@@ -1594,7 +1646,7 @@ function App() {
               </button>
               <button
                 className="glowing-btn menu-glowing-btn menu-glowing-btn-exit"
-                onClick={withClick(() => window.close())}
+                onClick={withClick(handleCloseTab)}
                 type="button"
               >
                 <span className="glowing-txt">
@@ -1767,9 +1819,20 @@ function App() {
                     />
                     <span className="player-name">{p.name}{p.isAdmin ? " ★" : ""}</span>
                     {p.disconnected && <span className="lobby-row-off">📵</span>}
+                    {p.isBot && isAdmin && gameState === "waiting" && (
+                      <button type="button" className="lobby-bot-remove" onClick={() => handleRemoveBot(p.id)} aria-label="Прибрати бота">
+                        ✕
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
+              {gameState === "waiting" && isAdmin && players.length < MAX_ROOM_PLAYERS && (
+                <button type="button" className="lobby-add-bot" onClick={withClick(handleAddBot)}>
+                  🤖 Додати бота
+                </button>
+              )}
+              {botError && <p className="lobby-bot-error">{botError}</p>}
               {gameState === "waiting" && isAdmin && (
                 <button className="btn-start" onClick={withClick(handleStartGame)}>
                   Розпочати гру
@@ -1932,6 +1995,7 @@ function App() {
             key={`results-${roundIndex}`}
             players={players}
             roundIndex={roundIndex}
+            answer={roundAnswer}
             videoSrc={scoresVideos?.afterResult || null}
             onDone={finishResultsCheck}
           />
@@ -2212,6 +2276,22 @@ function App() {
       {gameState === GAME_PHASE.SCORES && isMobile() && (
         <>
           <section className="scores-screen">
+            {roundAnswer?.text && (
+              <div className={`m-answer ${(() => {
+                const me = players.find((p) => p.id === myPlayerId);
+                return me ? (me.lastCorrect ? "ok" : "bad") : "";
+              })()}`}>
+                <small>Правильна відповідь</small>
+                <b>
+                  {"ABCD"[roundAnswer.index] || ""} · {roundAnswer.text}
+                </b>
+                {(() => {
+                  const me = players.find((p) => p.id === myPlayerId);
+                  if (!me) return null;
+                  return <em>{me.lastCorrect ? "✓ Ви вгадали!" : "✗ Цього разу ні"}</em>;
+                })()}
+              </div>
+            )}
             <h2>Бали після раунду</h2>
             <ol className="scores-list">
               {players.map((p, i) => (
@@ -2246,6 +2326,7 @@ function App() {
               livesById={playerLivesById}
               contestantIds={trueFalseContestantIds}
               results={trueFalseResultsPayload}
+              statements={trueFalseStatements}
             />
           )}
         </>

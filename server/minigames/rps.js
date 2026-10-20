@@ -20,10 +20,10 @@ const crypto = require("crypto");
 
 const ID = "rps";
 
-const CHOICE_MS = Number(process.env.RPS_CHOICE_MS) || 9000; // pick window per round
+const CHOICE_MS = Number(process.env.RPS_CHOICE_MS) || 10000; // pick window per round
 const REVEAL_MS = Number(process.env.RPS_REVEAL_MS) || 9000; // flip + battle animation + time to read
-// reading time for the on-screen rules (5 fighters, 10 rules) + a 3-2-1 countdown at the end
-const PREP_MS = Number(process.env.RPS_PREP_MS) || 30000;
+// 20 s to read the on-screen rules (5 fighters, 10 rules) + a 3-2-1 countdown at the end
+const PREP_MS = Number(process.env.RPS_PREP_MS) || 23000;
 const MAX_ROUNDS = 15; // safety valve against an endless tie loop
 const TOTAL_DURATION_MS = PREP_MS + MAX_ROUNDS * (CHOICE_MS + REVEAL_MS) + 8000;
 

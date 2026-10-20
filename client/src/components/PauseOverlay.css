@@ -142,3 +142,34 @@ html.game-paused body *:not(.pause-layer):not(.pause-layer *)::after {
 .pause-overlay-tv .pause-wait {
   font-size: clamp(1rem, 1.8vw, 2rem);
 }
+
+/* ---- admin: end the game (asks twice) */
+.pause-exit {
+  width: 100%;
+  margin-top: 12px;
+  padding: 13px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 215, 106, 0.45);
+  background: transparent;
+  color: #f3ead9;
+  font-family: "Manrope", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.98rem;
+  cursor: pointer;
+}
+.pause-exit:active {
+  transform: scale(0.98);
+}
+.pause-exit-yes {
+  border-color: #e53935;
+  background: linear-gradient(180deg, #e53935, #b71c1c);
+  color: #fff;
+}
+.pause-confirm-q {
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+.pause-overlay-tv .pause-exit,
+.pause-overlay-tv .pause-confirm-q {
+  font-size: clamp(1rem, 1.5vw, 1.6rem);
+}

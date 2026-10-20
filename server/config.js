@@ -35,6 +35,8 @@ module.exports = {
   DEFAULT_GAME_DIFFICULTY: "mixed",
 
   MAX_PLAYERS: 8,
+  // TEST MODE: the admin can add bots in the lobby (server/bots.js). Remove before release.
+  TEST_BOTS: process.env.TEST_BOTS !== "0",
   // a phone that drops out (reload, network) keeps its seat this long to come back
   RECONNECT_GRACE_MS: 3 * 60 * 1000,
   CHARACTER_SLOTS: 8,

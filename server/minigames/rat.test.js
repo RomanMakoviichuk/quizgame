@@ -260,3 +260,28 @@ test("through phases: lives taken once, max one per player, winner +1, ghosts ha
   assert.equal(ps[3].lives, LIVES_PER_PLAYER, "a non-contestant is untouched");
   assert.equal(ps[3].score, 0, "no minigame points for a non-contestant");
 });
+
+test("the vote closes as soon as every participant has voted", () => {
+  const mg = { contestantIds: ["A", "B"] };
+  rat.onStart(mg);
+  let now = 1000;
+  const timers = [];
+  let resolved = 0;
+  const ctx = {
+    now: () => now,
+    emitAll: () => {},
+    emitPlayer: () => {},
+    scheduleResolve: () => {},
+    setTimer: (fn, ms) => timers.push([fn, ms]),
+    resolveNow: () => resolved++,
+  };
+  rat.onSync(mg, now, ctx);
+  now = mg.rat.voteStartAt + 1000;
+  rat.onClientEvent(mg, "A", "rat:vote", { choice: "keep" }, ctx);
+  assert.equal(timers.length, 0, "one vote missing: keep waiting");
+  rat.onClientEvent(mg, "B", "rat:vote", { choice: "steal" }, ctx);
+  assert.equal(mg.rat.voteEndAt, now, "closed early");
+  assert.equal(timers.length, 1);
+  timers[0][0]();
+  assert.equal(resolved, 1);
+});

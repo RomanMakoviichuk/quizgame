@@ -8,7 +8,8 @@ import { gainFor, kindOfSrc } from "./loudness";
  * of its kind: voice -14 dB > effects -22 dB > music -26 dB) and then one
  * shared chain: a gentle compressor that evens out what is left, and a
  * limiter so nothing ever peaks. While any voice plays, every music bed is
- * ducked a further 6 dB and comes back smoothly when the voice stops. The gain
+ * ducked a further 6 dB, and while a victory fanfare plays a further 12 dB;
+ * it comes back smoothly when they stop. The gain
  * follows the element when its src changes (the background video switches
  * clips). The volumes set in code still work (fades, ducking in the tune game).
  *
@@ -18,6 +19,7 @@ import { gainFor, kindOfSrc } from "./loudness";
  * left alone. Not used on phones.
  */
 const DUCK = 0.5; // music under a speaking voice: -6 dB
+const FANFARE_DUCK = 0.25; // music under a victory fanfare: -12 dB
 const DUCK_TIME = 0.25; // seconds (time constant) for the music to dip / come back
 
 let ctx = null;
@@ -51,13 +53,13 @@ function build() {
 }
 
 // (new Audio() elements are never in the page, so "playing" is the only test)
-const speaking = () => [...tracks].some((t) => t.kind === "voice" && !t.el.paused && !t.el.ended);
+const playing = (kind) => [...tracks].some((t) => t.kind === kind && !t.el.paused && !t.el.ended);
 
-/** Duck or restore every music bed after any voice starts or stops. */
+/** Duck or restore every music bed after any voice / fanfare starts or stops. */
 function updateDucking() {
-  const duck = speaking();
+  const duck = playing("fanfare") ? FANFARE_DUCK : playing("voice") ? DUCK : 1;
   for (const t of tracks) {
-    const target = t.kind === "music" && duck ? t.base * DUCK : t.base;
+    const target = t.kind === "music" ? t.base * duck : t.base;
     t.gain.gain.setTargetAtTime(target, ctx.currentTime, DUCK_TIME);
   }
 }

@@ -13,6 +13,7 @@ const {
   INTRO_DURATION_MS,
   GAME_STATE,
   RECONNECT_GRACE_MS,
+  TEST_BOTS,
 } = require("./config");
 const {
   createRoom,
@@ -28,6 +29,7 @@ const {
 const { categoryReadiness, normalizeGameDifficulty, NOT_ENOUGH_MESSAGE } = require("./questions");
 const store = require("./content/store");
 const clock = require("./clock");
+const bots = TEST_BOTS ? require("./bots") : null;
 
 module.exports = function registerHandlers(io) {
   const phases = require("./phases")(io);
@@ -109,6 +111,10 @@ module.exports = function registerHandlers(io) {
         return callback?.({ error: "Гра вже почалася" });
 
       const player = addPlayer(room, socket.id, data?.playerName, data?.characterSlot);
+      if (bots && data?.botKey === bots.KEY) {
+        player.isBot = true;
+        player.isAdmin = false;
+      }
       socket.join(code);
       socket.roomCode = code;
       socket.playerId = player.id;
@@ -127,6 +133,25 @@ module.exports = function registerHandlers(io) {
         categoryName: category ? category.name : null,
       });
       io.to(code).emit("playerJoined", { players });
+    });
+
+    // TEST MODE: the admin adds / removes bots while the room waits for players
+    socket.on("addBot", (data, callback) => {
+      const room = roomOf();
+      if (!bots) return callback?.({ error: "Боти вимкнені" });
+      if (!room || room.gameState !== GAME_STATE.WAITING || room.introStarted || !isAdmin(room))
+        return callback?.({ error: "Бота можна додати лише в лобі" });
+      if (roomIsFull(room)) return callback?.({ error: `Кімната заповнена (макс. ${MAX_PLAYERS} гравців)` });
+      bots
+        .addBot(room.code)
+        .then((id) => callback?.({ ok: true, playerId: id }))
+        .catch((e) => callback?.({ error: e.message }));
+    });
+    socket.on("removeBot", (data) => {
+      const room = roomOf();
+      if (!bots || !room || room.gameState !== GAME_STATE.WAITING || !isAdmin(room)) return;
+      const target = [...room.players.values()].find((p) => p.id === data?.playerId && p.isBot);
+      if (target) bots.removeBot(target.id);
     });
 
     socket.on("startIntro", (data) => {
@@ -242,6 +267,14 @@ module.exports = function registerHandlers(io) {
       phases.handleFinalIntroDone(room);
     });
 
+    // a phone (re)joining the final asks for the race and the open question
+    socket.on("finalSync", (data, callback) => {
+      const room = roomOf();
+      const player = playerOf(room);
+      if (!room || !player) return callback?.(null);
+      callback?.(phases.finalSnapshot(room, player.id));
+    });
+
     onGame("finalAnswer", (data) => {
       const room = roomOf();
       if (!room || room.gameState !== GAME_STATE.FINAL_BATTLE) return;
@@ -320,6 +353,16 @@ module.exports = function registerHandlers(io) {
       if (!room || !isAdmin(room) || !canPause(room)) return;
       if (!clock.pause(room)) return;
       io.to(room.code).emit("gamePaused", { by: playerOf(room)?.name || null });
+    });
+
+    // the admin (phone) or the TV ends the game from the pause screen: everybody back to the start
+    socket.on("abortGame", () => {
+      const room = roomOf();
+      if (!room || !(isAdmin(room) || socket.isDisplay) || !clock.isPaused(room)) return;
+      io.to(room.code).emit("gameAborted", { by: playerOf(room)?.name || null });
+      bots?.removeAll(room.code);
+      deleteRoom(room.code); // clears every timer
+      io.in(room.code).socketsLeave(room.code);
     });
 
     socket.on("resumeGame", () => {
@@ -409,7 +452,7 @@ module.exports = function registerHandlers(io) {
         // the admin dropped out: hand the admin role (start / pause) to the next player
         // who is still connected, so nobody waits for a phone that may not come back
         if (player.isAdmin) {
-          const next = [...room.players.values()].find((p) => p !== player && !p.disconnected);
+          const next = [...room.players.values()].find((p) => p !== player && !p.disconnected && !p.isBot);
           if (next) {
             player.isAdmin = false;
             next.isAdmin = true;
@@ -439,10 +482,12 @@ module.exports = function registerHandlers(io) {
       io.to(room.code).emit("playerLeft", { players: getPlayersList(room) });
 
       if (wasAdmin && room.players.size > 0) {
-        const next = room.players.values().next().value;
+        const next = [...room.players.values()].find((p) => !p.isBot);
         if (next) next.isAdmin = true;
         io.to(room.code).emit("adminChanged", { players: getPlayersList(room) });
       }
+      // only bots left: they leave too (the room then closes)
+      if (bots && room.players.size > 0 && [...room.players.values()].every((p) => p.isBot)) bots.removeAll(room.code);
       if (room.players.size === 0) deleteRoom(room.code);
     }
 

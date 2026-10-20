@@ -6,7 +6,8 @@
  * is built and is the only list used for counting votes and for the outcome.
  *
  * Every participant secretly picks "steal" («ПІДМУТИТИ ЗАРЯДКУ») or "keep"
- * («НЕ ЧІПАТИ») during VOTE_MS (30 s) on the server clock. A vote is final: a
+ * («НЕ ЧІПАТИ») during VOTE_MS (30 s) on the server clock — or until the last
+ * of them has voted, whichever comes first. A vote is final: a
  * second vote, a vote before the window or after it are ignored. Nobody learns
  * anyone else's choice (nor the counts) before the window closes — the only
  * public signal is how many have decided.
@@ -34,6 +35,7 @@ const CONFIG = {
   PREP_MS: Number(process.env.RAT_PREP_MS) || 20000, // title + rules + 3-2-1
   VOTE_MS: Number(process.env.RAT_VOTE_MS) || 30000,
   CLOSE_GRACE_MS: 300, // the vote is closed by the time check; this is just when results go out
+  ALL_VOTED_PAUSE_MS: 1500, // everybody voted early: a beat on "all decided", then the outcome
 };
 const TOTAL_DURATION_MS = CONFIG.PREP_MS + CONFIG.VOTE_MS + 8000; // server hard stop
 
@@ -107,6 +109,13 @@ function onClientEvent(mg, playerId, name, data, ctx) {
   s.votes[playerId] = choice;
   ctx.emitPlayer(playerId, "rat:ack", { choice });
   ctx.emitAll("rat:progress", progressPayload(mg)); // counts how many decided, never what
+
+  // everybody has decided: close the vote now, no waiting for the clock
+  if (mg.contestantIds.every((id) => s.votes[id])) {
+    s.voteEndAt = now;
+    ctx.emitAll("rat:go", goPayload(mg, now)); // the timers on the TV and phones stop
+    ctx.setTimer(() => ctx.resolveNow(), CONFIG.ALL_VOTED_PAUSE_MS);
+  }
 }
 
 // ---------------------------------------------------------------- outcome
