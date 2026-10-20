@@ -494,13 +494,22 @@ test("a TV that answers in time cancels the fallback (no double moves)", (t) => 
 });
 
 test("a minigame's hard stop counts from its sync, not from its start", (t) => {
+  // «Правда/Брехня»: it ends only when the phones report or by the hard stop
+  // (other minigames may finish on their own clock first)
+  const prevDemo = process.env.MINIGAME_DEMO;
+  process.env.MINIGAME_DEMO = "trueFalse";
   const { io, phases, room, cleanup } = setup(3);
-  t.after(cleanup);
+  t.after(() => {
+    cleanup();
+    if (prevDemo === undefined) delete process.env.MINIGAME_DEMO;
+    else process.env.MINIGAME_DEMO = prevDemo;
+  });
   t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
   room.gameState = GAME_STATE.QUESTION_PLAY;
   phases.startAnswerPhase(room);
   t.mock.timers.tick(20_000); // nobody answered -> a minigame
   phases.handleScoresDone(room); // the TV's results are over: the minigame starts
+  assert.equal(room.minigame.minigameId, "trueFalse");
   const total = room.minigame.def.TOTAL_DURATION_MS;
   t.mock.timers.tick(5_000); // the TV takes 5 s to load its video
   phases.syncMinigame(room);
