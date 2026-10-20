@@ -5,8 +5,9 @@
  * Trigger: at least 2 living players got the quiz question wrong; they play.
  *
  * Round (decided ONCE in onStart, the same for everybody):
- *   - the level by the quiz round: 1-3 easy (2 colours), 4-6 medium (3),
- *     7+ hard (all 4) — the palette is a random pick of that many colours;
+ *   - the level follows the game's difficulty: easy -> 2 colours, medium -> 3,
+ *     hard -> 4 (the maximum); "mixed" (climbing) climbs with the quiz round:
+ *     1-3 easy, 4-6 medium, 7+ hard — the palette is a random pick of that many colours;
  *   - COUNT different items picked at random from server/data/memoryItems.json,
  *     in a random order, each with a random colour from the palette;
  *   - the mode: "order" (put the items back in order) or "color" (give each
@@ -42,12 +43,16 @@ const LEVELS = [
   { id: "medium", name: "Середній", colors: 3, untilRound: 6 },
   { id: "hard", name: "Максимальний", colors: 4, untilRound: Infinity },
 ];
-const levelFor = (roundIndex) => LEVELS.find((l) => (Number(roundIndex) || 1) <= l.untilRound) || LEVELS[LEVELS.length - 1];
+/** The game's difficulty sets the level; "mixed" (or none) climbs with the round. */
+const levelFor = (roundIndex, difficulty) =>
+  LEVELS.find((l) => l.id === difficulty) ||
+  LEVELS.find((l) => (Number(roundIndex) || 1) <= l.untilRound) ||
+  LEVELS[LEVELS.length - 1];
 
 const CONFIG = {
   COUNT: Number(process.env.MEMORY_COUNT) || 5,
-  PREP_MS: Number(process.env.MEMORY_PREP_MS) || 30000, // title + rules + 3-2-1
-  SHOW_MS: Number(process.env.MEMORY_SHOW_MS) || 20000, // remember
+  PREP_MS: Number(process.env.MEMORY_PREP_MS) || 15000, // title + rules + 3-2-1
+  SHOW_MS: Number(process.env.MEMORY_SHOW_MS) || 10000, // remember
   ANSWER_MS: Number(process.env.MEMORY_ANSWER_MS) || 15000,
   CLOSE_GRACE_MS: 250,
 };
@@ -112,7 +117,7 @@ function makeRound(items = ITEMS, count = CONFIG.COUNT, paletteSize = COLORS.len
 
 // ---------------------------------------------------------------- contest
 
-function buildContest({ players, correctIndex, roundIndex }) {
+function buildContest({ players, correctIndex, roundIndex, difficulty }) {
   if (ITEMS.length < 2) return null;
   const failers = players.filter((p) => !(p.hasAnswered && p.lastAnswerIndex === correctIndex));
   if (failers.length < MIN_PLAYERS) return null;
@@ -120,12 +125,13 @@ function buildContest({ players, correctIndex, roundIndex }) {
     minigameId: ID,
     mode: "all_lowest_loses",
     roundIndex,
+    difficulty, // the game's difficulty sets the level (levelFor)
     contestantIds: failers.map((p) => p.id),
   };
 }
 
 function onStart(mg) {
-  const level = levelFor(mg.roundIndex);
+  const level = levelFor(mg.roundIndex, mg.difficulty);
   const round = makeRound(ITEMS, CONFIG.COUNT, level.colors);
   mg.mem = {
     ...round,

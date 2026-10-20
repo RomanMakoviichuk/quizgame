@@ -94,13 +94,14 @@ function deleteRoom(roomCode) {
   rooms.delete(roomCode);
 }
 
+/** Character slots already taken in the room. */
+function takenSlots(room) {
+  return [...room.players.values()].map((p) => p.characterSlot).filter((s) => s >= 1 && s <= CHARACTER_SLOTS);
+}
+
 /** Random free character slot (1..CHARACTER_SLOTS); falls back to 1 when full. */
 function getRandomFreeCharacterSlot(room) {
-  const taken = new Set(
-    [...room.players.values()]
-      .map((p) => p.characterSlot)
-      .filter((s) => s >= 1 && s <= CHARACTER_SLOTS)
-  );
+  const taken = new Set(takenSlots(room));
   const free = [];
   for (let s = 1; s <= CHARACTER_SLOTS; s++) if (!taken.has(s)) free.push(s);
   if (free.length === 0) return 1;
@@ -111,8 +112,15 @@ function roomIsFull(room) {
   return room.players.size >= MAX_PLAYERS;
 }
 
-function addPlayer(room, socketId, rawName) {
+/**
+ * A new player. `preferredSlot` (the character picked on the phone) is used if
+ * still free, otherwise a random free one. `token` lets this player come back
+ * after a reload / dropped connection (handlers.js "resumeSession").
+ */
+function addPlayer(room, socketId, rawName, preferredSlot) {
   const isFirstPlayer = room.players.size === 0;
+  const slot = Number(preferredSlot);
+  const wanted = Number.isInteger(slot) && slot >= 1 && slot <= CHARACTER_SLOTS && !takenSlots(room).includes(slot);
   const player = {
     id: "player_" + Date.now() + "_" + crypto.randomBytes(4).toString("hex"),
     name: (rawName || "Гравець").trim().slice(0, 20) || "Гравець",
@@ -124,9 +132,23 @@ function addPlayer(room, socketId, rawName) {
     hasAnswered: false,
     lastAnswerIndex: null,
     isAdmin: isFirstPlayer,
-    characterSlot: getRandomFreeCharacterSlot(room),
+    characterSlot: wanted ? slot : getRandomFreeCharacterSlot(room),
+    token: crypto.randomBytes(16).toString("hex"),
+    disconnected: false, // the phone dropped out; kept for a while so it can come back
+    dropTimer: null,
   };
   room.players.set(socketId, player);
+  return player;
+}
+
+/** The same player object under a new socket (a phone that came back). */
+function rekeyPlayer(room, oldSocketId, newSocketId) {
+  const player = room.players.get(oldSocketId);
+  if (!player) return null;
+  // keep the join order (the admin / seat order rely on it)
+  const entries = [...room.players.entries()].map(([sid, p]) => (sid === oldSocketId ? [newSocketId, p] : [sid, p]));
+  room.players.clear();
+  for (const [sid, p] of entries) room.players.set(sid, p);
   return player;
 }
 
@@ -141,6 +163,7 @@ function serializePlayer(p) {
     hasAnswered: p.hasAnswered || false,
     isAdmin: p.isAdmin || false,
     characterSlot: p.characterSlot ?? 1,
+    disconnected: !!p.disconnected,
   };
 }
 
@@ -166,6 +189,8 @@ module.exports = {
   getRandomFreeCharacterSlot,
   roomIsFull,
   addPlayer,
+  rekeyPlayer,
+  takenSlots,
   serializePlayer,
   getPlayersList,
   resetPlayersAnswered,

@@ -161,7 +161,7 @@ export default function MathRushMinigame({
   onVideoStartedAt,
 }) {
   const isDisplay = uiMode === "display";
-  const [go, setGo] = useState(null); // { playStartAt, playEndAt, offset }
+  const [go, setGo] = useState(null); // { playStartAt, playEndAt, offset, maxLevel }
   const [question, setQuestion] = useState(null);
   const [liveScores, setLiveScores] = useState({});
   const [, setTick] = useState(0);
@@ -188,6 +188,7 @@ export default function MathRushMinigame({
         playStartAt: Number(d.playStartAt),
         playEndAt: Number(d.playEndAt),
         offset: Number(d.serverNow ?? gameClock.now()) - gameClock.now(),
+        maxLevel: !!d.maxLevel,
       });
     };
     const onQuestion = (d) => {
@@ -431,6 +432,12 @@ export default function MathRushMinigame({
             <b>⚡</b>
             <span>Тисни правильну відповідь — одразу наступний приклад</span>
           </div>
+          {go?.maxLevel && (
+            <div className="mr-rule" style={{ animationDelay: "0.18s" }}>
+              <b>×</b>
+              <span>Максимальний рівень: є множення до 15 × 15!</span>
+            </div>
+          )}
           <div className="mr-rule" style={{ animationDelay: "0.25s" }}>
             <b>±1</b>
             <span>+1 за правильну відповідь, −1 за помилку — не тисни навмання!</span>

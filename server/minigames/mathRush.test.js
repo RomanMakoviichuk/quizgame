@@ -195,3 +195,30 @@ test("onClientEvent: answers outside the play window are rejected", () => {
   mr.onClientEvent(mg, "A", "mathRush:answer", { seq: 0, choice: mg.pool[0].correctIndex }, ctx);
   assert.equal(mg.mr.A.answered, 0);
 });
+
+test("maximum level: multiplication 2..15 joins in, right answer, plausible slips", () => {
+  const cfg = { ...mr.CONFIG };
+  let products = 0;
+  for (let i = 0; i < 600; i++) {
+    const q = mr.makeQuestion(cfg, { multiply: true });
+    if (!q.text.includes("×")) continue;
+    products += 1;
+    const [a, , b] = q.text.split(" ");
+    assert.ok(Number(a) >= 1 && Number(a) <= 15 && Number(b) >= 1 && Number(b) <= 15, q.text);
+    assert.equal(q.answer, Number(a) * Number(b));
+    assert.equal(q.options.length, 4);
+    assert.equal(new Set(q.options).size, 4);
+    assert.equal(q.options[q.correctIndex], q.answer);
+    assert.ok(q.options.every((o) => o >= 0));
+  }
+  assert.ok(products > 120 && products < 300, `about a third: ${products}`);
+  for (let i = 0; i < 200; i++) assert.ok(!mr.makeQuestion(cfg).text.includes("×"), "no multiplication below the max level");
+});
+
+test("maximum level: hard always, mixed from round 7, easy/medium never", () => {
+  assert.equal(mr.isMaxLevel("hard", 1), true);
+  assert.equal(mr.isMaxLevel("mixed", 6), false);
+  assert.equal(mr.isMaxLevel("mixed", 7), true);
+  assert.equal(mr.isMaxLevel("medium", 9), false);
+  assert.equal(mr.isMaxLevel("easy", 9), false);
+});

@@ -12,6 +12,7 @@ const {
   MAX_PLAYERS,
   INTRO_DURATION_MS,
   GAME_STATE,
+  RECONNECT_GRACE_MS,
 } = require("./config");
 const {
   createRoom,
@@ -20,6 +21,8 @@ const {
   clearRoomTimers,
   roomIsFull,
   addPlayer,
+  rekeyPlayer,
+  takenSlots,
   getPlayersList,
 } = require("./rooms");
 const { categoryReadiness, normalizeGameDifficulty, NOT_ENOUGH_MESSAGE } = require("./questions");
@@ -105,7 +108,7 @@ module.exports = function registerHandlers(io) {
       if (room.gameState !== GAME_STATE.WAITING)
         return callback?.({ error: "Гра вже почалася" });
 
-      const player = addPlayer(room, socket.id, data?.playerName);
+      const player = addPlayer(room, socket.id, data?.playerName, data?.characterSlot);
       socket.join(code);
       socket.roomCode = code;
       socket.playerId = player.id;
@@ -115,6 +118,8 @@ module.exports = function registerHandlers(io) {
       callback?.({
         roomCode: code,
         playerId: player.id,
+        token: player.token, // the phone keeps it to come back after a reload
+        characterSlot: player.characterSlot,
         players,
         gameState: room.gameState,
         isAdmin: player.isAdmin,
@@ -325,6 +330,52 @@ module.exports = function registerHandlers(io) {
       for (const fn of room.deferredWhilePaused.splice(0)) fn();
     });
 
+    // Phone, before joining: which characters are already taken in that room.
+    socket.on("roomSlots", (data, callback) => {
+      const code = String(data?.roomCode || "").replace(/\D/g, "").padStart(4, "0").slice(0, 4);
+      const room = getRoom(code);
+      if (!room) return callback?.({ error: "Кімнату не знайдено" });
+      if (roomIsFull(room)) return callback?.({ error: `Кімната заповнена (макс. ${MAX_PLAYERS} гравців)` });
+      if (room.gameState !== GAME_STATE.WAITING) return callback?.({ error: "Гра вже почалася" });
+      callback?.({ roomCode: code, taken: takenSlots(room) });
+    });
+
+    // A phone that comes back (page reload, dropped Wi-Fi): same player, new socket.
+    socket.on("resumeSession", (data, callback) => {
+      const code = String(data?.roomCode || "").replace(/\D/g, "").padStart(4, "0").slice(0, 4);
+      const room = getRoom(code);
+      if (!room) return callback?.({ error: "Гру завершено" });
+      const entry = [...room.players.entries()].find(([, p]) => p.id === data?.playerId && p.token === data?.token);
+      if (!entry) return callback?.({ error: "Сесію не знайдено" });
+      const [oldSid, player] = entry;
+      if (player.dropTimer) {
+        clearTimeout(player.dropTimer);
+        player.dropTimer = null;
+      }
+      player.disconnected = false;
+      if (oldSid !== socket.id) {
+        rekeyPlayer(room, oldSid, socket.id); // first, so the stale socket below finds nobody to drop
+        io.sockets.sockets.get(oldSid)?.disconnect(true); // a stale tab of the same player
+      }
+      socket.join(code);
+      socket.roomCode = code;
+      socket.playerId = player.id;
+      const category = store.getCategory(room.categoryId);
+      const players = getPlayersList(room);
+      callback?.({
+        roomCode: code,
+        playerId: player.id,
+        token: player.token,
+        players,
+        isAdmin: player.isAdmin,
+        categoryName: category ? category.name : null,
+        ...phases.resumeSnapshot(room, player),
+      });
+      io.to(code).emit("playersUpdate", { players });
+      const snapMg = room.minigame;
+      if (snapMg && snapMg.startEmitted && !snapMg.resolved) snapMg.def.onReconnect?.(snapMg, player.id, phases.minigameCtxFor(room));
+    });
+
     // ---------------------------------------------------------- leave/disconnect
 
     function handleDeparture({ viaLeave }) {
@@ -343,8 +394,42 @@ module.exports = function registerHandlers(io) {
 
       const player = playerOf(room);
       if (!player) return;
+
+      // A dropped connection (not "Вийти"): keep the seat for RECONNECT_GRACE_MS
+      // so the phone can come back with resumeSession; only then the player leaves.
+      if (!viaLeave) {
+        player.disconnected = true;
+        const sid = socket.id;
+        if (player.dropTimer) clearTimeout(player.dropTimer);
+        player.dropTimer = setTimeout(() => {
+          player.dropTimer = null;
+          if (room.players.get(sid) === player && player.disconnected) removePlayer(room, sid, player, false);
+        }, RECONNECT_GRACE_MS);
+        player.dropTimer.unref?.();
+        // the admin dropped out: hand the admin role (start / pause) to the next player
+        // who is still connected, so nobody waits for a phone that may not come back
+        if (player.isAdmin) {
+          const next = [...room.players.values()].find((p) => p !== player && !p.disconnected);
+          if (next) {
+            player.isAdmin = false;
+            next.isAdmin = true;
+            io.to(room.code).emit("adminChanged", { players: getPlayersList(room) });
+          }
+        }
+        io.to(room.code).emit("playersUpdate", { players: getPlayersList(room) });
+        return;
+      }
+      removePlayer(room, socket.id, player, true);
+    }
+
+    /** The player is gone for good: out of the room, out of the race / minigame, admin handed on. */
+    function removePlayer(room, sid, player, viaLeave) {
+      if (player.dropTimer) {
+        clearTimeout(player.dropTimer);
+        player.dropTimer = null;
+      }
       const wasAdmin = player.isAdmin;
-      room.players.delete(socket.id);
+      room.players.delete(sid);
       phases.handleFinalDeparture(room, player.id);
       phases.handleMinigameDeparture(room, player.id);
       if (viaLeave) {

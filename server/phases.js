@@ -135,7 +135,9 @@ module.exports = function createPhases(io) {
     if (!roundData?.question) return emitScores(room);
 
     room.gameState = GAME_STATE.ANSWER_PHASE;
+    room.answerEndsAt = clock.now(room) + ANSWER_TIMER_MS; // for a phone that comes back mid-question
     resetPlayersAnswered(room);
+    to(room).emit("playersUpdate", { players: getPlayersList(room) }); // fresh "answered" marks on the TV
     to(room).emit("answerPhase", {
       question: roundData.question,
       roundIndex: room.currentRoundIndex + 1,
@@ -457,11 +459,13 @@ module.exports = function createPhases(io) {
       : living.filter(wrong);
 
     room.minigameHistory ??= [];
-    for (const def of minigames.selectForRound(roundIndex, room.minigameHistory)) {
+    const candidates = minigames.selectForRound(roundIndex, room.minigameHistory);
+    for (const def of candidates) {
       const contest = def.buildContest({
         players: pool,
         correctIndex,
         roundIndex,
+        difficulty: room.difficulty, // e.g. the memory level follows it
       });
       // e.g. «Перетягни канат» with an odd number of wrong players: try the next one
       if (!contest || !contest.contestantIds || contest.contestantIds.length === 0) continue;
@@ -481,8 +485,20 @@ module.exports = function createPhases(io) {
       };
       room.minigameHistory.push(def.ID); // no repeats until every minigame has run
       def.onStart?.(room.minigame, minigameCtx(room));
+      logMinigame(room, roundIndex, `${def.ID} (${contest.contestantIds.length} play${everyonePlays ? ", everyone" : ""})`);
       return;
     }
+    logMinigame(
+      room,
+      roundIndex,
+      `none — no candidate could start (alive ${living.length}, wrong ${living.filter(wrong).length}, tried: ${candidates.map((d) => d.ID).join(", ") || "-"}, played: ${room.minigameHistory.join(", ") || "-"})`
+    );
+  }
+
+  /** One line per round in the server log: which minigame, or why none (for chasing "it didn't start"). */
+  function logMinigame(room, roundIndex, what) {
+    if (process.env.NODE_ENV === "test") return;
+    console.log(`[minigame] room ${room.code} round ${roundIndex}: ${what}`);
   }
 
   function startMinigame(room) {
@@ -642,7 +658,35 @@ module.exports = function createPhases(io) {
     advanceRound(room);
   }
 
+  /**
+   * Everything a phone that came back (reload / dropped connection) needs to
+   * draw the current moment: the phase, the open question and its time left,
+   * a running minigame. Then the normal events take over.
+   */
+  function resumeSnapshot(room, player) {
+    const snap = {
+      gameState: room.gameState,
+      roundIndex: room.currentRoundIndex + 1,
+      question: null,
+      answerMsLeft: 0,
+      answered: !!player.hasAnswered,
+      answerIndex: player.hasAnswered ? player.lastAnswerIndex : null,
+      minigame: null,
+    };
+    if (room.gameState === GAME_STATE.ANSWER_PHASE) {
+      snap.question = room.rounds[room.currentRoundIndex]?.question || null;
+      snap.answerMsLeft = Math.max(0, (room.answerEndsAt || 0) - clock.now(room));
+    }
+    const mg = room.minigame;
+    if (room.gameState === GAME_STATE.SCORES && mg && mg.startEmitted && !mg.resolved) {
+      snap.minigame = { minigameId: mg.minigameId, roundIndex: mg.roundIndex, contestantIds: mg.contestantIds, mode: mg.mode };
+    }
+    return snap;
+  }
+
   return {
+    resumeSnapshot,
+    minigameCtxFor: (room) => minigameCtx(room),
     handleMinigameDeparture,
     startGame,
     emitQuestionAnnounce,

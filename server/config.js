@@ -35,6 +35,8 @@ module.exports = {
   DEFAULT_GAME_DIFFICULTY: "mixed",
 
   MAX_PLAYERS: 8,
+  // a phone that drops out (reload, network) keeps its seat this long to come back
+  RECONNECT_GRACE_MS: 3 * 60 * 1000,
   CHARACTER_SLOTS: 8,
 
   TOTAL_ROUNDS: 9, // 9 quiz rounds, then the final battle

@@ -25,7 +25,7 @@ export const MEASURED_DB = {
   "/assets/sounds/mainmenu.mp3": -11.5,
   "/assets/videos/intro/intro.mp3": -18.1,
   // voice: the host and the narrated clips
-  "/assets/minigames/truefalse.mp4": -22,
+  "/assets/minigames/truefalse/truefalse.mp4": -22,
   "/assets/questions/audio/round1/easy_1.mp3": -20.3,
   "/assets/questions/video/aftermg.mp4": -22.1,
   "/assets/questions/video/questions/1.mp4": -30.7,

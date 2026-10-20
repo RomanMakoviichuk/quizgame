@@ -1,0 +1,56 @@
+/* cheerful sky + crayon doodles behind the phone's entry screens */
+.fun-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 110%, rgba(255, 214, 140, 0.9), transparent 60%),
+    linear-gradient(180deg, #8fd3ff 0%, #bfe7ff 45%, #fff3d6 100%);
+}
+.fun-cloud {
+  position: absolute;
+  height: 9vh;
+  width: 34vw;
+  border-radius: 999px;
+  background: #fff;
+  opacity: 0.85;
+  filter: blur(1px);
+  animation: fun-drift 26s linear infinite;
+}
+.fun-cloud::before,
+.fun-cloud::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+}
+.fun-cloud::before { width: 45%; height: 140%; left: 14%; bottom: 20%; }
+.fun-cloud::after { width: 38%; height: 120%; left: 48%; bottom: 25%; }
+.fun-cloud.c1 { top: 16%; animation-duration: 30s; }
+.fun-cloud.c2 { top: 46%; width: 26vw; height: 7vh; animation-duration: 38s; animation-delay: -14s; opacity: 0.7; }
+.fun-cloud.c3 { top: 72%; width: 40vw; animation-duration: 44s; animation-delay: -30s; opacity: 0.6; }
+.fun-doodle {
+  position: absolute;
+  aspect-ratio: 1;
+  opacity: 0.85;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.08));
+  animation: fun-wobble 4.5s ease-in-out infinite;
+}
+.fun-doodle svg { width: 100%; height: 100%; overflow: visible; }
+.fun-doodle.squiggle { aspect-ratio: 3; }
+.fun-doodle.sun { animation: fun-spin 18s linear infinite; }
+@keyframes fun-drift { from { transform: translateX(-45vw); } to { transform: translateX(110vw); } }
+@keyframes fun-wobble { 0%, 100% { transform: rotate(-6deg) translateY(0); } 50% { transform: rotate(6deg) translateY(-1.2vh); } }
+@keyframes fun-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .fun-cloud, .fun-doodle { animation: none; }
+}
+
+/* in-game: the same sky, paler and still */
+.fun-backdrop.calm { filter: saturate(0.75) brightness(1.04); }
+.fun-backdrop.calm .fun-cloud,
+.fun-backdrop.calm .fun-doodle { animation: none; }
+.fun-backdrop.calm .fun-doodle { opacity: 0.35; }
+.fun-backdrop.calm .fun-cloud { opacity: 0.55; }

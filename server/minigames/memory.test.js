@@ -341,3 +341,11 @@ test("through phases: lives taken once, the TV gets the row, the phones do not",
   assert.equal(ps[0].lives, LIVES_PER_PLAYER);
   assert.ok(!log.some((e) => e.event === "mem:show" && e.target !== "display-sock"), "mem:show only to the display socket");
 });
+
+test("levels follow the game's difficulty; mixed (climbing) climbs with the round", () => {
+  assert.equal(mem.levelFor(9, "easy").colors, 2);
+  assert.equal(mem.levelFor(1, "medium").colors, 3);
+  assert.equal(mem.levelFor(1, "hard").colors, 4);
+  assert.deepEqual([1, 4, 7].map((r) => mem.levelFor(r, "mixed").colors), [2, 3, 4]);
+  assert.equal(mem.CONFIG.SHOW_MS, 10000);
+});

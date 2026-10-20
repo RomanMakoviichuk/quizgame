@@ -632,7 +632,7 @@ export default function TrueFalseMinigame({
         <video
           className="tf-video"
           ref={videoRef}
-          src="/assets/minigames/truefalse.mp4"
+          src="/assets/minigames/truefalse/truefalse.mp4"
           autoPlay
           playsInline
           preload="auto"

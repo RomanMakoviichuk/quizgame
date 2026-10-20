@@ -7,6 +7,9 @@
  * so blind tapping never pays).
  * Life loss: exactly one player — the lowest total score (ties broken by pace).
  *
+ * Maximum level (the game's difficulty "hard", or "mixed" from round 7): about a
+ * third of the examples are multiplication, both factors 1..MULT_MAX (7 × 8, 13 × 12).
+ *
  * Server-authoritative: the server generates the shared question pool, validates
  * every answer, awards points and owns the clock. The client only renders and
  * forwards taps.
@@ -26,7 +29,14 @@ const CONFIG = {
   PREP_MS: Number(process.env.MATH_RUSH_PREP_MS) || 15000,
   PLAY_MS: Number(process.env.MATH_RUSH_PLAY_MS) || 30000, // answering window
   POOL_SIZE: 40,
+  MULT_MAX: 15, // multiplication (maximum level): both factors 1..15
+  MULT_SHARE: 1 / 3, // ...in about a third of the examples
 };
+const MAX_LEVEL_FROM_ROUND = 7; // "mixed" difficulty climbs: the maximum level from this round
+
+/** Maximum level: the game is "hard", or "mixed" and far enough in. */
+const isMaxLevel = (difficulty, roundIndex) =>
+  difficulty === "hard" || ((!difficulty || difficulty === "mixed") && (Number(roundIndex) || 1) >= MAX_LEVEL_FROM_ROUND);
 const TOTAL_DURATION_MS = CONFIG.PREP_MS + CONFIG.PLAY_MS + 6000; // server hard stop
 
 const rint = (min, max) => crypto.randomInt(min, max + 1);
@@ -39,10 +49,11 @@ function shuffle(a) {
 }
 
 /**
- * One equation: `+` or `-` only, 4 options, exactly one correct, the three
- * wrong options are within a few of the answer and never negative.
+ * One equation: `+` or `-` (and `×` when `multiply`), 4 options, exactly one
+ * correct, the three wrong options are within a few of the answer and never negative.
  */
-function makeQuestion(cfg = CONFIG) {
+function makeQuestion(cfg = CONFIG, { multiply = false } = {}) {
+  if (multiply && crypto.randomInt(0, 1000) < cfg.MULT_SHARE * 1000) return makeProduct(cfg);
   const addition = crypto.randomInt(0, 2) === 0;
   let a;
   let b;
@@ -76,13 +87,31 @@ function makeQuestion(cfg = CONFIG) {
   return { text, options, correctIndex: options.indexOf(answer), answer };
 }
 
-function makePool(cfg = CONFIG) {
-  return Array.from({ length: cfg.POOL_SIZE }, () => makeQuestion(cfg));
+/**
+ * a × b, both 1..MULT_MAX. Wrong options are the classic slips: one factor off
+ * by one (a × (b ± 1)), and the answer ± a few — all distinct, never negative.
+ */
+function makeProduct(cfg = CONFIG) {
+  const max = cfg.MULT_MAX || 15;
+  const a = rint(2, max);
+  const b = rint(2, max);
+  const answer = a * b;
+  const opts = new Set([answer]);
+  for (const v of shuffle([a * (b + 1), a * (b - 1), (a + 1) * b, (a - 1) * b, answer + 1, answer - 1, answer + 2, answer - 2])) {
+    if (opts.size >= 4) break;
+    if (v >= 0) opts.add(v);
+  }
+  const options = shuffle([...opts]);
+  return { text: `${a} × ${b}`, options, correctIndex: options.indexOf(answer), answer };
+}
+
+function makePool(cfg = CONFIG, opts = {}) {
+  return Array.from({ length: cfg.POOL_SIZE }, () => makeQuestion(cfg, opts));
 }
 
 // ---------------------------------------------------------------- contest
 
-function buildContest({ players, correctIndex, roundIndex }) {
+function buildContest({ players, correctIndex, roundIndex, difficulty }) {
   const failers = players
     .filter((p) => !(p.hasAnswered && p.lastAnswerIndex === correctIndex))
     .map((p) => p.id);
@@ -94,11 +123,12 @@ function buildContest({ players, correctIndex, roundIndex }) {
     roundIndex,
     contestantIds: players.map((p) => p.id), // EVERYONE plays
     quizFailerIds: failers,
+    maxLevel: isMaxLevel(difficulty, roundIndex), // multiplication joins in
   };
 }
 
 function onStart(mg) {
-  mg.pool = makePool();
+  mg.pool = makePool(CONFIG, { multiply: !!mg.maxLevel });
   mg.mr = {};
   for (const id of mg.contestantIds) {
     mg.mr[id] = { cursor: 0, score: 0, wrong: 0, answered: 0, lastAt: 0 };
@@ -124,6 +154,7 @@ function onSync(mg, nowTs, ctx) {
     playStartAt: mg.playStartAt,
     playEndAt: mg.playEndAt,
     serverNow: nowTs,
+    maxLevel: !!mg.maxLevel,
   });
   for (const id of mg.contestantIds) {
     ctx.emitPlayer(id, "mathRush:question", questionFor(mg, id));
@@ -235,6 +266,8 @@ module.exports = {
   TOTAL_DURATION_MS,
   makeQuestion,
   makePool,
+  makeProduct,
+  isMaxLevel,
   buildContest,
   onStart,
   onSync,

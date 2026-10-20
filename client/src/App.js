@@ -20,6 +20,7 @@ const MINIGAME_GAP_MS = 3000;
 const PHONE_MG_RESULT_MS = 6500; // phone: how long a minigame's result screen stays // a pause in the dark between the round's results and its minigame
 const QUESTION_REVEAL_MS = 2500; // the question scene's video plays alone this long before the question appears
 import DarkPause from "./components/DarkPause";
+import FunBackdrop from "./components/FunBackdrop";
 import RoundResults from "./components/RoundResults";
 import WelcomePlayers from "./components/WelcomePlayers";
 import MinigameHost from "./components/MinigameHost";
@@ -47,6 +48,34 @@ const PUBLIC_SITE = process.env.REACT_APP_PUBLIC_HOST || "whoiswho.top";
 const isMobile = () =>
   typeof window !== "undefined" &&
   (window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent));
+
+// The phone remembers its seat (room, player, token) to come back after a reload
+// or a dropped connection (server: "resumeSession").
+const SESSION_KEY = "quizgame_session";
+const SESSION_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+const readSession = () => {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    return s && s.token && Date.now() - (s.at || 0) < SESSION_MAX_AGE_MS ? s : null;
+  } catch {
+    return null;
+  }
+};
+const saveSession = (s) => {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...s, at: Date.now() }));
+  } catch {
+    /* private mode: no coming back, the game still works */
+  }
+};
+const clearSession = () => {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* nothing to clear */
+  }
+};
+const CHARACTER_SLOTS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 const ROUND_DEBUG_STORAGE_KEY = "quizgame_round_debug";
 const SCORES_DEBUG_STORAGE_KEY = "quizgame_scores_debug";
@@ -291,6 +320,11 @@ function App() {
   const [introStarted, setIntroStarted] = useState(false);
   const pausedMediaRef = useRef([]);
   const [joinError, setJoinError] = useState("");
+  // phone join: "form" (code + name) -> "character" (pick a doll) -> joined
+  const [joinStep, setJoinStep] = useState("form");
+  const [takenSlots, setTakenSlots] = useState([]);
+  const [pickedSlot, setPickedSlot] = useState(null);
+  const [resuming, setResuming] = useState(false);
   const [connected, setConnected] = useState(false);
   const [isDisplay, setIsDisplay] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -503,7 +537,47 @@ function App() {
   useEffect(() => {
     const s = io(SOCKET_URL, { transports: ["websocket", "polling"] });
     setSocket(s);
-    s.on("connect", () => setConnected(true));
+    s.on("connect", () => {
+      setConnected(true);
+      // a phone with a seat: take it back (after a reload, or socket.io's own reconnect)
+      const saved = isMobile() && !isDisplayRef.current ? readSession() : null;
+      if (!saved) return;
+      setResuming(true);
+      s.emit("resumeSession", saved, (r) => {
+        setResuming(false);
+        if (!r || r.error) {
+          clearSession();
+          setJoinCodeInput((v) => v || saved.roomCode || "");
+          return;
+        }
+        saveSession({ roomCode: r.roomCode, playerId: r.playerId, token: r.token });
+        setRoomCode(r.roomCode);
+        setPlayers(r.players || []);
+        setPlayerId(r.playerId);
+        setIsAdmin(!!r.isAdmin);
+        setIsDisplay(false);
+        setLobbyCategoryName(r.categoryName || "");
+        setRoundIndex(r.roundIndex || 1);
+        setGameState(r.gameState || GAME_PHASE.WAITING);
+        if (!r.gameState || r.gameState === GAME_PHASE.WAITING) {
+          setScreen("lobby");
+          return;
+        }
+        setScreen("game");
+        if (r.gameState === GAME_PHASE.ANSWER_PHASE && r.question) {
+          setQuestion({ ...r.question, index: r.roundIndex, total: TOTAL_ROUNDS });
+          setAnswerTimeLeft(Math.max(0, Math.ceil((r.answerMsLeft || 0) / 1000)));
+          setSelectedAnswer(r.answered ? r.answerIndex : null);
+          setAnswerResult(null);
+        }
+        if (r.minigame) {
+          setMinigameId(r.minigame.minigameId);
+          setTrueFalseContestantIds(r.minigame.contestantIds || []);
+          setTrueFalseResultsPayload(null);
+          setTrueFalseStart(true);
+        }
+      });
+    });
     s.on("disconnect", () => setConnected(false));
     return () => s.close();
   }, []);
@@ -1008,6 +1082,21 @@ function App() {
     if (trueFalseStart) setPhoneMgDone(false);
   }, [trueFalseStart]);
 
+  // phone: during the game nothing scrolls — every screen fits the visible height, so the page
+  // is locked (no scrollbar, no rubber-band); the join form stays scrollable for the keyboard
+  useEffect(() => {
+    const lock = isMobile() && !isDisplay && (screen === "game" || screen === "lobby" || screen === "mobileWait");
+    document.documentElement.classList.toggle("phone-locked", lock);
+    return () => document.documentElement.classList.remove("phone-locked");
+  }, [screen, isDisplay]);
+
+  // the phone's admin role follows the server (it moves on when the admin leaves or drops out)
+  useEffect(() => {
+    if (isDisplay || !playerId) return;
+    const me = players.find((p) => p.id === playerId);
+    if (me) setIsAdmin(!!me.isAdmin);
+  }, [players, playerId, isDisplay]);
+
   // a new round: its announcement hasn't run yet (declared first: runs before the effect below)
   useEffect(() => {
     announceDoneRef.current = false;
@@ -1199,21 +1288,52 @@ function App() {
     setShowMenuDifficulty(true);
   };
 
+  const joinCode = () => (joinCodeInput || "").replace(/\D/g, "").padStart(4, "0").slice(0, 4);
+
+  // step 1: code + name -> see which characters are still free
   const handleJoinRoom = (e) => {
     e.preventDefault();
     setJoinError("");
     if (!socket || !connected) return;
-    const code = (joinCodeInput || "").replace(/\D/g, "").padStart(4, "0").slice(0, 4);
-    const name = (playerName || "Гравець").trim();
     if (!joinCodeInput.trim()) {
       setJoinError("Введіть код кімнати");
       return;
     }
-    socket.emit("joinRoom", { roomCode: code, playerName: name }, (data) => {
-      if (data.error) {
-        setJoinError(data.error);
+    socket.emit("roomSlots", { roomCode: joinCode() }, (d) => {
+      if (!d || d.error) {
+        setJoinError(d?.error || "Кімнату не знайдено");
         return;
       }
+      setTakenSlots(d.taken || []);
+      setPickedSlot(null);
+      setJoinStep("character");
+    });
+  };
+
+  // while choosing, keep the taken characters fresh (someone else may pick first)
+  useEffect(() => {
+    if (screen !== "join" || joinStep !== "character" || !socket) return undefined;
+    const id = window.setInterval(() => {
+      socket.emit("roomSlots", { roomCode: joinCode() }, (d) => {
+        if (d && !d.error) setTakenSlots(d.taken || []);
+      });
+    }, 2000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, joinStep, socket]);
+
+  // step 2: the picked character -> join
+  const handleJoinWithCharacter = () => {
+    if (!socket || !connected) return;
+    const name = (playerName || "Гравець").trim();
+    socket.emit("joinRoom", { roomCode: joinCode(), playerName: name, characterSlot: pickedSlot }, (data) => {
+      if (data.error) {
+        setJoinError(data.error);
+        setJoinStep("form");
+        return;
+      }
+      saveSession({ roomCode: data.roomCode, playerId: data.playerId, token: data.token });
+      setJoinStep("form");
       setRoomCode(data.roomCode);
       setPlayers(data.players || []);
       setGameState(data.gameState || "waiting");
@@ -1255,6 +1375,7 @@ function App() {
   };
 
   const handleExit = () => {
+    clearSession(); // left on purpose: no coming back to this seat
     if (gameClock.isPaused()) applyResume();
     setIntroStarted(false);
     if (socket && roomCode) socket.emit("leaveRoom");
@@ -1336,9 +1457,63 @@ function App() {
           <audio ref={questionAudioRef} preload="auto" />
         </>
       )}
-  {isMobile() && screen === "join" && (
-      <div className="app app-mobile-bg">
+  {isMobile() && screen === "join" && joinStep === "character" && (
+      <div className="app app-mobile-bg fun-screen">
+        <FunBackdrop />
+        <section className="pick-screen">
+          <header className="pick-head">
+            <button type="button" className="pick-back" onClick={withClick(() => setJoinStep("form"))} aria-label="Назад">
+              ←
+            </button>
+            <div>
+              <p className="pick-kicker">Кімната {joinCode()}</p>
+              <h2 className="pick-title">Обери свого персонажа</h2>
+            </div>
+          </header>
+          <div className="pick-grid">
+            {CHARACTER_SLOTS.map((slot) => {
+              const taken = takenSlots.includes(slot);
+              return (
+                <button
+                  key={slot}
+                  type="button"
+                  className={`pick-card ${pickedSlot === slot ? "picked" : ""} ${taken ? "taken" : ""}`}
+                  disabled={taken}
+                  onClick={withClick(() => setPickedSlot(slot))}
+                >
+                  <img src={`/assets/images/Characters/alivecharacters/${slot}.png`} alt="" />
+                  {taken && <span className="pick-taken">зайнято</span>}
+                </button>
+              );
+            })}
+          </div>
+          {joinError && <p className="join-error">{joinError}</p>}
+          <button
+            type="button"
+            className="pick-go"
+            disabled={!connected || !pickedSlot || takenSlots.includes(pickedSlot)}
+            onClick={withClick(handleJoinWithCharacter)}
+          >
+            {pickedSlot ? "Грати за цього!" : "Торкнись персонажа"}
+          </button>
+        </section>
+      </div>
+  )}
+  {isMobile() && screen === "join" && resuming && (
+      <div className="app app-mobile-bg fun-screen">
+        <FunBackdrop />
+        <section className="pick-screen pick-resume">
+          <p className="pick-title">Повертаємо тебе в гру…</p>
+        </section>
+      </div>
+  )}
+  {isMobile() && screen === "join" && joinStep === "form" && !resuming && (
+      <div className="app app-mobile-bg fun-screen">
+        <FunBackdrop />
         <div className="join-screen-full">
+          <div className="fun-logo">
+            <img src="/assets/images/logo-fun.png" alt="Хто є хто!" />
+          </div>
           <form onSubmit={handleJoinRoom} className="join-form-simple">
             <input
               type="text"
@@ -1358,7 +1533,7 @@ function App() {
             />
             {joinError && <p className="join-error">{joinError}</p>}
             <button type="submit" disabled={!connected || !joinCodeInput.trim()} onClick={playClickSound}>
-              Приєднатися
+              Далі: обрати персонажа
             </button>
           </form>
         </div>
@@ -1511,7 +1686,8 @@ function App() {
   )}
 
   {screen === "lobby" && (
-      <div className={`app lobby-screen ${!isMobile() ? "lobby-with-video" : "lobby-mobile app-mobile-bg"} ${showIntroFade ? "lobby-fade-out" : ""}`}>
+      <div className={`app lobby-screen ${!isMobile() ? "lobby-with-video" : "lobby-mobile app-mobile-bg fun-screen"} ${showIntroFade ? "lobby-fade-out" : ""}`}>
+        {isMobile() && <FunBackdrop />}
         {!isMobile() ? (
           <>
             <video
@@ -1580,8 +1756,17 @@ function App() {
               </h3>
               <ul className="players-list">
                 {players.map((p) => (
-                  <li key={p.id} className="player-item">
+                  <li
+                    key={p.id}
+                    className={`player-item ${p.id === playerId ? "me" : ""} ${p.disconnected ? "offline" : ""}`}
+                  >
+                    <img
+                      className="lobby-row-sprite"
+                      src={`/assets/images/Characters/alivecharacters/${p.characterSlot >= 1 && p.characterSlot <= 8 ? p.characterSlot : 1}.png`}
+                      alt=""
+                    />
                     <span className="player-name">{p.name}{p.isAdmin ? " ★" : ""}</span>
+                    {p.disconnected && <span className="lobby-row-off">📵</span>}
                   </li>
                 ))}
               </ul>
@@ -1618,7 +1803,8 @@ function App() {
   )}
 
   {isMobile() && screen === "mobileWait" && (
-    <div className="app app-mobile-bg mobile-wait-screen">
+    <div className="app app-mobile-bg mobile-wait-screen fun-screen">
+      <FunBackdrop />
       <div className="mobile-wait-card">
         <div className="mobile-wait-title">Зачекайте…</div>
         <div className="mobile-wait-subtitle">
@@ -1694,8 +1880,7 @@ function App() {
 
   {screen === "game" && (
     <div
-      style={isMobile() ? { backgroundImage: "url(/assets/images/background-mobile.jpg)", backgroundSize: "cover", backgroundPosition: "center" } : undefined}
-      className={`app ${!isMobile() ? "app-game-with-video" : "app-game-mobile app-mobile-bg"} ${
+      className={`app ${!isMobile() ? "app-game-with-video" : "app-game-mobile app-mobile-bg felt-day"} ${
         !isMobile() &&
         isDisplay &&
         (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE)
@@ -1849,6 +2034,7 @@ function App() {
           myPlayerId={null}
         />
       )}
+      {isMobile() && !isDisplay && <FunBackdrop calm />}
       <div className={`app-inner ${!isMobile() ? "app-inner-over-video" : ""}`}>
       {isMobile() && !isDisplay && myPlayer && gameState !== GAME_PHASE.FINAL_BATTLE && gameState !== GAME_PHASE.FINISHED && (
         <header className={`m-me ${myPlayer.isGhost ? "ghost" : ""}`}>
@@ -1902,7 +2088,24 @@ function App() {
         )}
         <ul className="players-list">
           {players.map((p, idx) => (
-            <li key={p.id} className="player-item">
+            <li
+              key={p.id}
+              className={`player-item ${
+                gameState === GAME_PHASE.ANSWER_PHASE ? (p.hasAnswered ? "pp-answered" : "pp-thinking") : ""
+              } ${p.isGhost ? "pp-ghost" : ""}`}
+              style={{ "--i": idx }}
+            >
+              <span className="pp-peg" aria-hidden />
+              {gameState === GAME_PHASE.ANSWER_PHASE && p.hasAnswered && (
+                <svg className="pp-done" viewBox="0 0 60 60" aria-label="відповів">
+                  <circle cx="30" cy="30" r="26" className="pp-btn" />
+                  {[[22, 22], [38, 22], [22, 38], [38, 38]].map(([x, y]) => (
+                    <circle key={`${x}${y}`} cx={x} cy={y} r="2.6" className="pp-hole" />
+                  ))}
+                  <path d="M17 31 L26 40 L44 20" className="pp-tick" />
+                </svg>
+              )}
+              {gameState === GAME_PHASE.ANSWER_PHASE && !p.hasAnswered && <span className="pp-yarn" aria-hidden />}
               <span className="player-name">{p.name}</span>
               <img
                 className={`player-sprite ${p.isGhost ? "player-sprite-ghost" : ""}`}
