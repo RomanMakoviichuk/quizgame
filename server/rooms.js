@@ -28,6 +28,8 @@ function createRoom(displaySocketId, categoryId, difficulty = "mixed") {
     code,
     players: new Map(), // socketId -> player
     displaySocketId,
+    displayToken: crypto.randomBytes(16).toString("hex"), // lets the TV come back after a dropped connection
+    displayDropTimer: null, // the TV is gone: the room closes when this fires
     categoryId: categoryId || null, // chosen quiz category (content store id)
     difficulty, // "easy" | "medium" | "hard" | "mixed" (questions.normalizeGameDifficulty)
 
@@ -80,6 +82,10 @@ function clearRoomTimers(room) {
   ]) {
     clock.cancel(room[key]);
     room[key] = null;
+  }
+  if (room.displayDropTimer) {
+    clearTimeout(room.displayDropTimer);
+    room.displayDropTimer = null;
   }
   if (room.minigame) {
     clock.cancel(room.minigame.timeoutHandle);

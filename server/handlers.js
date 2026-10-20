@@ -74,6 +74,7 @@ module.exports = function registerHandlers(io) {
       const category = store.getCategory(categoryId);
       callback?.({
         roomCode: room.code,
+        displayToken: room.displayToken,
         players: [],
         gameState: room.gameState,
         categoryId,
@@ -352,6 +353,7 @@ module.exports = function registerHandlers(io) {
       const room = roomOf();
       if (!room || !isAdmin(room) || !canPause(room)) return;
       if (!clock.pause(room)) return;
+      console.log(`[game] room ${room.code}: paused by ${playerOf(room)?.name || "?"}`);
       io.to(room.code).emit("gamePaused", { by: playerOf(room)?.name || null });
     });
 
@@ -369,6 +371,7 @@ module.exports = function registerHandlers(io) {
       const room = roomOf();
       if (!room || !isAdmin(room) || !clock.isPaused(room)) return;
       const pausedMs = clock.resume(room);
+      console.log(`[game] room ${room.code}: resumed after ${Math.round(pausedMs / 1000)}s`);
       io.to(room.code).emit("gameResumed", { pausedMs });
       for (const fn of room.deferredWhilePaused.splice(0)) fn();
     });
@@ -381,6 +384,34 @@ module.exports = function registerHandlers(io) {
       if (roomIsFull(room)) return callback?.({ error: `Кімната заповнена (макс. ${MAX_PLAYERS} гравців)` });
       if (room.gameState !== GAME_STATE.WAITING) return callback?.({ error: "Гра вже почалася" });
       callback?.({ roomCode: code, taken: takenSlots(room) });
+    });
+
+    // The TV comes back (socket.io reconnect or a page reload): same room, new socket.
+    socket.on("resumeDisplay", (data, callback) => {
+      const code = String(data?.roomCode || "").replace(/\D/g, "").padStart(4, "0").slice(0, 4);
+      const room = getRoom(code);
+      if (!room || !data?.token || data.token !== room.displayToken) return callback?.({ error: "Гру завершено" });
+      if (room.displayDropTimer) {
+        clearTimeout(room.displayDropTimer);
+        room.displayDropTimer = null;
+      }
+      const oldSid = room.displaySocketId;
+      room.displaySocketId = socket.id;
+      if (oldSid && oldSid !== socket.id) io.sockets.sockets.get(oldSid)?.disconnect(true); // a stale TV tab
+      socket.join(code);
+      socket.roomCode = code;
+      socket.isDisplay = true;
+      console.log(`[game] room ${code}: the TV is back`);
+      const category = store.getCategory(room.categoryId);
+      callback?.({
+        roomCode: code,
+        players: getPlayersList(room),
+        gameState: room.gameState,
+        roundIndex: room.currentRoundIndex + 1,
+        categoryName: category ? category.name : null,
+        difficulty: room.difficulty,
+        paused: clock.isPaused(room),
+      });
     });
 
     // A phone that comes back (page reload, dropped Wi-Fi): same player, new socket.
@@ -426,12 +457,31 @@ module.exports = function registerHandlers(io) {
       if (!room) return;
 
       if (socket.isDisplay) {
-        clearRoomTimers(room);
         if (viaLeave) {
+          // the TV left on purpose ("Вийти"): the game is over for everybody
+          clearRoomTimers(room);
           socket.leave(room.code);
           socket.roomCode = null;
+          deleteRoom(room.code);
+          return;
         }
-        deleteRoom(room.code);
+        // A dropped connection (Wi-Fi, the tunnel reconnecting, a sleeping tab): this
+        // used to close the room at once and the game froze on every screen. Now the
+        // room waits for the TV (resumeDisplay); the game itself goes on meanwhile —
+        // every TV handshake has a fallback in phases.js.
+        if (room.displaySocketId !== socket.id) return; // an old TV socket, already replaced
+        console.warn(`[game] room ${room.code}: the TV lost its connection — waiting ${RECONNECT_GRACE_MS / 1000}s for it`);
+        if (room.displayDropTimer) clearTimeout(room.displayDropTimer);
+        room.displayDropTimer = setTimeout(() => {
+          room.displayDropTimer = null;
+          if (getRoom(room.code) !== room || room.displaySocketId !== socket.id) return;
+          console.warn(`[game] room ${room.code}: the TV did not come back — closing the room`);
+          io.to(room.code).emit("gameAborted", { by: null, reason: "display" });
+          bots?.removeAll(room.code);
+          deleteRoom(room.code);
+          io.in(room.code).socketsLeave(room.code);
+        }, RECONNECT_GRACE_MS);
+        room.displayDropTimer.unref?.();
         return;
       }
 

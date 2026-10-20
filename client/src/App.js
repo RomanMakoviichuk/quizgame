@@ -71,6 +71,31 @@ const saveSession = (s) => {
     /* private mode: no coming back, the game still works */
   }
 };
+// The TV remembers its room the same way (server: "resumeDisplay"), so a dropped
+// connection or a reload doesn't end the game for everybody.
+const DISPLAY_KEY = "quizgame_display";
+const readDisplaySession = () => {
+  try {
+    const s = JSON.parse(localStorage.getItem(DISPLAY_KEY) || "null");
+    return s && s.token && Date.now() - (s.at || 0) < SESSION_MAX_AGE_MS ? s : null;
+  } catch {
+    return null;
+  }
+};
+const saveDisplaySession = (s) => {
+  try {
+    localStorage.setItem(DISPLAY_KEY, JSON.stringify({ ...s, at: Date.now() }));
+  } catch {
+    /* private mode: the TV just can't come back after a reload */
+  }
+};
+const clearDisplaySession = () => {
+  try {
+    localStorage.removeItem(DISPLAY_KEY);
+  } catch {
+    /* nothing to clear */
+  }
+};
 const clearSession = () => {
   try {
     localStorage.removeItem(SESSION_KEY);
@@ -397,6 +422,9 @@ function App() {
   isAdminRef.current = isAdmin;
   const isDisplayRef = useRef(isDisplay);
   isDisplayRef.current = isDisplay;
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+  const resetToStartRef = useRef(null); // set once resetToStart is defined below
   const pendingRulesSeekRef = useRef(null);
   const rulesSkipFadeRafRef = useRef(null);
   const roundDebugEnabledRef = useRef(false);
@@ -545,6 +573,32 @@ function App() {
     setSocket(s);
     s.on("connect", () => {
       setConnected(true);
+      // the TV: take its room back (socket.io's own reconnect, or a reload mid-game)
+      const tv = !isMobile() ? readDisplaySession() : null;
+      if (tv) {
+        s.emit("resumeDisplay", tv, (r) => {
+          if (!r || r.error) {
+            clearDisplaySession();
+            // this TV was running a game that is gone: back to the menu instead of a frozen scene
+            if (isDisplayRef.current) resetToStartRef.current?.();
+            return;
+          }
+          saveDisplaySession({ roomCode: r.roomCode, token: tv.token });
+          setIsDisplay(true);
+          setIsAdmin(false);
+          setRoomCode(r.roomCode);
+          setPlayers(r.players || []);
+          setLobbyCategoryName(r.categoryName || "");
+          setRoundIndex(r.roundIndex || 1);
+          // after a reload the TV starts on the menu: open the game; a TV that only
+          // reconnected keeps its screen, the next server event moves it on
+          if (screenRef.current === "menu") {
+            setGameState(r.gameState || GAME_PHASE.WAITING);
+            setScreen(!r.gameState || r.gameState === GAME_PHASE.WAITING ? "lobby" : "game");
+          }
+        });
+        return;
+      }
       // a phone with a seat: take it back (after a reload, or socket.io's own reconnect)
       const saved = isMobile() && !isDisplayRef.current ? readSession() : null;
       if (!saved) return;
@@ -1286,6 +1340,7 @@ function App() {
         alert("Помилка створення кімнати. Спробуйте ще раз.");
         return;
       }
+      if (data.displayToken) saveDisplaySession({ roomCode: data.roomCode, token: data.displayToken });
       setRoomCode(data.roomCode);
       setPlayers(data.players || []);
       setGameState(data.gameState || "waiting");
@@ -1423,6 +1478,7 @@ function App() {
   /** Back to the start screen (TV: main menu, phone: join), all game state dropped. */
   function resetToStart() {
     clearSession(); // left on purpose: no coming back to this seat
+    clearDisplaySession();
     if (gameClock.isPaused()) applyResume();
     setIntroStarted(false);
     setGameState(GAME_PHASE.WAITING);
@@ -1443,6 +1499,8 @@ function App() {
     setRulesActiveMobile(false);
     setShowIntroFade(false);
   }
+
+  resetToStartRef.current = resetToStart;
 
   // main menu "Вийти": close the tab. Browsers only let a page close a tab that was
   // opened by a script or never navigated; otherwise a goodbye screen stays.
