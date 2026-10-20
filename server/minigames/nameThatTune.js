@@ -40,7 +40,7 @@ const path = require("path");
 const usage = require("../content/usage");
 
 const ID = "tune";
-const AUDIO_DIR = path.join(__dirname, "..", "..", "client", "public", "assets", "minigames", "Name That Tune", "songs");
+const AUDIO_DIR = path.join(__dirname, "..", "..", "client", "public", "assets", "minigames", "name-that-tune", "songs");
 const AUDIO_URL_PREFIX = "/assets/minigames/Name%20That%20Tune"; // blocked in server.js
 const CATALOG_FILE = path.join(__dirname, "..", "data", "tunes.json");
 const AUDIO_EXT = /\.(mp3|ogg|wav|m4a)$/i;

@@ -24,7 +24,7 @@ import { createTugFx } from "../game/tugFx";
  * like alivecharacters/{slot}.png, so a player keeps their own character.
  */
 
-const ASSET = "/assets/minigames/tug%20of%20war";
+const ASSET = "/assets/minigames/tug-of-war";
 const ARENA = `${ASSET}/web/arena.webp`;
 const MUSIC = `${ASSET}/background.mp3`; // the whole minigame
 const MUSIC_VOLUME = 1; // level set by game/loudness.js
@@ -32,7 +32,7 @@ const MUSIC_VOLUME = 1; // level set by game/loudness.js
 const okSlot = (slot) => (slot >= 1 && slot <= 8 ? slot : 1);
 const PULLER = (team, slot) => `${ASSET}/web/${team}_${okSlot(slot)}.webp`;
 const POSE = (pose, team, slot) => `${ASSET}/web/${pose}_${team}_${okSlot(slot)}.webp`;
-const AVATAR = (slot) => `/assets/images/Characters/alivecharacters/${okSlot(slot)}.png`;
+const AVATAR = (slot) => `/assets/characters/alive/${okSlot(slot)}.png`;
 // width/height of every pulling sprite and the centre of its fists (fraction of the height, from the top);
 // web/{team}_{slot}.webp is numbered like alivecharacters/{slot}.png
 const META = {
@@ -62,6 +62,9 @@ const TEAM = {
 const OTHER = { blue: "red", red: "blue" };
 const TICK_MS = 100;
 const MAX_LOCAL_TAPS_PER_SEC = 16; // don't flood the socket; the server limit is lower anyway
+
+// the winners cheer on screen after every round they take
+const ROUND_WIN_SOUND = "/assets/minigames/tug-of-war/happy.mp3";
 
 function sfx(src, volume = 0.6) {
   try {
@@ -513,7 +516,7 @@ export default function TugOfWarMinigame({
   useEffect(() => {
     if (!isDisplay || roundsDone <= roundCheerRef.current) return;
     roundCheerRef.current = roundsDone;
-    if (lastRound && lastRound.winner !== "draw") sfx("/assets/minigames/rat/happy.mp3", 1);
+    if (lastRound && lastRound.winner !== "draw") sfx(ROUND_WIN_SOUND, 1);
   }, [isDisplay, roundsDone, lastRound]);
   useEffect(() => {
     if (!isDisplay || st?.phase !== "done" || endSoundRef.current) return;

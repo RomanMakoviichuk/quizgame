@@ -111,7 +111,7 @@ FINISHED  emit "gameFinished"
 | **Серед нас: КРИСА** (таємне голосування) | `rat.js` | ≥2 помилились | тільки ті, хто помилився | ніхто не підмутив — ніхто; рівно один — усі, крім нього (він +1 бал); кілька (не всі) — тільки ті, хто підмутив; усі підмутили — усі |
 
 **Вгадай мелодію** (server-authoritative): каталог — аудіофайли з
-`client/public/assets/minigames/Name That Tune/songs` (читаються на старті гри; `background.mp3` поруч із папкою — фон), назви з
+`client/public/assets/minigames/name-that-tune/songs` (читаються на старті гри; `background.mp3` поруч із папкою — фон), назви з
 `server/data/tunes.json` або з імені «Виконавець - Назва». Сервер вибирає 5 різних
 пісень (+2 запасні), 4 варіанти з унікальними назвами в однаковому для всіх
 порядку і правильну відповідь. Уривок грає **тільки телевізор** з непрозорого
@@ -132,7 +132,7 @@ FINISHED  emit "gameFinished"
 4–6 — 3, 7–9 — 4 (палітра випадкова). Кольоровий ряд іде **тільки на дисплей**
 (`ctx.emitDisplay`), телефони отримують лише завдання. Телефон постійно шле
 поточну відповідь, `final` її блокує; по завершенні рахується остання. 1 бал за
-позицію/колір. Новий предмет: картинка в `client/public/assets/minigames/items/`
+позицію/колір. Новий предмет: картинка в `client/public/assets/minigames/memory/`
 + рядок у реєстрі (+ `python server/tools/build_memory_items.py` для легкої копії)
 — див. `items/README.md`.
 
@@ -202,7 +202,7 @@ clientScored: true                           // (тільки Правда/Бр�
 
 ### Відео оголошення раундів
 
-`client/public/assets/questions/video/Round_N/` — кліпи «РАУНД N». `media.announceVideo(room, N)`
+`client/public/assets/rounds/announce/round-N/` — кліпи «РАУНД N». `media.announceVideo(room, N)`
 бере наступний файл папки по черзі (між іграми, стан у `server/data/round-announce.json`),
 один раз на гру; URL іде в `questionAnnounce.introVideo`. Порожня папка → `null` → напис
 `RoundIntro`. Фон під питанням — випадковий кліп з `questions/video/questions/`
@@ -255,7 +255,7 @@ clientScored: true                           // (тільки Правда/Бр�
 | `components/RoundIntro.jsx` | Напис «РАУНД N» (заглушка замість відео) |
 | `components/FinalBattle.jsx` | Фінальна гонка: `display` (коридор, темрява, звук) / `mobile` (пульт). Прев'ю: `?finalPreview=display` або `=mobile` |
 | `components/TrueFalseMinigame.jsx` | «Правда/Брехня» (режими `mobile` / `display`), клієнт рахує сам |
-| `components/TrueFalseAftermath.jsx` | Сцена після «Правда/Брехня»: `aftermg.mp4` + таблиця + анімація втрати життя |
+| `components/TrueFalseAftermath.jsx` | Сцена після «Правда/Брехня»: `minigames/true-false/aftermath.mp4` + таблиця + анімація втрати життя |
 | `components/MathRushMinigame.jsx` | «Тупоматика»: рівняння + 4 кнопки, лайв-таблиця, екран підсумку |
 | `components/RockPaperScissorsMinigame.jsx` | «Камінь-Ножиці-Папір»: вибір, розкриття, елімінація, екран підсумку |
 | `components/NameThatTuneMinigame.jsx` | «Вгадай мелодію»: телевізор грає уривки (Web Audio еквалайзер), 4 варіанти, розкриття, рейтинг; телефон — 4 кнопки |

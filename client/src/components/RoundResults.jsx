@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import gameClock from "../game/gameClock";
 import "./RoundResults.css";
+import FadeVideo from "./FadeVideo";
 
 /**
  * The round's results check on the TV (~10s) — «Лялькова вечірка», night version:
@@ -20,13 +21,13 @@ import "./RoundResults.css";
 export const ROUND_RESULTS_MS = 10000;
 const STAMP_START_MS = 2600;
 const STAMP_STEP_MS = 380;
-const STAMP_SOUND = "/assets/sounds/click-sound.mp3";
+const STAMP_SOUND = "/assets/sounds/click.mp3";
 const CLOSE_MS = 600;
-const MAIN_VIDEO = "/assets/videos/main.mp4";
+const MAIN_VIDEO = "/assets/game/background.mp4";
 const GHOST_SHARE = 0.5; // server: GHOST_SCORE_SHARE
 
 const sprite = (p, i) =>
-  `/assets/images/Characters/${p.isGhost ? "deathcharacters" : "alivecharacters"}/${
+  `/assets/characters/${p.isGhost ? "dead" : "alive"}/${
     p.characterSlot >= 1 && p.characterSlot <= 8 ? p.characterSlot : (i % 8) + 1
   }.png`;
 
@@ -113,7 +114,7 @@ export default function RoundResults({ players = [], roundIndex = 1, scoreCorrec
       }}
     >
       {videoSrc ? (
-        <video
+        <FadeVideo
           className="rr-bg"
           src={videoSrc}
           autoPlay
@@ -126,7 +127,7 @@ export default function RoundResults({ players = [], roundIndex = 1, scoreCorrec
           onError={() => tryClose("clip")}
         />
       ) : (
-        <video className="rr-bg" src={MAIN_VIDEO} autoPlay loop muted playsInline aria-hidden />
+        <FadeVideo className="rr-bg" src={MAIN_VIDEO} autoPlay loop muted playsInline aria-hidden />
       )}
       <div className="rr-shade" aria-hidden />
 

@@ -7,6 +7,7 @@ import IntroScene from "./components/IntroScene";
 import FireTitle from "./components/FireTitle";
 import RoundIntro from "./components/RoundIntro";
 import CinemaClip from "./components/CinemaClip";
+import FadeVideo from "./components/FadeVideo";
 
 // game difficulty (server: questions.normalizeGameDifficulty)
 const GAME_DIFFICULTIES = [
@@ -15,8 +16,10 @@ const GAME_DIFFICULTIES = [
   { id: "hard", icon: "💀", label: "Складна", hint: "для знавців" },
   { id: "mixed", icon: "📈", label: "Наростаюча", hint: "від легких до складних" },
 ];
-const ROUND_GAP_MS = 2000; // rounds 2-9: a pause in the dark before the round announcement
-const MINIGAME_GAP_MS = 3000;
+// the clips end with 1-2s of black of their own, so these dark beats stay short
+const ROUND_GAP_MS = 700; // rounds 2-9: a pause in the dark before the round announcement
+const MINIGAME_GAP_MS = 1200;
+const PRE_ROUND_DARK_MS = 1500; // after the welcome, before round 1
 const PHONE_MG_RESULT_MS = 6500; // phone: how long a minigame's result screen stays // a pause in the dark between the round's results and its minigame
 const QUESTION_REVEAL_MS = 2500; // the question scene's video plays alone this long before the question appears
 import DarkPause from "./components/DarkPause";
@@ -139,7 +142,7 @@ const readScoresDebugFlag = () => {
 /** Екран підрахунку балів: ?scoresDebug=1 або ?roundDebug=scores */
 const isScoresDebugActive = () => readScoresDebugFlag() || readRoundDebugScoresVariant();
 
-/** Сцена після міні-гри (aftermg + таблиця), лише дисплей: ?aftermathDebug=1 — відео зациклено, без переходу далі */
+/** Сцена після міні-гри (aftermath.mp4 + таблиця), лише дисплей: ?aftermathDebug=1 — відео зациклено, без переходу далі */
 const AFTERMATH_DEBUG_STORAGE_KEY = "quizgame_aftermath_debug";
 const readAftermathDebugFlag = () => {
   if (typeof window === "undefined") return false;
@@ -378,9 +381,9 @@ function App() {
   const [roundGap, setRoundGap] = useState(false); // showing that pause now
   const [minigameNext, setMinigameNext] = useState(false); // the server armed a minigame for this round
   const [minigameGap, setMinigameGap] = useState(false); // the dark pause before it, showing now
-  // this round's announcement clip from the server (questions/video/Round_N/, in turn); null = caption only
+  // this round's announcement clip from the server (assets/rounds/announce/round-N/, in turn); null = caption only
   const [announceVideo, setAnnounceVideo] = useState(null);
-  // this round's question background (questions/video/questions/, random); null = main.mp4
+  // this round's question background (assets/rounds/question/, random); null = game/background.mp4
   const [questionVideo, setQuestionVideo] = useState(null);
   const menuAudioRef = useRef(null);
   const chainAudioRef = useRef(null);
@@ -434,7 +437,7 @@ function App() {
   const [trueFalseStatements, setTrueFalseStatements] = useState(null); // «Правда/Брехня»: from the server
   const [roundAnswer, setRoundAnswer] = useState(null); // { question, index, text } — shown after the round
   const [trueFalseSyncData, setTrueFalseSyncData] = useState(null); // { startedAtTs, serverTime, receivedAt }
-  /** Після міні-гри: дані для сцени з aftermg.mp4 + таблиця + втрата життя */
+  /** Після міні-гри: дані для сцени з true-false/aftermath.mp4 + таблиця + втрата життя */
   const [trueFalseResultsPayload, setTrueFalseResultsPayload] = useState(null);
 
   const isTrueFalseActive =
@@ -1057,7 +1060,7 @@ function App() {
   }, [gameState, question?.id]);
 
   // ---------------------------------------------------------------- round announcement (display)
-  // The round's clip (questions/video/Round_N/, a different one every game) fades
+  // The round's clip (assets/rounds/announce/round-N/, a different one every game) fades
   // in from black and out to black; without a clip the "РАУНД N" caption holds
   // for a beat. Then the question scene fades in over its own video.
   function finishAnnounce() {
@@ -1365,6 +1368,8 @@ function App() {
     socket.emit("addBot", {}, (r) => r?.error && setBotError(r.error));
   };
   const handleRemoveBot = (id) => socket?.emit("removeBot", { playerId: id });
+  // TEST MODE: straight from the lobby into the final (made-up ratings, a few ghosts)
+  const handleTestFinal = () => isAdmin && socket?.emit("debugStartFinal");
 
   const handleStartGame = () => {
     if (!socket || !isAdmin) return;
@@ -1499,8 +1504,8 @@ function App() {
           controllers are silent. Do not render these on mobile. */}
       {!isMobile() && (
         <>
-          <audio ref={menuAudioRef} src="/assets/sounds/mainmenu.mp3" preload="auto" />
-          <audio ref={clickAudioRef} src="/assets/sounds/click-sound.mp3" preload="auto" />
+          <audio ref={menuAudioRef} src="/assets/menu/music.mp3" preload="auto" />
+          <audio ref={clickAudioRef} src="/assets/sounds/click.mp3" preload="auto" />
           <audio ref={knifeSliceRef} src="/assets/sounds/knife-slice.mp3" preload="auto" />
           <audio ref={bellRef} src="/assets/sounds/bell.mp3" preload="auto" />
           <audio ref={notificationRef} src="/assets/sounds/notification.mp3" preload="auto" />
@@ -1533,7 +1538,7 @@ function App() {
                   disabled={taken}
                   onClick={withClick(() => setPickedSlot(slot))}
                 >
-                  <img src={`/assets/images/Characters/alivecharacters/${slot}.png`} alt="" />
+                  <img src={`/assets/characters/alive/${slot}.png`} alt="" />
                   {taken && <span className="pick-taken">зайнято</span>}
                 </button>
               );
@@ -1564,7 +1569,7 @@ function App() {
         <FunBackdrop />
         <div className="join-screen-full">
           <div className="fun-logo">
-            <img src="/assets/images/logo-fun.png" alt="Хто є хто!" />
+            <img src="/assets/ui/logo-fun.png" alt="Хто є хто!" />
           </div>
           <form onSubmit={handleJoinRoom} className="join-form-simple">
             <input
@@ -1595,9 +1600,9 @@ function App() {
   {screen === "menu" && (
       <div className={`app ${!isMobile() ? "menu-with-video" : ""}`}>
         {!isMobile() && (
-          <video
+          <FadeVideo
             className="menu-background-video"
-            src="/assets/videos/waitroom.mp4"
+            src="/assets/menu/background.mp4"
             autoPlay
             loop
             muted
@@ -1742,9 +1747,9 @@ function App() {
         {isMobile() && <FunBackdrop />}
         {!isMobile() ? (
           <>
-            <video
+            <FadeVideo
               className="lobby-background-video"
-              src="/assets/videos/waitroom.mp4"
+              src="/assets/menu/background.mp4"
               autoPlay
               loop
               muted
@@ -1814,7 +1819,7 @@ function App() {
                   >
                     <img
                       className="lobby-row-sprite"
-                      src={`/assets/images/Characters/alivecharacters/${p.characterSlot >= 1 && p.characterSlot <= 8 ? p.characterSlot : 1}.png`}
+                      src={`/assets/characters/alive/${p.characterSlot >= 1 && p.characterSlot <= 8 ? p.characterSlot : 1}.png`}
                       alt=""
                     />
                     <span className="player-name">{p.name}{p.isAdmin ? " ★" : ""}</span>
@@ -1830,6 +1835,11 @@ function App() {
               {gameState === "waiting" && isAdmin && players.length < MAX_ROOM_PLAYERS && (
                 <button type="button" className="lobby-add-bot" onClick={withClick(handleAddBot)}>
                   🤖 Додати бота
+                </button>
+              )}
+              {gameState === "waiting" && isAdmin && (
+                <button type="button" className="lobby-add-bot" onClick={withClick(handleTestFinal)}>
+                  🏁 Тест: одразу у фінал
                 </button>
               )}
               {botError && <p className="lobby-bot-error">{botError}</p>}
@@ -1917,7 +1927,7 @@ function App() {
         <video
           ref={rulesVideoRef}
           className="rules-video"
-          src="/assets/videos/rulesmovie.mp4"
+          src="/assets/rules/rules.mp4"
           autoPlay
           playsInline
           preload="auto"
@@ -1952,16 +1962,16 @@ function App() {
       }`}
     >
       {!isMobile() && (
-        <video
+        <FadeVideo
           ref={gameBackgroundVideoRef}
           className="game-background-video"
           src={
             isDisplay && gameState === GAME_PHASE.SCORES
-              ? "/assets/videos/main.mp4"
+              ? "/assets/game/background.mp4"
               : isDisplay &&
                 (gameState === GAME_PHASE.QUESTION_PLAY || gameState === GAME_PHASE.ANSWER_PHASE)
-                ? questionVideo || "/assets/videos/main.mp4"
-                : "/assets/videos/main.mp4"
+                ? questionVideo || "/assets/game/background.mp4"
+                : "/assets/game/background.mp4"
           }
           autoPlay
           loop
@@ -2065,7 +2075,7 @@ function App() {
       {!isMobile() && isDisplay && preRoundStage === "welcome" && (
         <WelcomePlayers players={players} muted={musicMuted} onDone={() => setPreRoundStage("dark")} />
       )}
-      {!isMobile() && isDisplay && preRoundStage === "dark" && <DarkPause onDone={finishPreRound} />}
+      {!isMobile() && isDisplay && preRoundStage === "dark" && <DarkPause ms={PRE_ROUND_DARK_MS} onDone={finishPreRound} />}
       {!isMobile() && isDisplay && gameState === GAME_PHASE.QUESTION_ANNOUNCE && roundGap && (
         <DarkPause
           key={`gap-${roundIndex}`}
@@ -2104,7 +2114,7 @@ function App() {
         <header className={`m-me ${myPlayer.isGhost ? "ghost" : ""}`}>
           <img
             className="m-me-sprite"
-            src={`/assets/images/Characters/${myPlayer.isGhost ? "deathcharacters" : "alivecharacters"}/${
+            src={`/assets/characters/${myPlayer.isGhost ? "dead" : "alive"}/${
               myPlayer.characterSlot >= 1 && myPlayer.characterSlot <= 8 ? myPlayer.characterSlot : 1
             }.png`}
             alt=""
@@ -2173,7 +2183,7 @@ function App() {
               <span className="player-name">{p.name}</span>
               <img
                 className={`player-sprite ${p.isGhost ? "player-sprite-ghost" : ""}`}
-                src={`/assets/images/Characters/${p.isGhost ? "deathcharacters" : "alivecharacters"}/${
+                src={`/assets/characters/${p.isGhost ? "dead" : "alive"}/${
                   p.characterSlot && p.characterSlot >= 1 && p.characterSlot <= 8
                     ? p.characterSlot
                     : (idx % 8) + 1

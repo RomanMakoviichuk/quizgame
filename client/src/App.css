@@ -17,7 +17,7 @@ body {
      so the screen is never grey while the picture loads on mobile data */
   html,
   body {
-    background: #3a2312 url("../public/assets/images/background-mobile.jpg") center / cover no-repeat;
+    background: #3a2312 url("../public/assets/ui/background-mobile.jpg") center / cover no-repeat;
   }
 }
 
@@ -43,6 +43,7 @@ body {
 .app-game-with-video {
   position: relative;
   overflow: hidden;
+  background: #000; /* under a scene clip that is still loading */
 }
 
 .game-background-video {
@@ -372,7 +373,7 @@ body {
 }
 
 .sound-icon {
-  background-image: url("../public/assets/images/soundoff.png");
+  background-image: url("../public/assets/ui/sound-off.png");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -836,7 +837,7 @@ body {
 .modal-back-icon {
   width: 100%;
   height: 100%;
-  background: url("../public/assets/images/arrow-back.png") center/contain no-repeat;
+  background: url("../public/assets/ui/arrow-back.png") center/contain no-repeat;
 }
 
 .modal-back-btn:hover .modal-back-icon {
@@ -846,7 +847,7 @@ body {
 .modal-btn-lobby {
   width: 260px;
   height: 90px;
-  background: url("../public/assets/images/lobbie.png") center/contain no-repeat;
+  background: url("../public/assets/menu/lobby.webp") center/contain no-repeat;
   background-size: contain;
   border: none;
   padding: 0;
@@ -989,9 +990,15 @@ body {
 }
 
 .intro-video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0;
+}
+.intro-video.intro-video-on {
+  opacity: 1;
 }
 
 .player-overlay {
@@ -1172,7 +1179,7 @@ body {
   color: #8b4040;
 }
 
-/* Lobby — відео waitroom + 8 персонажів з левітацією */
+/* Lobby — відео menu/background.mp4 + 8 персонажів з левітацією */
 .lobby-screen {
   min-height: 100vh;
   position: relative;
@@ -2103,9 +2110,6 @@ body {
 }
 
 /* Smooth entry for round 1 question scene */
-.question-scene-fadein .game-background-video {
-  animation: questionSceneBgFadeIn 700ms ease-out both;
-}
 
 .question-scene-fadein .question-play-screen-round1 {
   animation: questionSceneContentFadeIn 700ms ease-out both;

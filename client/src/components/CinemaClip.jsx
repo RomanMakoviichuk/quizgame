@@ -21,8 +21,8 @@ export default function CinemaClip({
   fit = "cover",
   layer = "top",
   fadeInMs = 700,
-  fadeOutMs = 900,
-  holdMs = 350,
+  fadeOutMs = 700,
+  holdMs = 100, // the clips end with their own black: no long extra hold
 }) {
   const videoRef = useRef(null);
   const [stage, setStage] = useState("wait"); // wait | on | off

@@ -16,10 +16,10 @@ import { COLOR_IDS, MEMORY_COLORS, TintedItem, preloadTints, tintedUrl } from ".
  * Results:    results.memory { mode, max, lineup, answers, scores, ranked, topIds }
  */
 
-const MUSIC = "/assets/minigames/items/background.mp3";
+const MUSIC = "/assets/minigames/memory/background.mp3";
 const MUSIC_VOLUME = 1; // level set by game/loudness.js
-const SPRITE = (slot) => `/assets/images/Characters/alivecharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
-const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/minigames/RPS/lose_${n}.mp3`);
+const SPRITE = (slot) => `/assets/characters/alive/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/sounds/lose/${n}.mp3`);
 const TICK_MS = 100;
 // results scene: the right row flips in, then the scoreboard
 const REVEAL = { BOARD: 3200, HOLD: 9000 };
@@ -232,7 +232,7 @@ export default function MemoryMinigame({
     soundRef.current[soundKey] = true;
     if (soundKey === "show") {
       sfx("/assets/sounds/bell.mp3", 0.45);
-      for (let i = 0; i < 5; i++) gameClock.setTimeout(() => sfx("/assets/sounds/click-sound.mp3", 0.35), 150 + i * 140);
+      for (let i = 0; i < 5; i++) gameClock.setTimeout(() => sfx("/assets/sounds/click.mp3", 0.35), 150 + i * 140);
     } else if (soundKey === "answer") sfx("/assets/sounds/notification.mp3", 0.45);
     else sfx("/assets/sounds/beep.mp3", 0.4);
   }, [soundKey]);

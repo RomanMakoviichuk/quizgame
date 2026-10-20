@@ -16,9 +16,9 @@ import gameClock from "../game/gameClock";
  * Event out:  minigameEvent { name: "rps:choose", data: { choice } }
  */
 
-const IMG = (id) => `/assets/minigames/RPS/web/${id}.webp`;
+const IMG = (id) => `/assets/minigames/rps/web/${id}.webp`;
 const SPRITE = (slot) =>
-  `/assets/images/Characters/alivecharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+  `/assets/characters/alive/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
 
 const FIGHTERS = {
   rock: { name: "Камінь", acc: "камінь", color: "#b9b1a6" },
@@ -56,8 +56,8 @@ const JUDGE_DELAY_MS = 1500; // cards flip first, then the verdict lands
 const RULE_SPOTLIGHT_MS = 2000; // 10 rules x 2s fit the 20s rules screen
 const TICK_MS = 250; // countdown / timer ring refresh — no need for more
 
-const MUSIC = "/assets/minigames/RPS/background.mp3";
-const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/minigames/RPS/lose_${n}.mp3`);
+const MUSIC = "/assets/minigames/rps/background.mp3";
+const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/sounds/lose/${n}.mp3`);
 const MUSIC_VOLUME = 1; // level set by game/loudness.js
 
 // Lose sounds come from a shuffled bag: all four play before any repeats.
@@ -433,7 +433,7 @@ export default function RockPaperScissorsMinigame({
   // flip first, then the verdict (and the hit sound on the TV)
   useEffect(() => {
     if (!reveal) return;
-    if (isDisplay) sfx("/assets/sounds/click-sound.mp3", 0.5);
+    if (isDisplay) sfx("/assets/sounds/click.mp3", 0.5);
     let loseTimer = null;
     const t = gameClock.setTimeout(() => {
       setJudged(true);
@@ -514,7 +514,7 @@ export default function RockPaperScissorsMinigame({
   const choose = (id) => {
     if (myChoice || eliminated || reveal) return;
     setMyChoice(id); // optimistic
-    sfx("/assets/sounds/click-sound.mp3", 0.5);
+    sfx("/assets/sounds/click.mp3", 0.5);
     socket?.emit("minigameEvent", { name: "rps:choose", data: { choice: id } });
   };
 

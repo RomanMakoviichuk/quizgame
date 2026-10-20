@@ -1,5 +1,5 @@
 {
-  "_comment": "«Вгадай мелодію»: правильні назви для файлів з client/public/assets/minigames/Name That Tune/songs. Файл, якого тут немає, читається з імені «Виконавець - Назва.mp3». Ключ — точне ім'я файлу. Необов'язково: \"start\" (секунда, з якої грати), \"skip\": true (не використовувати).",
+  "_comment": "«Вгадай мелодію»: правильні назви для файлів з client/public/assets/minigames/name-that-tune/songs. Файл, якого тут немає, читається з імені «Виконавець - Назва.mp3». Ключ — точне ім'я файлу. Необов'язково: \"start\" (секунда, з якої грати), \"skip\": true (не використовувати).",
   "files": {
     "Britney Spears - Baby One More Time.mp3": { "artist": "Britney Spears", "title": "...Baby One More Time" },
     "Eminem - please stand up.mp3": { "artist": "Eminem", "title": "The Real Slim Shady" },

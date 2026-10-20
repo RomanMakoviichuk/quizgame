@@ -29,9 +29,9 @@ test("listPool: only video files, natural order, URL-encoded", (t) => {
   const dir = tempPools({ "after-round": ["after-round_10.mp4", "after-round_2.mp4", "notes.txt", "x y.webm"] });
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   assert.deepEqual(media.listPool("afterRound", dir), [
-    "/assets/videos/rounds/after-round/after-round_2.mp4",
-    "/assets/videos/rounds/after-round/after-round_10.mp4",
-    "/assets/videos/rounds/after-round/x%20y.webm",
+    "/assets/rounds/after-round/after-round_2.mp4",
+    "/assets/rounds/after-round/after-round_10.mp4",
+    "/assets/rounds/after-round/x%20y.webm",
   ]);
   assert.deepEqual(media.listPool("nope", dir), []);
 });
@@ -60,7 +60,7 @@ test("roundVideos: right folder by result, new files picked up, no immediate rep
 
   // empty folder -> old score clip; a file dropped in later is used right away
   const none = media.roundVideos(room, [{ lastCorrect: false }], dir);
-  assert.equal(none.afterResult, "/assets/questions/video/score.mp4");
+  assert.equal(none.afterResult, "/assets/rounds/results/fallback/score.mp4");
   fs.writeFileSync(path.join(dir, "results/all-wrong", "w1.mp4"), "x");
   assert.match(media.roundVideos(room, [{ lastCorrect: false }], dir).afterResult, /all-wrong\/w1\.mp4$/);
 });
@@ -96,42 +96,42 @@ test("the real folders are in place", () => {
 test("announceVideo: per-round folder, clips in turn across games, once per room", (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "quizgame-announce-"));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-  fs.mkdirSync(path.join(dir, "Round_1"));
-  for (const f of ["2.mp4", "10.mp4", "1.mp4", "notes.txt"]) fs.writeFileSync(path.join(dir, "Round_1", f), "x");
+  fs.mkdirSync(path.join(dir, "round-1"));
+  for (const f of ["2.mp4", "10.mp4", "1.mp4", "notes.txt"]) fs.writeFileSync(path.join(dir, "round-1", f), "x");
   const opts = { dir, stateFile: path.join(dir, "state.json") };
   assert.deepEqual(media.listAnnounce(1, dir), ["1.mp4", "2.mp4", "10.mp4"]);
 
   const game = () => ({});
   const played = [1, 2, 3, 4].map(() => media.announceVideo(game(), 1, opts));
   assert.deepEqual(played, [
-    "/assets/questions/video/Round_1/1.mp4",
-    "/assets/questions/video/Round_1/2.mp4",
-    "/assets/questions/video/Round_1/10.mp4",
-    "/assets/questions/video/Round_1/1.mp4",
+    "/assets/rounds/announce/round-1/1.mp4",
+    "/assets/rounds/announce/round-1/2.mp4",
+    "/assets/rounds/announce/round-1/10.mp4",
+    "/assets/rounds/announce/round-1/1.mp4",
   ]);
 
   // the same game asking again (a resent announce) gets the same clip, no skip
   const room = game();
   const a = media.announceVideo(room, 1, opts);
   assert.equal(media.announceVideo(room, 1, opts), a);
-  assert.equal(media.announceVideo(game(), 1, opts), "/assets/questions/video/Round_1/10.mp4");
+  assert.equal(media.announceVideo(game(), 1, opts), "/assets/rounds/announce/round-1/10.mp4");
 
   // no folder for the round -> no clip
   assert.equal(media.announceVideo(game(), 7, opts), null);
 });
 
-test("questionVideo: random from questions/, no repeats in a game until all played", (t) => {
+test("questionVideo: random from question/, no repeats in a game until all played", (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "quizgame-questions-"));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   assert.equal(media.questionVideo({}, 1, dir), null); // no folder -> none
-  fs.mkdirSync(path.join(dir, "questions"));
-  for (const f of ["a.mp4", "b.mp4", "c.mp4", "readme.txt"]) fs.writeFileSync(path.join(dir, "questions", f), "x");
+  fs.mkdirSync(path.join(dir, "question"));
+  for (const f of ["a.mp4", "b.mp4", "c.mp4", "readme.txt"]) fs.writeFileSync(path.join(dir, "question", f), "x");
   assert.equal(media.listQuestionVideos(dir).length, 3);
 
   const room = {};
   const firstThree = [1, 2, 3].map((r) => media.questionVideo(room, r, dir));
   assert.equal(new Set(firstThree).size, 3);
-  assert.ok(firstThree.every((u) => u.startsWith("/assets/questions/video/questions/")));
+  assert.ok(firstThree.every((u) => u.startsWith("/assets/rounds/question/")));
   assert.equal(media.questionVideo(room, 2, dir), firstThree[1]); // same round asked again -> same clip
   assert.notEqual(media.questionVideo(room, 4, dir), firstThree[2]); // a new bag never repeats the last one
 });

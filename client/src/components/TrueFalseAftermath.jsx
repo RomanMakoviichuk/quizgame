@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./TrueFalseAftermath.css";
 import gameClock from "../game/gameClock";
+import FadeVideo from "./FadeVideo";
 
 const HEART_DELAY_MS = 2500;
 
 /**
- * Після міні-гри: відео aftermg.mp4 на весь екран; таблиця балів з’являється
+ * Після міні-гри: відео true-false/aftermath.mp4 на весь екран; таблиця балів з’являється
  * після початкового фрагменту ролика; сцена триває рівно стільки, скільки триває відео.
  * @param {boolean} [stylingDebug] — dev: зациклити відео, не викликати onComplete; бейдж з підказкою.
  */
 const SPRITE = (slot) =>
-  `/assets/images/Characters/alivecharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+  `/assets/characters/alive/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
 const DEAD_SPRITE = (slot) =>
-  `/assets/images/Characters/deathcharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
-const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/minigames/RPS/lose_${n}.mp3`);
+  `/assets/characters/dead/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/sounds/lose/${n}.mp3`);
 
 export default function TrueFalseAftermath({ data, onComplete, stylingDebug = false, slotsById = {} }) {
   const { minigameScores, namesById, livesById, contestantIds, loserIds } = data;
@@ -100,10 +101,10 @@ export default function TrueFalseAftermath({ data, onComplete, stylingDebug = fa
 
   return (
     <div className="truefalse-aftermath-root" role="dialog" aria-label="Результати міні-гри">
-      <video
+      <FadeVideo
         ref={videoRef}
         className="truefalse-aftermath-video"
-        src="/assets/questions/video/aftermg.mp4"
+        src="/assets/minigames/true-false/aftermath.mp4"
         autoPlay
         playsInline
         preload="auto"

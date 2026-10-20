@@ -19,8 +19,8 @@ import { createHotBombFx } from "../game/hotBombFx";
  */
 
 const TITLE = "ГАРЯЧА БОМБА";
-const SPRITE = (slot) => `/assets/images/Characters/alivecharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
-const DEAD_SPRITE = (slot) => `/assets/images/Characters/deathcharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+const SPRITE = (slot) => `/assets/characters/alive/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+const DEAD_SPRITE = (slot) => `/assets/characters/dead/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
 const TICK_MS = 100;
 const BOOM_SHOW_MS = 2600;
 const MISS_REASON = {
@@ -33,10 +33,10 @@ const MISS_REASON = {
 const EXAMPLE = ["тигр", "рись", "сова", "антилопа"];
 
 /**
- * Sounds live in client/public/assets/minigames/bomb/ (see README there).
+ * Sounds live in client/public/assets/minigames/hot-bomb/ (see README there).
  * A file that is missing falls back to the game's built-in sound.
  */
-const HB_SOUND_DIR = "/assets/minigames/bomb";
+const HB_SOUND_DIR = "/assets/minigames/hot-bomb";
 const HB_MUSIC = `${HB_SOUND_DIR}/background.mp3`; // quiet bed under the whole minigame
 const HB_MUSIC_VOLUME = 1; // level set by game/loudness.js
 const HB_SOUNDS = {
@@ -356,7 +356,7 @@ export default function HotBombMinigame({
         const from = seatCenter(arenaRef.current, d.from);
         const to = seatCenter(arenaRef.current, d.to);
         fxRef.current?.fly(from, to, 560);
-        hbSound("pass", 0.6, () => sfx("/assets/sounds/click-sound.mp3", 0.6));
+        hbSound("pass", 0.6, () => sfx("/assets/sounds/click.mp3", 0.6));
       }
     };
     const onMiss = (d) => setMiss((m) => ({ ...d, n: (m?.n || 0) + 1 }));
@@ -368,7 +368,7 @@ export default function HotBombMinigame({
       setText("");
       setError(null);
       setOkFlash((n) => n + 1);
-      hbSound("wordOk", 0.6, () => sfx("/assets/sounds/click-sound.mp3", 0.6));
+      hbSound("wordOk", 0.6, () => sfx("/assets/sounds/click.mp3", 0.6));
     };
     const onTargetAck = (d) => setMyTarget(d.targetId);
     socket.on("hb:go", onGo);

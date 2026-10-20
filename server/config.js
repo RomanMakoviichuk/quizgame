@@ -9,14 +9,7 @@ module.exports = {
 
   // Legacy per-round decks (round1.json … round9.json). Still read once by the
   // content store to seed the question database on first run.
-  QUESTIONS_DIR: path.join(
-    __dirname,
-    "..",
-    "client",
-    "public",
-    "assets",
-    "questions"
-  ),
+  QUESTIONS_DIR: path.join(__dirname, "data", "legacy-questions"),
 
   // The question database (categories + questions). Plain JSON file, atomic
   // writes. This is what the admin panel manages and the game reads from.

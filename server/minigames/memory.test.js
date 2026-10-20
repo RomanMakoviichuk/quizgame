@@ -34,7 +34,7 @@ test("the registry loads every item with an id + image; bad rows are skipped", (
   assert.deepEqual(items.map((i) => i.id), ["a", "b"]);
   assert.equal(items[1].name, "b");
   assert.deepEqual(items[1].colors, ["red"], "unknown colours are dropped");
-  assert.equal(items[1].fallback, "/assets/minigames/items/b%20b.png");
+  assert.equal(items[1].fallback, "/assets/minigames/memory/b%20b.png");
 });
 
 test("a new item in the registry is used without touching the game code", () => {

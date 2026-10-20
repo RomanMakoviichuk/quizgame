@@ -23,12 +23,12 @@ import { playKillAndDeath, preloadDeathSounds } from "../game/deathSounds";
  */
 
 const SLOT = (n) => (n >= 1 && n <= 8 ? n : 1);
-const aliveSprite = (slot) => `/assets/images/Characters/alivecharacters/${SLOT(slot)}.png`;
-const deadSprite = (slot) => `/assets/images/Characters/deathcharacters/${SLOT(slot)}.png`;
+const aliveSprite = (slot) => `/assets/characters/alive/${SLOT(slot)}.png`;
+const deadSprite = (slot) => `/assets/characters/dead/${SLOT(slot)}.png`;
 export const spriteOf = (p) =>
   p.wasGhost || p.status === "consumed" ? deadSprite(p.characterSlot) : aliveSprite(p.characterSlot);
 
-const BG = "/assets/images/FinalBattle/background.webp";
+const BG = "/assets/final/background.webp";
 
 // Hall geometry, % of the scene. Strips 0..exit run from TRACK_LEFT to TRACK_RIGHT;
 // the lit doorway of the background sits just right of the last strip.
@@ -226,11 +226,14 @@ export default function FinalBattle({ uiMode = "display", socket, intro, myPlaye
   // phone: catch up with the race on mount and after every reconnect — a phone that
   // reloaded or dropped out (an iPhone with its screen off) missed the intro and the
   // open question, and without the line-up it could not find itself in the race
+  const syncRef = useRef(null);
   useEffect(() => {
-    if (!socket || isDisplay) return undefined;
+    if (!socket) return undefined;
     const sync = () =>
       socket.emit("finalSync", {}, (d) => {
         if (!d || !Array.isArray(d.participants)) return;
+        // the TV keeps its own intro show; after a reload mid-race it takes the snapshot
+        if (isDisplay && d.stage === "intro") return;
         clock.sync(d.serverNow);
         setRace({
           exit: d.exit,
@@ -250,6 +253,7 @@ export default function FinalBattle({ uiMode = "display", socket, intro, myPlaye
           setStage(d.stage);
         }
       });
+    syncRef.current = sync;
     sync();
     // after a reconnect the session is resumed first (App), then we ask
     const onConnect = () => setTimeout(sync, 400);
@@ -323,6 +327,16 @@ export default function FinalBattle({ uiMode = "display", socket, intro, myPlaye
   const me = race.participants.find((p) => p.id === myPlayerId) || null;
   const winner = race.participants.find((p) => p.id === race.winnerId) || null;
 
+  // phone: not in the line-up yet (joined mid-reconnect) -> keep asking
+  const lost = !isDisplay && !me;
+  useEffect(() => {
+    if (!lost) return undefined;
+    const t = gameClock.setInterval(() => syncRef.current?.(), 3000);
+    return () => gameClock.clearInterval(t);
+  }, [lost]);
+
+  const msLeft = useMsLeft(!isDisplay && stage === "question" ? question?.endsAt : null, clock);
+
   const sendAnswer = (idx) => {
     if (!socket || stage !== "question" || myAnswer !== null || pendingAnswer !== null) return;
     if (!me || me.status !== "racing") return;
@@ -357,6 +371,8 @@ export default function FinalBattle({ uiMode = "display", socket, intro, myPlaye
       stage={stage}
       question={question}
       timeLeft={timeLeft}
+      msLeft={msLeft}
+      rules={intro?.rules}
       myAnswer={myAnswer ?? pendingAnswer}
       acknowledged={myAnswer !== null}
       result={result}
@@ -407,7 +423,7 @@ function DisplayScene({ race, stage, introPart, countNum, question, timeLeft, an
 
   return (
     <div className={`fb-scene fb-stage-${stage} ${race.ending ? `fb-ending-${race.ending}` : ""}`}>
-      <audio ref={audio.ambient} src="/assets/sounds/final_background.mp3" loop preload="auto" />
+      <audio ref={audio.ambient} src="/assets/final/music.mp3" loop preload="auto" />
       <audio ref={audio.sting} src="/assets/sounds/chain.mp3" preload="auto" />
       <audio ref={audio.beep} src="/assets/sounds/beep.mp3" preload="auto" />
       <audio ref={audio.win} src="/assets/sounds/win.mp3" preload="auto" />
@@ -617,10 +633,12 @@ function DisplayScene({ race, stage, introPart, countNum, question, timeLeft, an
   );
 }
 
-const LURKER_SRC = "/assets/videos/characters%20animations/finaly%20monstter.mp4";
+const LURKER_SRC = "/assets/final/monster.mp4";
 const LURKER_SHOW_MS = 4300; // visible part of the 6s clip; it fades out before the clip ends
 const LURKER_FIRST_MS = 6000;
 const lurkerGap = () => 7000 + Math.random() * 6000; // hidden time between appearances
+const LURKER_VOLUME = 0.3; // a quiet growl in the dark: ~-32 dB after loudness.js, well under the music
+const LURKER_FADE_MS = 1600; // the sound creeps in with the picture and out with it
 
 /**
  * The thing that waits in the shadow: a clip on black, blended into the black
@@ -628,6 +646,22 @@ const lurkerGap = () => 7000 + Math.random() * 6000; // hidden time between appe
  * every so often, and always when the shadow takes someone (`summon` changes).
  * Timers run on gameClock, so it freezes with the admin pause.
  */
+/** Ramp a media element's volume to `target` over `ms` (one ramp per element). */
+function fadeVolume(el, target, ms) {
+  window.clearInterval(el._fadeTimer);
+  const from = el.volume;
+  const t0 = performance.now();
+  el._fadeTimer = window.setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    try {
+      el.volume = Math.max(0, Math.min(1, from + (target - from) * k));
+    } catch {
+      /* detached */
+    }
+    if (k >= 1) window.clearInterval(el._fadeTimer);
+  }, 50);
+}
+
 function ShadowLurker({ summon }) {
   const videoRef = useRef(null);
   const [shown, setShown] = useState(false);
@@ -642,15 +676,19 @@ function ShadowLurker({ summon }) {
     if (v) {
       try {
         v.currentTime = 0;
-        v.volume = 0.55;
+        v.volume = 0;
         v.play().catch(() => {
           v.muted = true;
           v.play().catch(() => {});
         });
+        fadeVolume(v, LURKER_VOLUME, LURKER_FADE_MS);
       } catch {}
     }
     setShown(true);
-    t.hide = gameClock.setTimeout(() => setShown(false), LURKER_SHOW_MS);
+    t.hide = gameClock.setTimeout(() => {
+      setShown(false);
+      if (v) fadeVolume(v, 0, LURKER_FADE_MS);
+    }, LURKER_SHOW_MS);
     t.next = gameClock.setTimeout(() => appearRef.current(), LURKER_SHOW_MS + 1600 + lurkerGap());
   };
 
@@ -789,7 +827,7 @@ const CREDIT_ROLES = [
  * Display-only end credits after gameFinished. Placeholder texts — edit freely.
  * Calls onDone when the roll finishes (or on "Пропустити").
  */
-const CREDITS_MUSIC = "/assets/sounds/End Game/background.mp3";
+const CREDITS_MUSIC = "/assets/final/end-music.mp3";
 const CREDITS_VOLUME = 1; // level set by game/loudness.js
 
 export function FinalCredits({ result, onDone }) {
@@ -993,13 +1031,76 @@ export function FinalResults({ result, myPlayerId, onExit }) {
 }
 
 // ==================================================================== phone
+//
+// The phone is a small piece of the TV hall: the same dark background and
+// torch light, the shadow rising from below as it gets closer to me, my strip
+// on a mini track to the door, and the answer buttons.
 
-function MobileController({ race, me, stage, question, timeLeft, myAnswer, acknowledged, result, winner, onAnswer }) {
+const RING_R = 26;
+const RING_C = 2 * Math.PI * RING_R;
+
+/** ms left until `endsAt`, ticking fast enough for a smooth ring. */
+function useMsLeft(endsAt, clock) {
+  const [left, setLeft] = useState(0);
+  useEffect(() => {
+    if (!endsAt) return setLeft(0);
+    const tick = () => setLeft(Math.max(0, endsAt - clock.now()));
+    tick();
+    const t = gameClock.setInterval(tick, 100);
+    return () => gameClock.clearInterval(t);
+  }, [endsAt, clock]);
+  return left;
+}
+
+function MobileTrack({ race, me }) {
+  const exit = race.exit || 30;
+  const cells = Array.from({ length: exit + 1 }, (_, i) => i);
+  const rivals = new Set(race.participants.filter((p) => p.id !== me.id && p.status === "racing").map((p) => p.pos));
+  const pct = (cell) => ((Math.max(0, Math.min(exit, cell)) + 0.5) / (exit + 1)) * 100;
+  return (
+    <div className="fb-m-track" aria-label={`Смуга ${me.pos} з ${exit}`}>
+      <div className="fb-m-cells">
+        {cells.map((i) => (
+          <span
+            key={i}
+            className={[
+              "fb-m-c",
+              i < race.darkness ? "dark" : "",
+              i === race.darkness ? "edge" : "",
+              i === exit ? "exit" : "",
+              rivals.has(i) ? "rival" : "",
+            ].join(" ")}
+          />
+        ))}
+      </div>
+      <img
+        className="fb-m-token"
+        src={me.status === "escaped" ? aliveSprite(me.characterSlot) : spriteOf(me)}
+        alt=""
+        style={{ left: `${pct(me.pos)}%` }}
+      />
+      <span className="fb-m-door" aria-hidden>
+        🚪
+      </span>
+    </div>
+  );
+}
+
+function MobileController({ race, me, stage, question, timeLeft, msLeft, myAnswer, acknowledged, result, winner, rules, onAnswer }) {
   if (!me) {
     return (
       <section className="fb-mobile">
-        <div className="fb-m-title">ФІНАЛЬНА БИТВА</div>
-        <p className="fb-m-note">Дивіться на головний екран</p>
+        <div className="fb-m-bg" style={{ backgroundImage: `url(${BG})` }} aria-hidden />
+        <div className="fb-m-glow" aria-hidden />
+        <div className="fb-m-shadow" style={{ height: "18%" }} aria-hidden />
+        <div className="fb-m-body fb-m-center">
+          <h1 className="fb-m-title">
+            <FireTitle text="ФІНАЛ" />
+          </h1>
+          <div className="fb-m-ember" aria-hidden />
+          <p className="fb-m-big">Шукаємо тебе в гонці…</p>
+          <p className="fb-m-note">Дивись на головний екран</p>
+        </div>
       </section>
     );
   }
@@ -1007,86 +1108,196 @@ function MobileController({ race, me, stage, question, timeLeft, myAnswer, ackno
   const exit = race.exit || 30;
   const consumed = me.status === "consumed";
   const escaped = me.status === "escaped";
+  const racing = me.status === "racing";
+  const gap = Math.max(0, me.pos - race.darkness);
+  const toExit = Math.max(0, exit - me.pos);
+  // the shadow climbs the screen as it closes in (all of it once it took me)
+  const danger = consumed ? 1 : escaped ? 0 : Math.max(0, Math.min(1, 1 - (gap - 1) / 10));
+  const shadowH = consumed ? 100 : 10 + danger * 38;
+
   const myMove = result?.movers?.find((m) => m.id === me.id);
   const wasCorrect = result?.correctIds?.includes(me.id);
   const answered = result?.answeredIds?.includes(me.id);
+  const justConsumed = result?.consumed?.includes(me.id);
+  const showResult = (stage === "reveal" || stage === "done") && result;
 
   let feedback = null;
-  if (stage === "reveal" || stage === "done") {
+  if (showResult && !justConsumed) {
     if (myMove) {
       const d = myMove.to - myMove.from;
-      feedback = { cls: "good", text: `${myMove.rank}-й! +${d} ${d === 1 ? "смуга" : "смуги"}` };
-    } else if (wasCorrect) feedback = { cls: "meh", text: "Правильно, але не в трійці" };
-    else if (answered) feedback = { cls: "bad", text: "Неправильно" };
-    else if (!consumed && !escaped) feedback = { cls: "bad", text: "Не встиг відповісти" };
+      const word = d === 1 ? "смуга" : d < 5 ? "смуги" : "смуг";
+      feedback = { cls: "good", icon: "🔥", title: `${myMove.rank}-й!`, text: `+${d} ${word} вперед` };
+    } else if (wasCorrect) feedback = { cls: "meh", icon: "✓", title: "Правильно", text: "але інші були швидші" };
+    else if (answered) feedback = { cls: "bad", icon: "✗", title: "Неправильно", text: "стоїш на місці" };
+    else if (racing) feedback = { cls: "bad", icon: "⏳", title: "Не встиг", text: "стоїш на місці" };
   }
 
+  const correctText = showResult && question ? question.options?.[result.correctIndex] : null;
+  const shortOptions = question?.options?.every((o) => String(o).length <= 14);
+  const statusText = me.wasGhost && racing ? "Привид у гонці" : statusLabel(me);
+  const moves = rules?.moves || [4, 3, 2];
+
   return (
-    <section className={`fb-mobile ${me.wasGhost ? "fb-mobile-ghost" : ""}`}>
-      <div className="fb-m-head">
-        <img className="fb-m-sprite" src={spriteOf(me)} alt="" />
-        <div>
-          <div className={`fb-m-status fb-m-status-${me.status}`}>
-            {me.wasGhost && me.status === "racing" ? "ТИ ПРИВИД" : statusLabel(me)}
+    <section
+      className={[
+        "fb-mobile",
+        me.wasGhost ? "fb-mobile-ghost" : "",
+        `fb-m-${me.status}`,
+        danger > 0.75 && racing ? "fb-m-danger" : "",
+      ].join(" ")}
+    >
+      <div className="fb-m-bg" style={{ backgroundImage: `url(${BG})` }} aria-hidden />
+      <div className="fb-m-glow" aria-hidden />
+      <div className="fb-m-shadow" style={{ height: `${shadowH}%` }} aria-hidden>
+        <i />
+        <i />
+        <i />
+      </div>
+
+      <div className="fb-m-body">
+        <header className="fb-m-top">
+          <h1 className="fb-m-title">
+            <FireTitle text="ФІНАЛ" />
+          </h1>
+          {race.step > 0 && <span className="fb-m-step">Питання {race.step}</span>}
+        </header>
+
+        <div className="fb-m-card">
+          <img className="fb-m-sprite" src={escaped ? aliveSprite(me.characterSlot) : spriteOf(me)} alt="" />
+          <div className="fb-m-who">
+            <div className="fb-m-name">{me.name}</div>
+            <div className={`fb-m-status fb-m-status-${me.status}`}>{statusText}</div>
           </div>
           <div className="fb-m-cell">
-            Смуга <b>{me.pos}</b> / {exit}
+            <b>{me.pos}</b>
+            <small>/ {exit}</small>
           </div>
         </div>
-      </div>
 
-      <div className="fb-m-bar" aria-label="Прогрес до виходу">
-        <span className="fb-m-bar-dark" style={{ width: `${(Math.min(race.darkness + 1, exit + 1) / (exit + 1)) * 100}%` }} />
-        <span className="fb-m-bar-me" style={{ left: `${((me.pos + 0.5) / (exit + 1)) * 100}%` }} />
-        <span className="fb-m-bar-exit">🚪</span>
-      </div>
-      {!consumed && !escaped && (
-        <p className="fb-m-note">
-          Тінь за <b>{Math.max(0, me.pos - race.darkness)}</b> смуг позаду
-        </p>
-      )}
+        <MobileTrack race={race} me={me} />
 
-      {stage === "intro" && <p className="fb-m-big">Дивіться на екран — гонка от-от почнеться</p>}
-
-      {consumed && <p className="fb-m-big">Тінь тебе накрила. Дивись, хто вирветься!</p>}
-
-      {stage === "question" && question && !consumed && !escaped && (
-        <>
-          <div className="fb-m-qhead">
-            <span>Питання {question.step}</span>
-            <span className={`fb-m-timer ${timeLeft <= 3 ? "low" : ""}`}>{timeLeft}</span>
+        {racing && (
+          <div className="fb-m-chips">
+            <span className={`fb-m-chip ${gap <= 3 ? "hot" : ""}`}>
+              🌑 Тінь позаду: <b>{gap}</b>
+            </span>
+            <span className="fb-m-chip">
+              🚪 До виходу: <b>{toExit}</b>
+            </span>
           </div>
-          <h3 className="fb-m-question">{question.text}</h3>
-          <div className="fb-m-options">
-            {question.options.map((o, idx) => (
-              <button
-                key={idx}
-                type="button"
-                className={`fb-m-option ${myAnswer === idx ? "selected" : ""}`}
-                disabled={myAnswer !== null}
-                onClick={() => onAnswer(idx)}
-              >
-                <b>{LETTERS[idx]}</b> {o}
-              </button>
-            ))}
+        )}
+
+        {stage === "intro" && racing && (
+          <div className="fb-m-panel fb-m-rules">
+            <h3>Втеча від тіні</h3>
+            <p>
+              Відповідай правильно і <b>швидко</b>: перші троє йдуть на <b>+{moves.join(" / +")}</b>, решта
+              правильних — на <b>+{rules?.otherMove ?? 1}</b>.
+            </p>
+            <p>Після кожного питання тінь наступає. Хто перший дійде до дверей — переміг!</p>
+            <div className="fb-m-ember" aria-hidden />
           </div>
-          {myAnswer !== null && (
-            <p className="fb-m-note">{acknowledged ? "Відповідь прийнято. Чекаємо інших…" : "Надсилаємо…"}</p>
-          )}
-        </>
-      )}
+        )}
 
-      {feedback && <div className={`fb-m-feedback ${feedback.cls}`}>{feedback.text}</div>}
+        {stage === "question" && question && racing && (
+          <div className="fb-m-panel fb-m-q" key={question.step}>
+            <div className="fb-m-qhead">
+              <svg className={`fb-m-ring ${timeLeft <= 3 ? "low" : ""}`} viewBox="0 0 64 64" aria-label={`${timeLeft} с`}>
+                <circle className="track" cx="32" cy="32" r={RING_R} />
+                <circle
+                  className="left"
+                  cx="32"
+                  cy="32"
+                  r={RING_R}
+                  strokeDasharray={RING_C}
+                  strokeDashoffset={RING_C * (1 - Math.min(1, msLeft / (question.answerMs || 10000)))}
+                />
+                <text x="32" y="33">
+                  {timeLeft}
+                </text>
+              </svg>
+              <h3 className="fb-m-question">{question.text}</h3>
+            </div>
+            <div className={`fb-m-options ${shortOptions ? "grid" : ""}`}>
+              {question.options.map((o, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={[
+                    "fb-m-option",
+                    myAnswer === idx ? "selected" : "",
+                    myAnswer !== null && myAnswer !== idx ? "dim" : "",
+                  ].join(" ")}
+                  disabled={myAnswer !== null}
+                  onClick={() => onAnswer(idx)}
+                >
+                  <b>{LETTERS[idx]}</b>
+                  <span>{o}</span>
+                </button>
+              ))}
+            </div>
+            {myAnswer !== null && (
+              <p className="fb-m-wait">
+                <span className="fb-m-dot" />
+                {acknowledged ? "Відповідь прийнято. Чекаємо інших…" : "Надсилаємо…"}
+              </p>
+            )}
+          </div>
+        )}
 
-      {stage === "done" && (
-        <p className="fb-m-big">
-          {race.ending === "escaped" && winner
-            ? winner.id === me.id
-              ? "🏆 ПЕРЕМОГА! ТИ НА СВОБОДІ!"
-              : `Переможець: ${winner.name}`
-            : "Нічия — тінь забрала всіх"}
-        </p>
-      )}
+        {feedback && (
+          <div className={`fb-m-feedback ${feedback.cls}`} key={`fb-${result.step}`}>
+            <span className="icon">{feedback.icon}</span>
+            <div>
+              <b>{feedback.title}</b>
+              <small>{feedback.text}</small>
+            </div>
+          </div>
+        )}
+
+        {correctText && stage === "reveal" && (
+          <div className="fb-m-correct">
+            <span>Правильна відповідь</span>
+            <b>
+              <i>{LETTERS[result.correctIndex]}</i> {correctText}
+            </b>
+          </div>
+        )}
+
+        {consumed && stage !== "done" && (
+          <div className="fb-m-panel fb-m-fate">
+            <h3>Тінь тебе накрила</h3>
+            <p>Ти вибув із гонки. Дивись на головний екран — хто вирветься?</p>
+          </div>
+        )}
+
+        {stage === "done" && (
+          <div className={`fb-m-panel fb-m-end ${winner?.id === me.id ? "win" : ""}`}>
+            {race.ending === "escaped" && winner ? (
+              winner.id === me.id ? (
+                <>
+                  <div className="fb-m-trophy">🏆</div>
+                  <h3>
+                    <FireTitle text="ТИ НА СВОБОДІ!" />
+                  </h3>
+                  <p>Ти перший вирвався із зали. Перемога!</p>
+                </>
+              ) : (
+                <>
+                  <img className="fb-m-winner" src={aliveSprite(winner.characterSlot)} alt="" />
+                  <h3>Переможець: {winner.name}</h3>
+                  <p>{consumed ? "Тінь тебе наздогнала." : "Ти не встиг до дверей."}</p>
+                </>
+              )
+            ) : (
+              <>
+                <h3>Нічия</h3>
+                <p>Тінь забрала всіх.</p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

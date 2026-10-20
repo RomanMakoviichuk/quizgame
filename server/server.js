@@ -49,11 +49,10 @@ app.get(/^\/admin(\/.*)?$/, (_req, res) =>
   res.sendFile(path.join(adminDir, "index.html"))
 );
 
-// Round video pools (drop-in folders) are served straight from client/public, so
+// Round videos (assets/rounds/: announcements, question backgrounds, after-round
+// and result clips) are drop-in folders served straight from client/public, so
 // clips added later work without rebuilding the client. See server/media.js.
 app.use(media.ROUNDS_URL, express.static(media.ROUNDS_DIR));
-// "РАУНД N" announcement clips (questions/video/Round_N/) — drop-in too.
-app.use(media.ANNOUNCE_URL, express.static(media.ANNOUNCE_DIR));
 app.get("/api/media/round-videos", (_req, res) =>
   res.json(Object.fromEntries(Object.keys(media.POOLS).map((k) => [k, media.listPool(k)])))
 );
@@ -69,7 +68,7 @@ app.use((req, res, next) => {
     /* keep the raw path */
   }
   // the songs are only served through /tune/<token> (background.mp3 next to them is public)
-  if (p.toLowerCase().startsWith("/assets/minigames/name that tune/songs")) return res.sendStatus(404);
+  if (p.toLowerCase().startsWith("/assets/minigames/name-that-tune/songs")) return res.sendStatus(404);
   next();
 });
 

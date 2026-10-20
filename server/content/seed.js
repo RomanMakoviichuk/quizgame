@@ -2,7 +2,7 @@
  * First-run seed for the question database.
  *
  * Builds an initial content.json from the legacy per-round decks
- * (client/public/assets/questions/round1.json … round9.json) so the game is
+ * (server/data/legacy-questions/round1.json … round9.json) so the game is
  * playable the moment the server starts. Everything lands in one active
  * category, "Загальні знання"; a few empty example categories are added
  * (inactive) as a starting point for the admin.

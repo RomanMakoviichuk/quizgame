@@ -271,8 +271,8 @@ module.exports = function registerHandlers(io) {
     socket.on("finalSync", (data, callback) => {
       const room = roomOf();
       const player = playerOf(room);
-      if (!room || !player) return callback?.(null);
-      callback?.(phases.finalSnapshot(room, player.id));
+      if (!room || (!player && !socket.isDisplay)) return callback?.(null);
+      callback?.(phases.finalSnapshot(room, player?.id ?? null));
     });
 
     onGame("finalAnswer", (data) => {
@@ -281,9 +281,9 @@ module.exports = function registerHandlers(io) {
       phases.submitFinalAnswer(room, socket.playerId, data?.answerIndex);
     });
 
-    // Dev/demo only (FINAL_DEMO=1): jump from the lobby straight into the final
-    // with made-up ratings and a few ghosts, to rehearse the final scene.
-    if (process.env.FINAL_DEMO === "1") {
+    // Dev/demo only (FINAL_DEMO=1, or test mode with bots): jump from the lobby
+    // straight into the final with made-up ratings and a few ghosts.
+    if (process.env.FINAL_DEMO === "1" || TEST_BOTS) {
       onGame("debugStartFinal", () => {
         const room = roomOf();
         if (!room || room.gameState !== GAME_STATE.WAITING) return;

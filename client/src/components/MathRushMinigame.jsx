@@ -18,13 +18,13 @@ import gameClock from "../game/gameClock";
 
 const TITLE = "ТУПОМАТИКА";
 const SPRITE = (slot) =>
-  `/assets/images/Characters/alivecharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+  `/assets/characters/alive/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
 const DEAD_SPRITE = (slot) =>
-  `/assets/images/Characters/deathcharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
-const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/minigames/RPS/lose_${n}.mp3`);
-const MUSIC = "/assets/minigames/tupomath/background.mp3"; // TV, the whole minigame
+  `/assets/characters/dead/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/sounds/lose/${n}.mp3`);
+const MUSIC = "/assets/minigames/math-rush/background.mp3"; // TV, the whole minigame
 const MUSIC_VOLUME = 1; // level set by game/loudness.js
-const RIGHT_SOUND = "/assets/minigames/tupomath/click.mp3"; // phone, a right answer
+const RIGHT_SOUND = "/assets/minigames/math-rush/click.mp3"; // phone, a right answer
 const TICK_MS = 250;
 const OPTION_COLORS = ["#ff4fa3", "#3fd0ff", "#c6ff4a", "#ffb22e"];
 // floating chalk symbols in the background (fixed layout, transform-only motion)

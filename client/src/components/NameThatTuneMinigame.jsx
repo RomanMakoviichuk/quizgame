@@ -22,14 +22,14 @@ import gameClock from "../game/gameClock";
  *             minigameDisplayEvent tune:ready | tune:audioFail { index }
  */
 
-const SPRITE = (slot) => `/assets/images/Characters/alivecharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
-const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/minigames/RPS/lose_${n}.mp3`);
+const SPRITE = (slot) => `/assets/characters/alive/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/sounds/lose/${n}.mp3`);
 const LETTERS = ["A", "B", "C", "D"];
 const TICK_MS = 100;
 const FINAL_SCENE_MS = 11000;
 const CLIP_VOLUME = 0.95;
 // lounge music under the whole minigame (TV); it ducks out while a clip plays
-const BED_MUSIC = "/assets/minigames/Name That Tune/background.mp3";
+const BED_MUSIC = "/assets/minigames/name-that-tune/background.mp3";
 const BED_VOLUME = 1; // level set by game/loudness.js
 const BED_DUCK_MS = 900; // fade out when a clip starts
 const BED_RISE_MS = 1800; // fade back in when the clip is over

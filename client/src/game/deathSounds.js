@@ -6,11 +6,10 @@
  */
 import gameClock from "./gameClock";
 
-const folder = (name, count) =>
-  Array.from({ length: count }, (_, i) => `/assets/sounds/${encodeURIComponent(name)}/${i + 1}.mp3`);
+const folder = (name, count) => Array.from({ length: count }, (_, i) => `/assets/sounds/${name}/${i + 1}.mp3`);
 
-const KILL_SOUNDS = folder("Kill sounds", 5);
-const DEATH_SOUNDS = folder("Death sounds", 4);
+const KILL_SOUNDS = folder("kill", 4);
+const DEATH_SOUNDS = folder("death", 4);
 const KILL_TO_DEATH_MS = 550;
 
 function picker(list) {

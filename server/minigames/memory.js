@@ -35,7 +35,7 @@ const ID = "memory";
 const COLORS = ["blue", "red", "green", "yellow"];
 const MODES = ["order", "color"];
 const MIN_PLAYERS = 2;
-const IMAGE_DIR = "/assets/minigames/items"; // client/public/assets/minigames/items
+const IMAGE_DIR = "/assets/minigames/memory"; // client/public/assets/minigames/memory
 
 // level by the quiz round (1-based): up to `untilRound` -> `colors` colours in play
 const LEVELS = [
@@ -62,7 +62,7 @@ const TOTAL_DURATION_MS = CONFIG.PREP_MS + CONFIG.SHOW_MS + CONFIG.ANSWER_MS + 8
 
 /**
  * server/data/memoryItems.json: [{ id, name, image, colors? }]. `image` is the
- * file in client/public/assets/minigames/items; an optimised copy
+ * file in client/public/assets/minigames/memory; an optimised copy
  * web/<id>.webp is used when it exists (see items/README.md).
  */
 function loadItems(file = path.join(__dirname, "..", "data", "memoryItems.json")) {

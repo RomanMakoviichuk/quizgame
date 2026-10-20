@@ -32,8 +32,8 @@ const MUSIC_VOLUME = 1; // level set by game/loudness.js
 // the k-th decision plays k.mp3 — the same sound whatever was chosen, so nothing leaks
 const DECISION_SOUND = (k) => `${DIR}/${((k - 1) % 8) + 1}.mp3`;
 const DECISION_VOLUME = 0.32; // decisions are a background cue, quieter than the music
-const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/minigames/RPS/lose_${n}.mp3`);
-const SPRITE = (slot) => `/assets/images/Characters/alivecharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+const LOSE_SOUNDS = [1, 2, 3, 4].map((n) => `/assets/sounds/lose/${n}.mp3`);
+const SPRITE = (slot) => `/assets/characters/alive/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
 const TICK_MS = 200;
 
 // reveal timeline (ms after the results arrive)

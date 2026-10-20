@@ -2,7 +2,7 @@
 «Меморі: кольоровий хаос» — optimised copies of the item pictures.
 
 Reads server/data/memoryItems.json and, for every item, writes
-client/public/assets/minigames/items/web/<id>.webp: trimmed to the visible
+client/public/assets/minigames/memory/web/<id>.webp: trimmed to the visible
 pixels, at most 480 px on the long side, transparency kept. The originals are
 never touched. Run it after adding a picture:
 
@@ -19,7 +19,7 @@ from PIL import Image
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 REGISTRY = ROOT / "server" / "data" / "memoryItems.json"
-ITEMS_DIR = ROOT / "client" / "public" / "assets" / "minigames" / "items"
+ITEMS_DIR = ROOT / "client" / "public" / "assets" / "minigames" / "memory"
 OUT_DIR = ITEMS_DIR / "web"
 MAX_SIDE = 480
 

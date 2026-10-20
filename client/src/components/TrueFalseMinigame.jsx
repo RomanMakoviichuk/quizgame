@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import "./TrueFalseMinigame.css";
 import gameClock from "../game/gameClock";
+import FadeVideo from "./FadeVideo";
 
 const TOTAL_PLAY_SECONDS = 30;
 const FREEZE_SECONDS = 3;
@@ -250,7 +251,7 @@ export default function TrueFalseMinigame({
     const correct = pickedIsTrue === currentQ.isTrue;
     setFlash((f) => ({ kind: correct ? "correct" : "wrong", n: (f?.n || 0) + 1 }));
     if (correct) {
-      sfx("/assets/sounds/click-sound.mp3", 0.5);
+      sfx("/assets/sounds/click.mp3", 0.5);
       setStreak((n) => n + 1);
       setScore((s) => s + 1);
       setQuestionIdx((i) => i + 1);
@@ -327,10 +328,10 @@ export default function TrueFalseMinigame({
       } ${isFrozen ? "tf-frozen" : ""}`}
     >
       {resolvedShowVideoBg && (
-        <video
+        <FadeVideo
           className="tf-video"
           ref={videoRef}
-          src="/assets/minigames/truefalse/truefalse.mp4"
+          src="/assets/minigames/true-false/game.mp4"
           autoPlay
           playsInline
           preload="auto"
@@ -516,7 +517,7 @@ export default function TrueFalseMinigame({
 // ---------------------------------------------------------------- TV parts
 
 const SPRITE = (slot) =>
-  `/assets/images/Characters/alivecharacters/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
+  `/assets/characters/alive/${slot >= 1 && slot <= 8 ? slot : 1}.png`;
 
 function sfx(src, volume = 0.6) {
   try {

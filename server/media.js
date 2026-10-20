@@ -1,11 +1,14 @@
 /**
- * Round video pools — drop-in folders, read on every round (no rebuild, no restart).
+ * Round videos — drop-in folders under client/public/assets/rounds/, read on
+ * every round (no rebuild, no restart):
  *
- *   client/public/assets/videos/rounds/
- *     after-round/            after every round, before the results are shown
- *     results/all-correct/    everybody answered right
- *     results/partial/        some right, some wrong
- *     results/all-wrong/      nobody right (wrong or no answer)
+ *   announce/round-N/       «РАУНД N» clips, in turn across games
+ *   question/               background under the question, random
+ *   after-round/            after every round, before the results are shown
+ *   results/all-correct/    everybody answered right
+ *   results/partial/        some right, some wrong
+ *   results/all-wrong/      nobody right (wrong or no answer)
+ *   results/fallback/       used only when a results folder is empty
  *
  * Any .mp4/.webm/.mov/.m4v file in a folder is a candidate. Clips are dealt
  * from a shuffled "bag" per room and folder: every clip plays once before any
@@ -17,8 +20,8 @@
  *
  * Round announcements ("РАУНД N" clips):
  *
- *   client/public/assets/questions/video/Round_1/1.mp4, 2.mp4, …
- *   client/public/assets/questions/video/Round_2/…   (one folder per round)
+ *   client/public/assets/rounds/announce/round-1/1.mp4, 2.mp4, …
+ *   client/public/assets/rounds/announce/round-2/…   (one folder per round)
  *
  * Each game plays the next clip of that round's folder in turn (1, 2, 3, 1, …),
  * remembered across games and server restarts in data/round-announce.json.
@@ -27,7 +30,7 @@
  *
  * Question backgrounds (the video under the question and the answer timer):
  *
- *   client/public/assets/questions/video/questions/*.mp4
+ *   client/public/assets/rounds/question/*.mp4
  *
  * A random one per round, dealt from the room's bag like the result clips
  * (no repeats in a game until all have played). Empty folder -> null: the
@@ -37,14 +40,14 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
-const ROUNDS_DIR = path.join(__dirname, "..", "client", "public", "assets", "videos", "rounds");
-const ROUNDS_URL = "/assets/videos/rounds";
+const ROUNDS_DIR = path.join(__dirname, "..", "client", "public", "assets", "rounds");
+const ROUNDS_URL = "/assets/rounds";
 const VIDEO_EXT = /\.(mp4|webm|mov|m4v)$/i;
 
-const ANNOUNCE_DIR = path.join(__dirname, "..", "client", "public", "assets", "questions", "video");
-const ANNOUNCE_URL = "/assets/questions/video";
+const ANNOUNCE_DIR = path.join(ROUNDS_DIR, "announce");
+const ANNOUNCE_URL = `${ROUNDS_URL}/announce`;
 const ANNOUNCE_STATE_FILE = path.join(__dirname, "data", "round-announce.json");
-const QUESTION_FOLDER = "questions"; // inside ANNOUNCE_DIR
+const QUESTION_FOLDER = "question"; // inside ROUNDS_DIR
 
 const POOLS = {
   afterRound: "after-round",
@@ -55,9 +58,9 @@ const POOLS = {
 
 // Old single clips, used only when a results folder is empty.
 const LEGACY_RESULT = {
-  allCorrect: "/assets/questions/video/score2.mp4",
-  partial: "/assets/questions/video/score.mp4",
-  allWrong: "/assets/questions/video/score.mp4",
+  allCorrect: `${ROUNDS_URL}/results/fallback/score-all-correct.mp4`,
+  partial: `${ROUNDS_URL}/results/fallback/score.mp4`,
+  allWrong: `${ROUNDS_URL}/results/fallback/score.mp4`,
 };
 
 function listPool(pool, dir = ROUNDS_DIR) {
@@ -128,7 +131,7 @@ function roundVideos(room, players, dir = ROUNDS_DIR) {
 
 /** The announcement clips of one round, in natural order (1.mp4, 2.mp4, … 10.mp4). */
 function listAnnounce(roundIndex, dir = ANNOUNCE_DIR) {
-  const folder = `Round_${roundIndex}`;
+  const folder = `round-${roundIndex}`;
   try {
     return fs
       .readdirSync(path.join(dir, folder))
@@ -168,27 +171,27 @@ function announceVideo(room, roundIndex, { dir = ANNOUNCE_DIR, stateFile = ANNOU
     } catch {
       /* read-only disk: the rotation just restarts next time */
     }
-    url = `${ANNOUNCE_URL}/Round_${roundIndex}/${encodeURIComponent(file)}`;
+    url = `${ANNOUNCE_URL}/round-${roundIndex}/${encodeURIComponent(file)}`;
   }
   room.announceVideos[roundIndex] = url;
   return url;
 }
 
 /** All question background clips (URLs, natural order). */
-function listQuestionVideos(dir = ANNOUNCE_DIR) {
+function listQuestionVideos(dir = ROUNDS_DIR) {
   try {
     return fs
       .readdirSync(path.join(dir, QUESTION_FOLDER))
       .filter((f) => VIDEO_EXT.test(f))
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-      .map((f) => `${ANNOUNCE_URL}/${QUESTION_FOLDER}/${encodeURIComponent(f)}`);
+      .map((f) => `${ROUNDS_URL}/${QUESTION_FOLDER}/${encodeURIComponent(f)}`);
   } catch {
     return [];
   }
 }
 
 /** The question background for this round of this game (random, no repeats until all played; null = none). */
-function questionVideo(room, roundIndex, dir = ANNOUNCE_DIR) {
+function questionVideo(room, roundIndex, dir = ROUNDS_DIR) {
   room.questionVideos = room.questionVideos || {};
   if (roundIndex in room.questionVideos) return room.questionVideos[roundIndex];
   room.videoBags = room.videoBags || {};
