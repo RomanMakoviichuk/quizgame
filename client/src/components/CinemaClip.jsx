@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import gameClock from "../game/gameClock";
+import { markAutoMuted } from "../game/audioLeveler";
 import "./CinemaClip.css";
 
 /**
@@ -99,10 +100,16 @@ export default function CinemaClip({
     v.addEventListener("ended", onEnded);
     v.addEventListener("error", onError);
     armSafety(30000); // until the real length is known
-    v.play().catch(() => {
-      // autoplay with sound refused: try muted, else skip the clip
+    const playMuted = () => {
+      // sound refused (no click on this page yet): play muted, the sound comes back on the first click
       v.muted = true;
+      markAutoMuted(v);
       v.play().catch(onError);
+    };
+    v.play().catch((err) => {
+      // only a refused autoplay mutes the clip; an interrupted play (a new load) just tries again with sound
+      if (err?.name === "NotAllowedError") playMuted();
+      else v.play().catch((e) => (e?.name === "NotAllowedError" ? playMuted() : onError()));
     });
 
     return () => {

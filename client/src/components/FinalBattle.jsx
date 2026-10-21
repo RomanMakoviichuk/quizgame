@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "./FinalBattle.css";
 import FireTitle from "./FireTitle";
 import gameClock from "../game/gameClock";
+import { markAutoMuted } from "../game/audioLeveler";
 import { playKillAndDeath, preloadDeathSounds } from "../game/deathSounds";
 
 /**
@@ -677,9 +678,11 @@ function ShadowLurker({ summon }) {
       try {
         v.currentTime = 0;
         v.volume = 0;
-        v.play().catch(() => {
-          v.muted = true;
-          v.play().catch(() => {});
+        v.play().catch((err) => {
+          if (err?.name !== "NotAllowedError") return v.play().catch(() => {});
+          v.muted = true; // sound refused: muted for now, back on the first click
+          markAutoMuted(v);
+          return v.play().catch(() => {});
         });
         fadeVolume(v, LURKER_VOLUME, LURKER_FADE_MS);
       } catch {}

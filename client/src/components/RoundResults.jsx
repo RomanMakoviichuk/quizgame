@@ -131,55 +131,63 @@ export default function RoundResults({ players = [], roundIndex = 1, scoreCorrec
       )}
       <div className="rr-shade" aria-hidden />
 
-      <p className="rr-ribbon">
-        Раунд {roundIndex} <span>·</span> Перевірка відповідей
-      </p>
-      {answer?.text && (
-        <div className="rr-answer">
-          <small>Правильна відповідь</small>
-          <b>
-            <i>{"ABCD"[answer.index] || "✓"}</i>
-            {answer.text}
-          </b>
+      {/* one column: the title and the answer, the thread with the tags under them, then the
+          mood line — in flow, so a long answer or a short laptop screen pushes the rest down */}
+      <div className="rr-stage">
+        <div className="rr-head">
+          <p className="rr-ribbon">
+            Раунд {roundIndex} <span>·</span> Перевірка відповідей
+          </p>
+          {answer?.text && (
+            <div className="rr-answer">
+              <small>Правильна відповідь</small>
+              <b>
+                <i>{"ABCD"[answer.index] || "✓"}</i>
+                {answer.text}
+              </b>
+            </div>
+          )}
         </div>
-      )}
 
-      <div className="rr-thread" aria-hidden />
-      <div className="rr-tags">
-        {list.map((p, i) => {
-          const lives = Number.isFinite(Number(p.lives)) ? Math.max(0, Number(p.lives)) : 3;
-          const gained = p.lastCorrect ? (p.isGhost ? Math.ceil(scoreCorrect * GHOST_SHARE) : scoreCorrect) : 0;
-          return (
-            <div
-              key={p.id}
-              className={`rr-tag-slot ${p.lastCorrect ? "ok" : "bad"} ${p.isGhost ? "ghost" : ""}`}
-              style={{ "--i": i }}
-            >
+        <div className="rr-line">
+          <div className="rr-thread" aria-hidden />
+          <div className="rr-tags">
+            {list.map((p, i) => {
+              const lives = Number.isFinite(Number(p.lives)) ? Math.max(0, Number(p.lives)) : 3;
+              const gained = p.lastCorrect ? (p.isGhost ? Math.ceil(scoreCorrect * GHOST_SHARE) : scoreCorrect) : 0;
+              return (
+                <div
+                  key={p.id}
+                  className={`rr-tag-slot ${p.lastCorrect ? "ok" : "bad"} ${p.isGhost ? "ghost" : ""}`}
+                  style={{ "--i": i }}
+                >
+                  <span className="rr-peg" aria-hidden />
+                  <div className="rr-tag">
+                    <img src={sprite(p, i)} alt="" />
+                    <b className="rr-name">{p.name}</b>
+                    <span className="rr-lives">{lives ? "❤".repeat(Math.min(5, lives)) : "👻"}</span>
+                    <span className="rr-score">{Number(p.score) || 0}</span>
+                    <Verdict ok={!!p.lastCorrect} />
+                    {gained > 0 && <em className="rr-plus">+{gained}</em>}
+                  </div>
+                </div>
+              );
+            })}
+            <div className="rr-tag-slot rr-total-slot" style={{ "--i": list.length }}>
               <span className="rr-peg" aria-hidden />
-              <div className="rr-tag">
-                <img src={sprite(p, i)} alt="" />
-                <b className="rr-name">{p.name}</b>
-                <span className="rr-lives">{lives ? "❤".repeat(Math.min(5, lives)) : "👻"}</span>
-                <span className="rr-score">{Number(p.score) || 0}</span>
-                <Verdict ok={!!p.lastCorrect} />
-                {gained > 0 && <em className="rr-plus">+{gained}</em>}
+              <div className="rr-tag rr-total">
+                <small>Вгадали</small>
+                <b>
+                  {right}
+                  <span>з {list.length}</span>
+                </b>
               </div>
             </div>
-          );
-        })}
-        <div className="rr-tag-slot rr-total-slot" style={{ "--i": list.length }}>
-          <span className="rr-peg" aria-hidden />
-          <div className="rr-tag rr-total">
-            <small>Вгадали</small>
-            <b>
-              {right}
-              <span>з {list.length}</span>
-            </b>
           </div>
         </div>
-      </div>
 
-      <p className="rr-mood">{mood(right, list.length)}</p>
+        <p className="rr-mood">{mood(right, list.length)}</p>
+      </div>
       <div className="rr-blackout" aria-hidden />
     </div>
   );

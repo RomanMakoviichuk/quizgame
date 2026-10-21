@@ -233,15 +233,21 @@ function seatPos(ids, id) {
   return { x: 50 + 43 * Math.cos(a), y: 50 + 40 * Math.sin(a) };
 }
 
-function Chain({ chain, namesById }) {
+function Chain({ chain, namesById, max = Infinity }) {
+  // the TV keeps one row: only the latest words (a long chain would squeeze the arena)
+  const from = Math.max(0, chain.length - max);
   return (
     <div className="hb-chain">
-      {chain.map((c, i) => (
-        <span key={`${c.word}-${i}`} className={`hb-chip ${i === chain.length - 1 ? "last" : ""} ${c.by ? "" : "start"}`}>
-          <span>{c.word}</span>
-          {c.by && <em>{namesById[c.by] || ""}</em>}
-        </span>
-      ))}
+      {from > 0 && <span className="hb-chip more">… +{from}</span>}
+      {chain.slice(from).map((c, k) => {
+        const i = from + k;
+        return (
+          <span key={`${c.word}-${i}`} className={`hb-chip ${i === chain.length - 1 ? "last" : ""} ${c.by ? "" : "start"}`}>
+            <span>{c.word}</span>
+            {c.by && <em>{namesById[c.by] || ""}</em>}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -712,7 +718,7 @@ export default function HotBombMinigame({
             </div>
           )}
         </div>
-        <Chain chain={st?.chain || []} namesById={namesById} />
+        <Chain chain={st?.chain || []} namesById={namesById} max={7} />
         {st?.phase === "done" && <div className="hb-banner">Час вийшов!</div>}
         {boomOverlay}
       </section>

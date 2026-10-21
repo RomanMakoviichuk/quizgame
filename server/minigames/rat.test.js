@@ -209,8 +209,10 @@ test("through phases: lives taken once, max one per player, winner +1, ghosts ha
   const phases = createPhases(io);
   const room = rooms.createRoom("display-sock", "cat");
   t.after(() => rooms.deleteRoom(room.code));
-  // 5 players (more than SMALL_GAME_MAX_PLAYERS): only the wrong ones play
+  // 5 players, two of them ghosts (ghosts sit minigames out): the three living ones play
   const ps = [0, 1, 2, 3, 4].map((i) => rooms.addPlayer(room, `s${i}`, `P${i}`));
+  ps[3].isGhost = true;
+  ps[4].isGhost = true;
   room.rounds = Array.from({ length: TOTAL_ROUNDS }, (_, i) => ({
     roundIndex: i + 1,
     question: { id: `q${i}`, text: `Q${i}`, options: ["a", "b", "c", "d"], correctIndex: 0 },

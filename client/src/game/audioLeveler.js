@@ -93,15 +93,56 @@ function route(el) {
   }
 }
 
+// ---------------------------------------------------------------- blocked sound
+// Until the TV page has had a click (e.g. it was reloaded mid-game) the browser
+// refuses to play anything with sound. Such plays are remembered and retried on
+// the first click; clips that fell back to playing muted get their sound back
+// then too. "sound-blocked" on window tells the «Увімкнути звук» button to show.
+const blocked = new Set(); // elements whose play() was refused and that still want to play
+const autoMuted = new Set(); // elements muted only because sound was refused
+
+/** A clip that had to start muted: unmute it on the first click (or right away when allowed). */
+export function markAutoMuted(el) {
+  if (!el) return;
+  if (navigator.userActivation?.hasBeenActive) {
+    el.muted = false;
+    return;
+  }
+  autoMuted.add(el);
+  window.dispatchEvent(new Event("sound-blocked"));
+}
+
+function unblock() {
+  for (const el of autoMuted) el.muted = false;
+  autoMuted.clear();
+  for (const el of blocked) if (el.__wantsPlay && el.paused && !el.ended) el.play().catch(() => {});
+  blocked.clear();
+}
+
 export function installAudioLeveler() {
   if (typeof window === "undefined" || ctx || !build()) return;
+  // for checking the sound from the console: window.__audio.ctx.state, .tracks
+  window.__audio = { get ctx() { return ctx; }, tracks, blocked, autoMuted };
   const resume = () => {
     if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    unblock();
   };
   ["pointerdown", "keydown", "touchstart"].forEach((ev) => window.addEventListener(ev, resume, { passive: true }));
   const play = HTMLMediaElement.prototype.play;
+  const pause = HTMLMediaElement.prototype.pause;
   HTMLMediaElement.prototype.play = function levelAndPlay(...args) {
     route(this);
-    return play.apply(this, args);
+    this.__wantsPlay = true;
+    const p = play.apply(this, args);
+    p?.catch?.((err) => {
+      if (err?.name !== "NotAllowedError") return;
+      blocked.add(this);
+      window.dispatchEvent(new Event("sound-blocked"));
+    });
+    return p;
+  };
+  HTMLMediaElement.prototype.pause = function pauseAndForget(...args) {
+    this.__wantsPlay = false;
+    return pause.apply(this, args);
   };
 }

@@ -44,8 +44,8 @@ module.exports = {
   MINIGAME_SAFE_POINTS: 5, // every other contestant who kept their life
   // Who plays the minigames: with this many living players or fewer EVERYONE plays,
   // but only those who got the round's question wrong can lose a life in it; with
-  // more, only the players who got it wrong play.
-  SMALL_GAME_MAX_PLAYERS: 4,
+  // more, only the players who got it wrong play. = MAX_PLAYERS: everybody always plays.
+  SMALL_GAME_MAX_PLAYERS: 8,
 
   // Timings (ms)
   ANSWER_TIMER_MS: 15000, // ends earlier when everyone has answered

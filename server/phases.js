@@ -521,11 +521,11 @@ module.exports = function createPhases(io) {
     const wrong = (p) => !(p.hasAnswered && p.lastAnswerIndex === correctIndex);
     if (!living.some(wrong)) return;
 
-    // Small game (<= SMALL_GAME_MAX_PLAYERS alive): everybody plays — each module
-    // sees every living player as "wrong", so all of them take part — but the
-    // ones who answered right are protected: the minigame can't take their life.
-    // Bigger game: only the wrong ones play — also in the minigames that would
-    // otherwise take everybody alive (bomb, tune, math rush).
+    // Up to SMALL_GAME_MAX_PLAYERS alive (today: the whole room) everybody plays —
+    // each module sees every living player as "wrong", so all of them take part —
+    // but the ones who answered right are protected: the minigame can't take their
+    // life. Bigger game: only the wrong ones play — also in the minigames that
+    // would otherwise take everybody alive (bomb, tune, math rush).
     const everyonePlays = living.length <= SMALL_GAME_MAX_PLAYERS;
     const protectedIds = everyonePlays ? living.filter((p) => !wrong(p)).map((p) => p.id) : [];
     const pool = everyonePlays

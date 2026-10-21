@@ -411,7 +411,7 @@ test("4 or fewer alive: everyone plays the minigame, but only the wrong ones can
   assert.equal(players[1].score, 0, "lost the minigame: no minigame points");
 });
 
-test("more than 4 alive: only the wrong ones play", (t) => {
+test("5 alive: everybody plays, the right ones are protected", (t) => {
   const { phases, room, players, cleanup } = setup(5);
   t.after(cleanup);
   const prev = process.env.MINIGAME_DEMO;
@@ -425,12 +425,12 @@ test("more than 4 alive: only the wrong ones play", (t) => {
     p.lastAnswerIndex = i < 2 ? 2 : 0; // P0, P1 wrong
   });
   phases.emitScores(room);
-  assert.deepEqual([...room.minigame.contestantIds].sort(), [players[0].id, players[1].id].sort());
-  assert.deepEqual(room.minigame.protectedIds, []);
+  assert.deepEqual([...room.minigame.contestantIds].sort(), players.map((p) => p.id).sort());
+  assert.deepEqual([...room.minigame.protectedIds].sort(), players.slice(2).map((p) => p.id).sort());
 });
 
-test("more than 4 alive: an everyone-plays minigame (the bomb) also takes only the wrong ones", (t) => {
-  const { phases, room, players, cleanup } = setup(6);
+test("8 alive (full room): the bomb takes everybody", (t) => {
+  const { phases, room, players, cleanup } = setup(8);
   t.after(cleanup);
   const prev = process.env.MINIGAME_DEMO;
   process.env.MINIGAME_DEMO = "hotBomb";
@@ -444,7 +444,7 @@ test("more than 4 alive: an everyone-plays minigame (the bomb) also takes only t
   });
   phases.emitScores(room);
   assert.equal(room.minigame.minigameId, "hotBomb");
-  assert.deepStrictEqual([...room.minigame.contestantIds].sort(), players.slice(0, 3).map((p) => p.id).sort());
+  assert.deepStrictEqual([...room.minigame.contestantIds].sort(), players.map((p) => p.id).sort());
 });
 
 test("a silent TV never hangs the game: every handshake has a fallback", (t) => {

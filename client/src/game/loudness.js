@@ -150,11 +150,11 @@ export function kindOfSrc(src) {
   return kindOf(path);
 }
 
-/** Linear gain that brings this file to its kind's target (1 when unmeasured), clamped to 0.15..6. */
+/** Linear gain that brings this file to its kind's target (1 when unmeasured), clamped to 0.15..10. */
 export function gainFor(src) {
   const path = pathOf(src);
   const measured = MEASURED_DB[path];
   if (measured == null) return 1;
   const g = 10 ** ((TARGET_DB[kindOf(path)] - measured) / 20);
-  return Math.max(0.15, Math.min(6, g));
+  return Math.max(0.15, Math.min(10, g));
 }

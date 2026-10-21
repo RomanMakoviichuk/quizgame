@@ -463,3 +463,15 @@
 /* the holder's phone shows the same bomb heating up */
 .hb-phone-bomb .hb-bomb { width: 8.5rem; }
 
+
+/* TV on a laptop (short screens): the bomb is sized by the height too, so it never
+   reaches the players above and below it; the chain stays one row */
+.hb-display .hb-bomb.big { width: clamp(7rem, min(22vw, 30vh), 20rem); }
+.hb-display .hb-chain { flex-wrap: nowrap; max-width: 96vw; overflow: hidden; }
+.hb-chip.more { justify-content: center; opacity: 0.6; border-style: dashed; }
+@media (max-height: 760px) and (min-width: 641px) {
+  .hb-display { padding-top: 1.2vh; padding-bottom: 1.2vh; }
+  .hb-display .hb-seat img { height: clamp(3.2rem, 9vh, 5.5rem); }
+  .hb-display .hb-need { font-size: clamp(0.85rem, 1.5vw, 1.25rem); }
+  .hb-display .hb-holder-line { font-size: clamp(0.8rem, 1.3vw, 1.1rem); }
+}

@@ -275,3 +275,27 @@
   font-size: 2.4vh;
   box-shadow: inset 0 0 0 0.3vh rgba(46, 125, 50, 0.4);
 }
+
+/* layout: the title and the answer side by side, the thread under them, the mood line
+   under the tags — all in one column, so nothing ever covers the right answer */
+.rr-stage {
+  position: absolute;
+  top: 1.6vh;
+  left: 1.6vw;
+  right: var(--rr-free-right);
+  display: flex;
+  flex-direction: column;
+  gap: 1.4vh;
+}
+.rr-head { display: flex; align-items: flex-start; gap: 1.2vw; }
+.rr-stage .rr-ribbon { position: relative; top: auto; left: auto; flex: none; margin-top: 0.8vh; white-space: nowrap; }
+.rr-stage .rr-answer { position: relative; top: auto; left: auto; right: auto; flex: 1 1 auto; min-width: 0; }
+.rr-line { position: relative; }
+.rr-stage .rr-thread { left: -0.6vw; right: -0.6vw; top: 1vh; }
+.rr-stage .rr-tags { position: relative; left: auto; right: auto; top: auto; }
+.rr-stage .rr-mood { position: relative; left: auto; right: auto; top: auto; margin-top: 1vh; }
+/* narrow / short screens: the answer goes under the title, at full width */
+@media (max-aspect-ratio: 16/10), (max-width: 1100px) {
+  .rr-head { flex-direction: column; gap: 0.8vh; }
+  .rr-stage .rr-answer { align-self: stretch; }
+}
