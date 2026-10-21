@@ -619,6 +619,13 @@ function App() {
         setLobbyCategoryName(r.categoryName || "");
         setRoundIndex(r.roundIndex || 1);
         setGameState(r.gameState || GAME_PHASE.WAITING);
+        if (r.introStage) {
+          // the TV is on the intro / the rules: back to «Зачекайте…» (with the admin's skip button)
+          setIntroActiveMobile(r.introStage === "intro");
+          setRulesActiveMobile(r.introStage === "rules");
+          setScreen("mobileWait");
+          return;
+        }
         if (!r.gameState || r.gameState === GAME_PHASE.WAITING) {
           setScreen("lobby");
           return;

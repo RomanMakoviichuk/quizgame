@@ -227,6 +227,7 @@ module.exports = function registerHandlers(io) {
       const room = roomOf();
       if (!room || room.gameState !== GAME_STATE.WAITING || !socket.isDisplay)
         return;
+      room.rulesStarted = true; // a phone that reconnects now gets the «Пропустити правила» screen back
       io.to(room.code).emit("rulesStarted");
     });
 
@@ -443,6 +444,10 @@ module.exports = function registerHandlers(io) {
         players,
         isAdmin: player.isAdmin,
         categoryName: category ? category.name : null,
+        // still WAITING while the TV plays the intro / the rules: the phone goes back to
+        // «Зачекайте…» with the admin's skip button, not to the lobby
+        introStage:
+          room.gameState === GAME_STATE.WAITING && room.introStarted ? (room.rulesStarted ? "rules" : "intro") : null,
         ...phases.resumeSnapshot(room, player),
       });
       io.to(code).emit("playersUpdate", { players });

@@ -113,6 +113,8 @@ module.exports = function createPhases(io) {
     if (result.error) {
       // Not enough questions / category unavailable — abort back to the lobby.
       room.gameState = GAME_STATE.WAITING;
+      room.introStarted = false;
+      room.rulesStarted = false;
       to(room).emit("gameError", {
         message: result.error,
         available: result.available,

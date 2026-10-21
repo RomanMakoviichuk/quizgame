@@ -54,6 +54,7 @@ function createRoom(displaySocketId, categoryId, difficulty = "mixed") {
     timers: new Set(),
     deferredWhilePaused: [], // display handshakes that arrived during a pause
     introStarted: false,
+    rulesStarted: false, // the TV is on the rules video (still WAITING)
 
     // active minigame contest for the round just played (see minigames/)
     minigame: null,
