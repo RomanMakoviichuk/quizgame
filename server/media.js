@@ -201,7 +201,46 @@ function questionVideo(room, roundIndex, dir = ROUNDS_DIR) {
   return url;
 }
 
+/**
+ * Everything the TV can download ahead of the game (the «Завантаження» screen,
+ * client/src/components/MediaPreloader.jsx): every video, sound and picture
+ * under client/public/assets, as URL paths with a version that changes when
+ * the file does. The «Вгадай мелодію» songs stay out (they're secret and only
+ * played through /tune/<token>).
+ */
+const ASSETS_DIR = path.join(__dirname, "..", "client", "public", "assets");
+const PRELOAD_EXT = /\.(mp4|webm|mov|m4v|mp3|wav|ogg|m4a|png|jpe?g|webp|gif|svg)$/i;
+const PRELOAD_SKIP = /^minigames\/name-that-tune\/songs(\/|$)/i;
+
+function preloadManifest(dir = ASSETS_DIR) {
+  const files = [];
+  const walk = (rel) => {
+    let entries;
+    try {
+      entries = fs.readdirSync(path.join(dir, rel), { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const r = rel ? `${rel}/${e.name}` : e.name;
+      if (PRELOAD_SKIP.test(r)) continue;
+      if (e.isDirectory()) walk(r);
+      else if (e.isFile() && PRELOAD_EXT.test(e.name)) {
+        const st = fs.statSync(path.join(dir, r));
+        files.push({
+          path: `/assets/${r.split("/").map(encodeURIComponent).join("/")}`,
+          size: st.size,
+          ver: `${st.size}-${Math.floor(st.mtimeMs)}`,
+        });
+      }
+    }
+  };
+  walk("");
+  return { files, total: files.reduce((n, f) => n + f.size, 0) };
+}
+
 module.exports = {
+  preloadManifest,
   ROUNDS_DIR,
   ROUNDS_URL,
   ANNOUNCE_DIR,

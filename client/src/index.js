@@ -4,6 +4,7 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { installAudioLeveler } from './game/audioLeveler';
+import MediaPreloader from './components/MediaPreloader';
 
 // the TV: one loudness for every sound and video (phones play little and are left alone)
 const isPhone = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent);
@@ -12,7 +13,8 @@ if (!isPhone) installAudioLeveler();
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    {/* the TV downloads all media up front so nothing stalls mid-game; phones start right away */}
+    {isPhone ? <App /> : <MediaPreloader><App /></MediaPreloader>}
   </React.StrictMode>
 );
 

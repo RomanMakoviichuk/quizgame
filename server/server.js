@@ -67,6 +67,8 @@ app.use(media.ROUNDS_URL, express.static(media.ROUNDS_DIR));
 app.get("/api/media/round-videos", (_req, res) =>
   res.json(Object.fromEntries(Object.keys(media.POOLS).map((k) => [k, media.listPool(k)])))
 );
+// what the TV downloads up front (see client/src/components/MediaPreloader.jsx)
+app.get("/api/media/manifest", (_req, res) => res.set("Cache-Control", "no-store").json(media.preloadManifest()));
 
 // «Вгадай мелодію»: clips are played from opaque per-round URLs, so the file
 // name (= the answer) never reaches a phone; the song folder itself is closed.
@@ -82,6 +84,11 @@ app.use((req, res, next) => {
   if (p.toLowerCase().startsWith("/assets/minigames/name-that-tune/songs")) return res.sendStatus(404);
   next();
 });
+
+// the TV's media cache worker must always be the fresh one (Cloudflare caches .js for hours otherwise)
+app.get("/media-sw.js", (_req, res) =>
+  res.set("Cache-Control", "no-store").sendFile(path.join(__dirname, "..", "client", "build", "media-sw.js"))
+);
 
 // Serve the production client build when it exists. In development the CRA dev
 // server on :3000 serves the app and its assets instead — this is a no-op then.
