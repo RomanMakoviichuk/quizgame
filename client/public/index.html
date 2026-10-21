@@ -6,10 +6,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playpen+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- a static screen: no pinch zoom, no double-tap zoom, no zoom into a field -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#2a170b" />
     <!-- dark brown right away, before any CSS or picture has loaded (no grey flash on phones) -->
-    <style>html,body{background:#2a170b;}</style>
+    <style>html,body{background:#2a170b;}html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%;}</style>
+    <script>
+      // iOS Safari ignores user-scalable=no: stop its pinch zoom by hand
+      // (double-tap zoom is off through touch-action: quick taps in the minigames stay taps)
+      (function () {
+        var stop = function (e) { e.preventDefault(); };
+        document.addEventListener("gesturestart", stop, { passive: false });
+        document.addEventListener("gesturechange", stop, { passive: false });
+        document.addEventListener("touchmove", function (e) {
+          if (e.touches.length > 1 || (e.scale !== undefined && e.scale !== 1)) e.preventDefault();
+        }, { passive: false });
+      })();
+    </script>
     <meta
       name="description"
       content="Хто є хто! — хорор-вікторина для компанії: великий екран і телефони гравців"

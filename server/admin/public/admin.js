@@ -75,6 +75,24 @@
     });
   }
 
+  // Line icons (the stroke follows the text colour).
+  var ICON_PATHS = {
+    dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+    folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    question: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><circle cx="12" cy="17" r=".6" fill="currentColor"/>',
+    swap: '<path d="M7 4v14m0 0-3-3m3 3 3-3M17 20V6m0 0-3 3m3-3 3 3"/>',
+    check: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+    pause: '<circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/>',
+    bolt: '<path d="M13 3 5 14h6l-1 7 8-11h-6z"/>',
+    logout: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 8l-4 4 4 4M6 12h10"/>',
+  };
+  function icon(name) {
+    var span = document.createElement("span");
+    span.className = "icon";
+    span.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON_PATHS[name] + "</svg>";
+    return span;
+  }
+
   // -------------------------------------------------------------- login
 
   function renderLogin() {
@@ -108,15 +126,15 @@
 
   function shell(activeRoute, content) {
     var routes = [
-      ["#/dashboard", "📊", "Дашборд"],
-      ["#/categories", "📚", "Категорії"],
-      ["#/questions", "❓", "Питання"],
-      ["#/import", "⇅", "Імпорт / Експорт", "Імпорт"],
+      ["#/dashboard", "dashboard", "Дашборд"],
+      ["#/categories", "folder", "Категорії"],
+      ["#/questions", "question", "Питання"],
+      ["#/import", "swap", "Імпорт / Експорт", "Імпорт"],
     ];
     // one nav: in the top bar on a computer, a tab bar at the bottom on a phone
     var nav = h("nav", { class: "nav" }, routes.map(function (r) {
       return h("a", { href: r[0], class: activeRoute === r[0] ? "active" : "" }, [
-        h("span", { class: "nav-ico", text: r[1] }),
+        h("span", { class: "nav-ico" }, [icon(r[1])]),
         h("span", { class: "nav-long", text: r[2] }),
         h("span", { class: "nav-short", text: r[3] || r[2] }),
       ]);
@@ -128,9 +146,9 @@
         h("span", { class: "brand-sub", text: "адмін" }),
       ]),
       nav,
-      h("button", { class: "btn secondary small logout", text: "Вийти", onclick: function () {
+      h("button", { class: "btn secondary small logout", onclick: function () {
         api("POST", "/api/admin/logout").catch(function () {}).then(logout);
-      } }),
+      } }, [icon("logout"), h("span", { text: "Вийти" })]),
     ]);
     app.innerHTML = "";
     app.appendChild(top);
@@ -165,11 +183,11 @@
       container.innerHTML = "";
       container.appendChild(h("h1", { class: "page-title", text: "Дашборд" }));
       container.appendChild(h("div", { class: "stat-grid" }, [
-        stat(s.totalCategories, "Категорій", "📚"),
-        stat(s.activeCategories, "Активних категорій", "✅"),
-        stat(s.inactiveCategories, "Неактивних категорій", "💤"),
-        stat(s.totalQuestions, "Питань усього", "❓"),
-        stat(s.activeQuestions, "Активних питань", "⚡"),
+        stat(s.totalCategories, "Категорій", "folder"),
+        stat(s.activeCategories, "Активних категорій", "check"),
+        stat(s.inactiveCategories, "Неактивних категорій", "pause"),
+        stat(s.totalQuestions, "Питань усього", "question"),
+        stat(s.activeQuestions, "Активних питань", "bolt"),
       ]));
       var rows = s.perCategory.map(function (c) {
         return h("tr", {}, [
@@ -186,9 +204,9 @@
     }).catch(function (e) { toast(e.message, "err"); });
   }
 
-  function stat(num, lbl, icon) {
+  function stat(num, lbl, iconName) {
     return h("div", { class: "stat" }, [
-      h("div", { class: "ico", text: icon || "" }),
+      h("div", { class: "ico" }, [icon(iconName)]),
       h("div", { class: "num", text: String(num) }),
       h("div", { class: "lbl", text: lbl }),
     ]);

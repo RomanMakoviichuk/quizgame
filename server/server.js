@@ -9,6 +9,7 @@
  */
 const express = require("express");
 const http = require("http");
+const fs = require("fs");
 const path = require("path");
 const { Server } = require("socket.io");
 
@@ -44,10 +45,20 @@ app.use(apiRoutes);
 
 // Admin panel — a self-contained static SPA (no build step). http://host:PORT/admin
 const adminDir = path.join(__dirname, "admin", "public");
-app.use("/admin", express.static(adminDir));
-app.get(/^\/admin(\/.*)?$/, (_req, res) =>
-  res.sendFile(path.join(adminDir, "index.html"))
-);
+// Cloudflare tells browsers to keep .css/.js for 4 hours, so a phone mixed the old
+// admin.css with a new admin.js. The page links them as admin.css?v=<mtime>: a new
+// file is a new URL. The page itself is never cached.
+function adminPage(_req, res) {
+  const html = fs.readFileSync(path.join(adminDir, "index.html"), "utf8").replace(
+    /(href|src)="(admin\.(?:css|js))"/g,
+    (_m, attr, file) => `${attr}="${file}?v=${Math.floor(fs.statSync(path.join(adminDir, file)).mtimeMs)}"`
+  );
+  res.set("Cache-Control", "no-store").type("html").send(html);
+}
+app.get("/admin", (req, res, next) => (req.path === "/admin" ? res.redirect(301, "/admin/") : next()));
+app.get(["/admin/", "/admin/index.html"], adminPage);
+app.use("/admin", express.static(adminDir, { index: false }));
+app.get(/^\/admin(\/.*)?$/, adminPage);
 
 // Round videos (assets/rounds/: announcements, question backgrounds, after-round
 // and result clips) are drop-in folders served straight from client/public, so
