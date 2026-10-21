@@ -2095,7 +2095,8 @@ body {
     0 12px 40px rgba(0, 0, 0, 0.45),
     0 0 28px rgba(57, 181, 255, 0.26),
     inset 0 0 18px rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(5px);
+  /* no backdrop blur: the box changes with every typed letter over a playing video,
+     and the blur behind an 80%-opaque panel was barely visible anyway */
   font-size: clamp(1.2rem, 2vw, 2rem);
   text-align: center;
 }
