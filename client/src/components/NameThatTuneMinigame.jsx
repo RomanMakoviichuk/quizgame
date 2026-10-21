@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./NameThatTuneMinigame.css";
 import gameClock from "../game/gameClock";
+import { playVictory } from "../game/victory";
 
 /**
  * «Вгадай мелодію» (id: tune) — 5 rounds, speed scoring. Server-authoritative
@@ -538,7 +539,7 @@ export default function NameThatTuneMinigame({
     if (sKey.startsWith("c")) sfx("/assets/sounds/beep.mp3", 0.4);
     else if (sKey.startsWith("r")) sfx("/assets/sounds/notification.mp3", 0.45);
     else {
-      sfx("/assets/sounds/win.mp3", 0.4);
+      playVictory(0.5);
       if ((results?.loserIds || []).length) gameClock.setTimeout(() => sfx(LOSE_SOUNDS[Math.floor(Math.random() * 4)], 0.8), 1600);
     }
   }, [sKey, results]);

@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import "./TugOfWarMinigame.css";
 import gameClock from "../game/gameClock";
+import { playVictory } from "../game/victory";
 import { createTugFx } from "../game/tugFx";
 
 /**
@@ -521,7 +522,7 @@ export default function TugOfWarMinigame({
   useEffect(() => {
     if (!isDisplay || st?.phase !== "done" || endSoundRef.current) return;
     endSoundRef.current = true;
-    sfx("/assets/sounds/win.mp3", 0.4);
+    playVictory(0.55);
   }, [isDisplay, st?.phase]);
 
   useEffect(() => {

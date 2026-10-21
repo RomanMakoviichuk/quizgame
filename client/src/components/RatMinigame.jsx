@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./RatMinigame.css";
 import gameClock from "../game/gameClock";
+import { playVictory } from "../game/victory";
 
 /**
  * «Серед нас: КРИСА» (id: rat) — a secret vote over a phone charger.
@@ -455,7 +456,7 @@ export default function RatMinigame({
     if (isDisplay) {
       if (stage === 0) sfx("/assets/sounds/bell.mp3", 0.5);
       if (stage === 3) {
-        if (outcome.scenario === "trust") sfx("/assets/sounds/win.mp3", 0.45);
+        if (outcome.scenario === "trust") playVictory(0.55);
         else {
           sfx("/assets/sounds/result.mp3", 0.5);
           gameClock.setTimeout(() => sfx(randomLoseSound(), 0.8), 1400);

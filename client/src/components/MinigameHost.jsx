@@ -6,6 +6,8 @@ import TugOfWarMinigame from "./TugOfWarMinigame";
 import RatMinigame from "./RatMinigame";
 import MemoryMinigame from "./MemoryMinigame";
 import NameThatTuneMinigame from "./NameThatTuneMinigame";
+import PerfectSecondMinigame from "./PerfectSecondMinigame";
+import TapeMeasureMinigame from "./TapeMeasureMinigame";
 
 /**
  * Renders the active minigame by id — the single switch point for every minigame.
@@ -25,6 +27,8 @@ const MINIGAME_COMPONENTS = {
   rat: RatMinigame,
   memory: MemoryMinigame,
   tune: NameThatTuneMinigame,
+  perfectSecond: PerfectSecondMinigame,
+  tapeMeasure: TapeMeasureMinigame,
 };
 
 export default function MinigameHost({ minigameId = "trueFalse", ...props }) {

@@ -146,6 +146,24 @@ function wire(bot) {
     const think = m?.[2] === "×" ? rnd(1800, 4000) : rnd(900, 2600);
     later(startsIn + think, () => mg("mathRush:answer", { seq: q.seq, choice: idx }));
   });
+  // Ідеальна секунда: stops around 10.00 s — looser the sooner the timer hides; now and then forgets
+  s.on("ps:round", (d) => {
+    if (!bot.inMg || Math.random() < 0.08) return;
+    const offset = Number(d.serverNow) - Date.now(); // the bots share the server's machine: no latency
+    const spread = 300 + (10000 - (Number(d.hideAt) - Number(d.startAt))) * 0.18;
+    const at = Number(d.startAt) + 10000 + (Math.random() + Math.random() - 1) * spread;
+    later(at - offset - Date.now(), () => mg("ps:stop", { round: d.round, at: Date.now() + offset }));
+  });
+  // До міліметра: starts measuring, locks a few mm off (by eye); now and then too late
+  s.on("tm:round", (d) => {
+    if (!bot.inMg) return;
+    const startsIn = Number(d.startAt) - Number(d.serverNow);
+    later(startsIn + rnd(500, 1500), () => mg("tm:busy", { round: d.round }));
+    if (Math.random() < 0.08) return;
+    const spread = 9; // by eye: a few mm off
+    const mm = Number(d.targetMm) + (Math.random() + Math.random() - 1) * spread;
+    later(startsIn + rnd(4000, 16000), () => mg("tm:lock", { round: d.round, mm }));
+  });
   s.on("rps:round", (d) => {
     if (!(d.alive || []).includes(bot.id)) return;
     later(rnd(800, 4000), () => mg("rps:choose", { choice: pick(["rock", "scissors", "paper", "solder", "yanukovych"]) }));

@@ -4,6 +4,7 @@ import FireTitle from "./FireTitle";
 import gameClock from "../game/gameClock";
 import { markAutoMuted } from "../game/audioLeveler";
 import { playKillAndDeath, preloadDeathSounds } from "../game/deathSounds";
+import { randomVictory } from "../game/victory";
 
 /**
  * Фінальна гонка гри «Хто є хто!».
@@ -176,6 +177,7 @@ export default function FinalBattle({ uiMode = "display", socket, intro, myPlaye
     win: useRef(null),
     step: useRef(null),
   };
+  const [winSrc] = useState(randomVictory); // the champion's fanfare: a random victory track
   const play = (ref, volume = 1) => {
     if (!isDisplay || !ref.current) return;
     try {
@@ -427,7 +429,7 @@ function DisplayScene({ race, stage, introPart, countNum, question, timeLeft, an
       <audio ref={audio.ambient} src="/assets/final/music.mp3" loop preload="auto" />
       <audio ref={audio.sting} src="/assets/sounds/chain.mp3" preload="auto" />
       <audio ref={audio.beep} src="/assets/sounds/beep.mp3" preload="auto" />
-      <audio ref={audio.win} src="/assets/sounds/win.mp3" preload="auto" />
+      <audio ref={audio.win} src={winSrc} preload="auto" />
       <audio ref={audio.step} src="/assets/sounds/notification.mp3" preload="auto" />
 
       <StitchDefs />

@@ -285,7 +285,7 @@ test("pause: the answer window and the final race stand still until resume", (t)
   t.after(cleanup);
   t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
 
-  // main quiz: 15s answer window
+  // main quiz: 25s answer window
   room.gameState = GAME_STATE.QUESTION_PLAY;
   phases.startAnswerPhase(room);
   t.mock.timers.tick(5000);
@@ -455,7 +455,7 @@ test("a silent TV never hangs the game: every handshake has a fallback", (t) => 
   // a round everybody got wrong -> results with a minigame next; the TV says nothing from here on
   room.gameState = GAME_STATE.QUESTION_PLAY;
   phases.startAnswerPhase(room);
-  t.mock.timers.tick(20_000); // answer window runs out, nobody answered
+  t.mock.timers.tick(30_000); // answer window runs out, nobody answered
   assert.equal(room.gameState, GAME_STATE.SCORES);
   assert.ok(room.minigame, "a minigame is armed");
 
@@ -507,7 +507,7 @@ test("a minigame's hard stop counts from its sync, not from its start", (t) => {
   t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
   room.gameState = GAME_STATE.QUESTION_PLAY;
   phases.startAnswerPhase(room);
-  t.mock.timers.tick(20_000); // nobody answered -> a minigame
+  t.mock.timers.tick(30_000); // nobody answered -> a minigame
   phases.handleScoresDone(room); // the TV's results are over: the minigame starts
   assert.equal(room.minigame.minigameId, "trueFalse");
   const total = room.minigame.def.TOTAL_DURATION_MS;

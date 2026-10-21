@@ -48,7 +48,7 @@ module.exports = {
   SMALL_GAME_MAX_PLAYERS: 8,
 
   // Timings (ms)
-  ANSWER_TIMER_MS: 15000, // ends earlier when everyone has answered
+  ANSWER_TIMER_MS: 25000, // ends earlier when everyone has answered
   INTRO_DURATION_MS: 180000, // hard cap on the cinematic intro
   ROUND1_ANSWER_DELAY_MS: 6000, // round 1: fixed delay from question start to answer phase (2.5s scene + the text)
 

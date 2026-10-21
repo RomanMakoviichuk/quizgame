@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import "./HotBombMinigame.css";
 import gameClock from "../game/gameClock";
 import { playKillAndDeath } from "../game/deathSounds";
+import { playVictory } from "../game/victory";
 import { createHotBombFx } from "../game/hotBombFx";
 
 /**
@@ -519,6 +520,14 @@ export default function HotBombMinigame({
   useEffect(() => () => fxRef.current?.destroy(), []);
 
   const isResults = !!results && results.minigameId === "hotBomb";
+  const cheeredRef = useRef(false);
+  useEffect(() => {
+    // the survivors' fanfare on the results
+    if (!isResults || !isDisplay || cheeredRef.current) return;
+    cheeredRef.current = true;
+    const t = gameClock.setTimeout(() => playVictory(0.5), 1200);
+    return () => gameClock.clearTimeout(t);
+  }, [isResults, isDisplay]);
   useEffect(() => {
     if (!isResults || !isDisplay || sceneDoneRef.current) return;
     const t = gameClock.setTimeout(() => {

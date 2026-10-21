@@ -119,10 +119,16 @@ export const MEASURED_DB = {
   // more music
 };
 
+/** By-ear corrections on top of the measured level (linear factor): what still sounds off in the game. */
+export const TRIM = {
+  "/assets/minigames/true-false/game.mp4": 1.2, // the host under the True/False round sounded quiet next to the rest
+  "/assets/minigames/true-false/aftermath.mp4": 1.2,
+};
+
 const isMusic = (p) =>
   /\/background\.mp3$|\/music\.mp3$|\/end-music\.mp3$/i.test(p);
 const isVoice = (p) => /\.mp4$/i.test(p);
-const isFanfare = (p) => /\/sounds\/win\.mp3$|\/happy\.mp3$/i.test(p);
+const isFanfare = (p) => /\/sounds\/win\.mp3$|\/sounds\/victory\/|\/happy\.mp3$/i.test(p); // the music steps back under them
 
 // the monster lurking in the final's shadow: a quiet background growl, not a voice (no ducking)
 const isAmbient = (p) => /\/final\/monster\.mp4$/i.test(p);
@@ -155,6 +161,6 @@ export function gainFor(src) {
   const path = pathOf(src);
   const measured = MEASURED_DB[path];
   if (measured == null) return 1;
-  const g = 10 ** ((TARGET_DB[kindOf(path)] - measured) / 20);
+  const g = 10 ** ((TARGET_DB[kindOf(path)] - measured) / 20) * (TRIM[path] ?? 1);
   return Math.max(0.15, Math.min(10, g));
 }

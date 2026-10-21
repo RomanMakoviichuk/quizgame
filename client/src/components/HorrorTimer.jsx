@@ -4,11 +4,11 @@ import gameClock from "../game/gameClock";
 
 /**
  * Хоррор-тематичний таймер: жирні білі цифри + мілісекунди.
- * @param {number} timeLeft - Залишок часу в секундах (15 -> 0), для синхронізації
+ * @param {number} timeLeft - Залишок часу в секундах (totalSeconds -> 0), для синхронізації
  * @param {string} questionId - ID питання (для скидання таймера)
  * @param {number} totalSeconds - Загальна тривалість
  */
-export default function HorrorTimer({ timeLeft, questionId, totalSeconds = 15 }) {
+export default function HorrorTimer({ timeLeft, questionId, totalSeconds = 25 }) {
   const [display, setDisplay] = useState({ sec: timeLeft, ms: 0 });
   const startTimeRef = useRef(null);
   const questionIdRef = useRef(questionId);

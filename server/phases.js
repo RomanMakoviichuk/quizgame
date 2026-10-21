@@ -8,7 +8,7 @@
  *   QUESTION_PLAY      emit "questionPlay"
  *     -> round 1: fixed timer            -> startAnswerPhase()
  *     -> rounds 2-10: "questionPlayDone" -> startAnswerPhase()
- *   ANSWER_PHASE       emit "answerPhase" + 15s timer
+ *   ANSWER_PHASE       emit "answerPhase" + 25s timer
  *     -> all answered OR timeout         -> checkAnswers() -> emitScores()
  *   SCORES            emit "scores"; a minigame contest is armed here
  *     -> display: "scoresDone"           -> handleScoresDone()
@@ -190,6 +190,7 @@ module.exports = function createPhases(io) {
     to(room).emit("answerPhase", {
       question: roundData.question,
       roundIndex: room.currentRoundIndex + 1,
+      answerMs: ANSWER_TIMER_MS,
     });
     room.questionTimer = clock.schedule(room, () => checkAnswers(room), ANSWER_TIMER_MS);
   }
@@ -767,6 +768,7 @@ module.exports = function createPhases(io) {
     if (room.gameState === GAME_STATE.ANSWER_PHASE) {
       snap.question = room.rounds[room.currentRoundIndex]?.question || null;
       snap.answerMsLeft = Math.max(0, (room.answerEndsAt || 0) - clock.now(room));
+      snap.answerMs = ANSWER_TIMER_MS;
     }
     const mg = room.minigame;
     if (room.gameState === GAME_STATE.SCORES && mg && mg.startEmitted && !mg.resolved) {

@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import "./MathRushMinigame.css";
 import gameClock from "../game/gameClock";
+import { playVictory } from "../game/victory";
 
 /**
  * "Тупоматика" (id: mathRush) — server-authoritative arithmetic sprint.
@@ -269,7 +270,7 @@ export default function MathRushMinigame({
     if (!isResults) return;
     const loserId = (results.loserIds || [])[0];
     if (isDisplay) {
-      sfx("/assets/sounds/win.mp3", 0.35);
+      playVictory(0.5);
       if (loserId) {
         const t = gameClock.setTimeout(() => sfx(randomLoseSound(), 0.8), 1600);
         return () => gameClock.clearTimeout(t);

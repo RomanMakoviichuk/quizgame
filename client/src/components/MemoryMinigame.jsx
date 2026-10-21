@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./MemoryMinigame.css";
 import gameClock from "../game/gameClock";
+import { playVictory } from "../game/victory";
 import { COLOR_IDS, MEMORY_COLORS, TintedItem, preloadTints, tintedUrl } from "../game/tintItem";
 
 /**
@@ -245,7 +246,7 @@ export default function MemoryMinigame({
     if (isDisplay && revealStage === 0) sfx("/assets/sounds/result.mp3", 0.45);
     if (revealStage === 1) {
       if (isDisplay) {
-        sfx("/assets/sounds/win.mp3", 0.35);
+        playVictory(0.5);
         if ((results.loserIds || []).length) gameClock.setTimeout(() => sfx(LOSE_SOUNDS[Math.floor(Math.random() * 4)], 0.8), 1500);
       } else if (amLoser) sfx(LOSE_SOUNDS[Math.floor(Math.random() * 4)], 0.8);
     }

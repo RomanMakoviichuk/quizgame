@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import "./RockPaperScissorsMinigame.css";
 import gameClock from "../game/gameClock";
+import { playVictory } from "../game/victory";
 
 /**
  * "Камінь-Ножиці-Папір-Паяльник-Янукович" — server-authoritative elimination
@@ -384,6 +385,7 @@ export default function RockPaperScissorsMinigame({
   const [eliminated, setEliminated] = useState(false);
   const [now, setNow] = useState(() => gameClock.now());
   const sceneDoneRef = useRef(false);
+  const cheeredRef = useRef(false); // the winner's fanfare, once
   const beepRef = useRef(null);
 
   useEffect(() => {
@@ -484,6 +486,10 @@ export default function RockPaperScissorsMinigame({
   useEffect(() => {
     if (!results || results.minigameId !== "rps" || !isDisplay) return;
     sfx("/assets/sounds/bell.mp3", 0.6);
+    if (!cheeredRef.current) {
+      cheeredRef.current = true;
+      gameClock.setTimeout(() => playVictory(0.5), 900); // the winner
+    }
     if (sceneDoneRef.current) return;
     const t = gameClock.setTimeout(() => {
       sceneDoneRef.current = true;

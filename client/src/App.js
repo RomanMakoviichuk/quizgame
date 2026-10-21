@@ -21,6 +21,7 @@ const ROUND_GAP_MS = 700; // rounds 2-9: a pause in the dark before the round an
 const MINIGAME_GAP_MS = 1200;
 const PRE_ROUND_DARK_MS = 1500; // after the welcome, before round 1
 const PHONE_MG_RESULT_MS = 6500; // phone: how long a minigame's result screen stays // a pause in the dark between the round's results and its minigame
+const ANSWER_SECONDS = 25; // fallback; the server sends the real answer time with answerPhase
 const QUESTION_REVEAL_MS = 2500; // the question scene's video plays alone this long before the question appears
 import DarkPause from "./components/DarkPause";
 import FunBackdrop from "./components/FunBackdrop";
@@ -371,7 +372,8 @@ function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showIntroFade, setShowIntroFade] = useState(false);
   const [countdownNum, setCountdownNum] = useState(null);
-  const [answerTimeLeft, setAnswerTimeLeft] = useState(15);
+  const [answerTimeLeft, setAnswerTimeLeft] = useState(ANSWER_SECONDS);
+  const [answerTotal, setAnswerTotal] = useState(ANSWER_SECONDS);
   // TV: the question appears a beat after its scene starts (QUESTION_REVEAL_MS), every round
   const [questionRevealed, setQuestionRevealed] = useState(false);
   const [showRoundResultIcons, setShowRoundResultIcons] = useState(false);
@@ -633,6 +635,7 @@ function App() {
         setScreen("game");
         if (r.gameState === GAME_PHASE.ANSWER_PHASE && r.question) {
           setQuestion({ ...r.question, index: r.roundIndex, total: TOTAL_ROUNDS });
+          if (r.answerMs) setAnswerTotal(Math.round(r.answerMs / 1000));
           setAnswerTimeLeft(Math.max(0, Math.ceil((r.answerMsLeft || 0) / 1000)));
           setSelectedAnswer(r.answered ? r.answerIndex : null);
           setAnswerResult(null);
@@ -937,7 +940,9 @@ function App() {
       setSelectedAnswer(null);
       setAnswerResult(null);
       setGameState(GAME_PHASE.ANSWER_PHASE);
-      setAnswerTimeLeft(15);
+      const total = Math.round((d.answerMs || ANSWER_SECONDS * 1000) / 1000);
+      setAnswerTotal(total);
+      setAnswerTimeLeft(total);
     });
     socket.on("answerResult", (d) => setAnswerResult(d));
     socket.on("answerBeep", () => {
@@ -2064,7 +2069,7 @@ function App() {
           autoPlay
           loop
           playsInline
-          muted={gameState === GAME_PHASE.FINAL_BATTLE || gameState === GAME_PHASE.FINISHED || (["rps", "hotBomb", "tugOfWar", "mathRush", "rat", "memory", "tune"].includes(minigameId) && !!(trueFalseStart || trueFalseResultsPayload))}
+          muted={gameState === GAME_PHASE.FINAL_BATTLE || gameState === GAME_PHASE.FINISHED || (["rps", "hotBomb", "tugOfWar", "mathRush", "rat", "memory", "tune", "perfectSecond", "tapeMeasure"].includes(minigameId) && !!(trueFalseStart || trueFalseResultsPayload))}
           onLoadedMetadata={(e) => {
             const isQuestionPhase =
               isDisplay &&
@@ -2317,7 +2322,7 @@ function App() {
                   <HorrorTimer
                     timeLeft={answerTimeLeft}
                     questionId={question?.id}
-                    totalSeconds={15}
+                    totalSeconds={answerTotal}
                   />
                 </div>
               </>
@@ -2336,7 +2341,7 @@ function App() {
             <HorrorTimer
               timeLeft={answerTimeLeft}
               questionId={question?.id}
-              totalSeconds={15}
+              totalSeconds={answerTotal}
             />
           </div>
           <div className="options">
