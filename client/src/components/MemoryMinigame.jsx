@@ -551,9 +551,10 @@ export default function MemoryMinigame({
         {head}
         <div className="mm-color-rows">
           {task.items.map((it, i) => (
-            <div key={it.id} className={`mm-color-row ${colors[i] ? "set" : ""}`}>
+            <div key={it.id} className={`mm-color-row ${colors[i] ? "set" : ""}`} style={colors[i] ? { "--c": MEMORY_COLORS[colors[i]].css } : undefined}>
               <span className="mm-row-num">{i + 1}</span>
-              <TintedItem item={it} color={colors[i]} className="mm-color-item" />
+              {/* stays black-and-white while answering: the pick shows on the swatch and the row frame */}
+              <TintedItem item={it} color={null} className="mm-color-item" />
               <div className={`mm-swatches n${(task.colors || COLOR_IDS).length}`}>
                 {(task.colors || COLOR_IDS).map((c) => (
                   <button

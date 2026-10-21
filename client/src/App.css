@@ -4429,3 +4429,123 @@ html.phone-locked *::-webkit-scrollbar { width: 0; height: 0; }
 .m-answer.ok em { color: #2e7d32; }
 .m-answer.bad { border-color: #e53935; }
 .m-answer.bad em { color: #c62828; }
+
+/* ===== Desktop/TV lobby: centred layout (site → code card → info chips → actions) ===== */
+.lobby-ui-overlay {
+  justify-content: center;
+  gap: clamp(1rem, 3.5vh, 2.5rem);
+  padding: clamp(1.5rem, 5vh, 3.5rem) clamp(1rem, 4vw, 3rem);
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.lobby-ui-overlay .lobby-wait-text {
+  position: static;
+  rotate: 0deg;
+  max-width: none;
+  margin: 0;
+  font-size: clamp(1.4rem, 2.6vw, 2.4rem);
+}
+
+.lobby-ui-overlay .lobby-wait-highlight {
+  font-size: 1.15em;
+  margin: 0 0.2em;
+}
+
+.lobby-ui-overlay .lobby-room-code {
+  position: static;
+  rotate: 0deg;
+  margin: 0;
+  min-width: min(520px, 90vw);
+  padding: clamp(1.25rem, 3.5vh, 2.25rem) clamp(2rem, 5vw, 4rem);
+  border-radius: 24px;
+  background: rgba(12, 6, 8, 0.6);
+  border: 1px solid rgba(255, 70, 70, 0.35);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.55),
+    0 0 50px rgba(185, 6, 6, 0.22),
+    inset 0 0 30px rgba(185, 6, 6, 0.12);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.lobby-ui-overlay .lobby-room-code .room-code-label {
+  rotate: 0deg;
+  margin: 0;
+  font-size: clamp(1rem, 1.6vw, 1.4rem);
+  letter-spacing: 0.35em;
+  color: #ff4d4d;
+}
+
+.lobby-ui-overlay .lobby-room-code .room-code-value {
+  margin: 0.15em 0 0.1em;
+  padding-left: 0.35em; /* balances the trailing letter-spacing */
+  font-size: clamp(3.5rem, 10vh, 6.5rem);
+  line-height: 1.1;
+  letter-spacing: 0.35em;
+}
+
+.lobby-ui-overlay .lobby-room-code .room-code-hint {
+  margin: 0;
+  font-size: clamp(0.95rem, 1.3vw, 1.2rem);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.lobby-info {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem 1rem;
+}
+
+.lobby-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 150px;
+  padding: 0.6rem 1.4rem;
+  border-radius: 16px;
+  background: rgba(10, 10, 14, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-family: "Playpen Sans", cursive;
+}
+
+.lobby-chip-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(176, 216, 255, 0.8);
+}
+
+.lobby-chip-value {
+  font-size: clamp(1.1rem, 1.6vw, 1.45rem);
+  font-weight: 700;
+  color: #fff;
+}
+
+.lobby-ui-overlay .lobby-actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0;
+  padding-bottom: 0;
+}
+
+.lobby-ui-overlay .lobby-actions .btn-start {
+  width: auto;
+  min-width: 240px;
+  height: 60px;
+  padding: 0 2rem;
+  font-size: 1.25rem;
+  border-radius: 14px;
+}
+
+.lobby-ui-overlay .lobby-exit-spiderverse {
+  width: auto;
+  min-width: 200px;
+  height: 60px;
+}

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
  * colour (saturated enough) gets the target hue, keeping its shading; white,
  * black, grey and metal parts (eyes, outlines, the cone's silver stripes) stay
  * as they are; transparent pixels stay transparent. The original files are
- * never changed. `color = null` paints the coloured parts grey (no hint).
+ * never changed. `color = null` turns the whole picture black-and-white (no hint).
  *
  * Results are cached per (picture, colour), so a colour is computed once.
  */
@@ -58,6 +58,14 @@ function hsv(h, s, v) {
 
 function recolor(data, color) {
   const target = color ? MEMORY_COLORS[color] : null;
+  if (!target) {
+    // black-and-white: every pixel to its luminance, so no part hints at the colour
+    for (let k = 0; k < data.length; k += 4) {
+      const y = Math.round(0.299 * data[k] + 0.587 * data[k + 1] + 0.114 * data[k + 2]);
+      data[k] = data[k + 1] = data[k + 2] = y;
+    }
+    return;
+  }
   for (let k = 0; k < data.length; k += 4) {
     if (data[k + 3] === 0) continue;
     const r = data[k] / 255;
@@ -70,25 +78,17 @@ function recolor(data, color) {
     // how much this pixel is "the item's colour" (soft edges, no halos)
     const w = clamp01((s - 0.18) / 0.17) * clamp01((v - 0.08) / 0.12);
     if (w === 0) continue;
-    let nr;
-    let ng;
-    let nb;
-    if (!target) {
-      const grey = 0.22 + 0.62 * v;
-      nr = ng = nb = grey;
-    } else {
-      let vv = v;
-      if (color === "yellow") vv = 0.38 + 0.62 * v; // dark yellow turns olive otherwise
-      else if (color === "blue") vv = Math.min(1, v * 1.05);
-      [nr, ng, nb] = hsv(target.hue, Math.max(s, 0.72), vv);
-    }
+    let vv = v;
+    if (color === "yellow") vv = 0.38 + 0.62 * v; // dark yellow turns olive otherwise
+    else if (color === "blue") vv = Math.min(1, v * 1.05);
+    const [nr, ng, nb] = hsv(target.hue, Math.max(s, 0.72), vv);
     data[k] = Math.round((r * (1 - w) + nr * w) * 255);
     data[k + 1] = Math.round((g * (1 - w) + ng * w) * 255);
     data[k + 2] = Math.round((b * (1 - w) + nb * w) * 255);
   }
 }
 
-/** A data URL of `item` painted `color` (null = neutral grey). Cached. */
+/** A data URL of `item` painted `color` (null = black-and-white). Cached. */
 export function tintedUrl(item, color) {
   if (!item?.src) return Promise.reject(new Error("no item"));
   const key = `${item.src}|${color || "none"}`;

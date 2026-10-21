@@ -1832,30 +1832,38 @@ function App() {
             <div className="lobby-ui-overlay">
               <p className="lobby-wait-text">
                 Переходьте на{" "}
-                <span className="lobby-wait-highlight">{PUBLIC_SITE}</span>
-                <br />
+                <span className="lobby-wait-highlight">{PUBLIC_SITE}</span>{" "}
                 якщо не боїтесь!
               </p>
               <section className="lobby-room-code">
-                <p className="room-code-label">Код кімнати:</p>
+                <p className="room-code-label">Код кімнати</p>
                 <p className="room-code-value">
                   <FireTitle text={roomCode} />
                 </p>
                 <p className="room-code-hint">Введіть код на телефоні</p>
               </section>
-              <p className="lobby-connected-count">
-                Підключилось гравців {players.length}/{MAX_ROOM_PLAYERS}
-              </p>
-              {lobbyCategoryName && (
-                <p className="lobby-connected-count">
-                  Категорія: {lobbyCategoryName}
-                </p>
-              )}
-              {lobbyDifficulty && (
-                <p className="lobby-connected-count">
-                  Складність: {(GAME_DIFFICULTIES.find((d) => d.id === lobbyDifficulty) || {}).label || lobbyDifficulty}
-                </p>
-              )}
+              <div className="lobby-info">
+                <div className="lobby-chip">
+                  <span className="lobby-chip-label">Гравці</span>
+                  <span className="lobby-chip-value">
+                    {players.length}/{MAX_ROOM_PLAYERS}
+                  </span>
+                </div>
+                {lobbyCategoryName && (
+                  <div className="lobby-chip">
+                    <span className="lobby-chip-label">Категорія</span>
+                    <span className="lobby-chip-value">{lobbyCategoryName}</span>
+                  </div>
+                )}
+                {lobbyDifficulty && (
+                  <div className="lobby-chip">
+                    <span className="lobby-chip-label">Складність</span>
+                    <span className="lobby-chip-value">
+                      {(GAME_DIFFICULTIES.find((d) => d.id === lobbyDifficulty) || {}).label || lobbyDifficulty}
+                    </span>
+                  </div>
+                )}
+              </div>
               <section className="lobby-actions">
                 {gameState === "waiting" && isAdmin && (
                   <button className="btn-start" onClick={withClick(handleStartGame)}>

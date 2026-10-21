@@ -466,3 +466,8 @@ p.mm-lives.dead { margin: 0; font-weight: 800; color: #ffd0d4; }
   border-width: 3px;
 }
 .mm-swatch.on { transform: scale(1.1); }
+
+/* colour task: the items are black-and-white (grayscale also covers the untinted fallback picture) */
+.mm-color-item,
+.mm-card.grey .mm-item { filter: grayscale(1); }
+.mm-color-row.set { border-color: var(--c); box-shadow: 0 0 12px var(--c); }
