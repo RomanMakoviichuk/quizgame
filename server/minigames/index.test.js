@@ -5,12 +5,14 @@ const { MINIGAMES, selectForRound } = require("./index");
 const ids = (list) => list.map((d) => d.ID);
 const ALL = ids(MINIGAMES);
 
-test("a fresh game: every minigame is a candidate, tug of war (RARE) first", () => {
-  for (let k = 0; k < 20; k++) {
+test("a fresh game: every minigame is a candidate, in random order", () => {
+  const firsts = new Set();
+  for (let k = 0; k < 60; k++) {
     const list = ids(selectForRound(1, []));
-    assert.strictEqual(list[0], "tugOfWar");
+    firsts.add(list[0]);
     assert.deepStrictEqual([...list].sort(), [...ALL].sort());
   }
+  assert.ok(firsts.size >= 3, `the first one varies: ${[...firsts]}`);
 });
 
 test("a played minigame is never offered again while others are unplayed", () => {
@@ -26,19 +28,18 @@ test("the unplayed ones come in random order", () => {
   assert.ok(firsts.size >= 3, `only ${[...firsts]}`);
 });
 
-test("a whole game: all 8 once, then a new cycle that never starts with the previous one", () => {
+test("a whole game: every minigame at most once; once all are played, no more minigames", () => {
   const history = [];
-  for (let round = 1; round <= ALL.length + 4; round++) {
+  for (let round = 1; round <= 9; round++) {
     const list = ids(selectForRound(round, history));
-    history.push(list[0]); // pretend the first candidate's trigger always holds
+    if (list.length) history.push(list[0]); // pretend the first candidate's trigger always holds
   }
-  assert.deepStrictEqual([...history.slice(0, ALL.length)].sort(), [...ALL].sort(), "no repeats in the first cycle");
-  assert.notStrictEqual(history[ALL.length], history[ALL.length - 1]);
-  for (let i = 1; i < history.length; i++) assert.notStrictEqual(history[i], history[i - 1]);
+  assert.deepStrictEqual([...history].sort(), [...ALL].sort(), "each one exactly once");
+  assert.deepStrictEqual(ids(selectForRound(9, history)), []);
 });
 
-test("a skipped trigger (odd count) keeps tug of war first for later rounds", () => {
-  const list = ids(selectForRound(2, ["rps"]));
+test("from round 5 an unplayed RARE minigame (tug of war) goes first", () => {
+  const list = ids(selectForRound(5, ["rps"]));
   assert.strictEqual(list[0], "tugOfWar");
   assert.ok(!list.includes("rps"));
 });

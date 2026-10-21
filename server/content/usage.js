@@ -71,7 +71,8 @@ function createUsage(file = FILE, { log = IN_TESTS ? () => {} : console.log } = 
     const left = [...all].filter((id) => !used.has(id)).length;
     if (all.size > 0 && left === 0) {
       e.cycle += 1;
-      e.used = [];
+      // the ones just played open the new cycle as used, so the next game doesn't replay them
+      e.used = all.size > ids.length ? ids.filter((id) => all.has(id)) : [];
       log(`[usage] ${kind}: all ${all.size} played — cycle ${e.cycle} starts over`);
     } else {
       e.used = [...used].filter((id) => all.has(id)); // forget ids that no longer exist

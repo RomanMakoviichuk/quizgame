@@ -80,6 +80,9 @@ test("levels: rounds 1-3 easy (2 colours), 4-6 medium (3), 7+ hard (4)", () => {
       const r = mem.makeRound(mem.items, 5, size);
       assert.equal(r.palette.length, size);
       assert.ok(r.lineup.every((it) => r.palette.includes(it.color)), "every item is painted from the palette");
+      const counts = r.palette.map((c) => r.lineup.filter((it) => it.color === c).length);
+      assert.ok(counts.every((k) => k >= 1), "every palette colour is used");
+      assert.ok(Math.max(...counts) <= Math.ceil(5 / size), `colours dealt evenly: ${counts}`);
       palettes.add(r.palette.join(","));
     }
     if (size < 4) assert.ok(palettes.size > 1, "the palette itself is random");

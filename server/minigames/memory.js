@@ -9,7 +9,8 @@
  *     hard -> 4 (the maximum); "mixed" (climbing) climbs with the quiz round:
  *     1-3 easy, 4-6 medium, 7+ hard — the palette is a random pick of that many colours;
  *   - COUNT different items picked at random from server/data/memoryItems.json,
- *     in a random order, each with a random colour from the palette;
+ *     in a random order; the palette's colours are dealt evenly between them
+ *     (each colour at least once when there are enough items);
  *   - the mode: "order" (put the items back in order) or "color" (give each
  *     item its colour), 50/50. The mode stays secret until the answer phase.
  *
@@ -105,11 +106,15 @@ function makeRound(items = ITEMS, count = CONFIG.COUNT, paletteSize = COLORS.len
   const fits = items.filter((it) => it.colors.some((c) => palette.includes(c)));
   const pool = fits.length >= Math.min(count, items.length) ? fits : items;
   const n = Math.min(count, pool.length);
+  // the colours are dealt evenly: every palette colour shows up (enough items permitting)
+  // and none more than ceil(n / palette) times — no row of nearly one colour
+  const deck = shuffle(Array.from({ length: n }, (_, i) => palette[i % palette.length]));
   const lineup = shuffle(pool)
     .slice(0, n)
-    .map((it) => {
+    .map((it, i) => {
       const allowed = it.colors.filter((c) => palette.includes(c));
-      return { id: it.id, name: it.name, src: it.src, fallback: it.fallback, color: pick(allowed.length ? allowed : palette) };
+      const color = allowed.includes(deck[i]) ? deck[i] : pick(allowed.length ? allowed : palette);
+      return { id: it.id, name: it.name, src: it.src, fallback: it.fallback, color };
     });
   // keep the palette in the canonical order (blue, red, green, yellow) for the buttons
   // dev: MEMORY_MODE=color|order always deals that task (to check one screen)

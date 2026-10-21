@@ -15,10 +15,12 @@ test("draws only unused items until all are played, then starts over", () => {
     }
   }
   assert.equal(seen.size, 9);
-  // 1 new left: it comes first, the cycle resets, 2 repeats count for the next cycle
+  // 1 new left: it comes first, the cycle resets; all 3 of this draw count for the
+  // next cycle, so the next game doesn't replay what was just played
   const last = u.draw("k", items, 3);
   assert.ok(!seen.has(last[0].id));
-  assert.equal(u.usedSet("k").size, 2);
+  assert.deepEqual([...u.usedSet("k")].sort(), last.map((x) => x.id).sort());
+  for (const x of u.draw("k", items, 3)) assert.ok(!last.some((y) => y.id === x.id), "no replay right after the reset");
 });
 
 test("record: false only peeks; mark records later", () => {
