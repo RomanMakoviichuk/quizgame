@@ -974,7 +974,7 @@ export default function TapeMeasureMinigame({
             <div key={r.index} className="tm-round-card" style={{ "--i": i }}>
               <small>Замір {r.index}</small>
               <b>{r.level}</b>
-              <span>ціль 3–7,5 см · {ROUND_RULE}</span>
+              <span>ціль 1–7 см · {ROUND_RULE}</span>
             </div>
           ))}
         </div>

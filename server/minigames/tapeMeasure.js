@@ -8,8 +8,8 @@
  * While the TV explains the rules the phones already pull a practice tape (not
  * scored): the blade shows its scale, so everybody gets a feel for a few cm and
  * sees how far their phone goes. Then three rounds with a
- * blank blade (judge it by eye), each a random target of 3.0–7.5 cm (whole mm,
- * the rounds' targets at least MIN_GAP_MM apart) — the same for everybody.
+ * blank blade (judge it by eye), each a random whole number of cm from TARGET_CM
+ * (three different ones) — the same for everybody.
  * A round: the host's line + the target, then ROUND_MS to pull and press
  * ЗАФІКСУВАТИ. Closes when everybody has locked or the time is up; no lock ->
  * «Не встиг».
@@ -40,8 +40,7 @@ const CONFIG = {
   LAST_RESULT_MS: 10000, // round 3's result, then the final board
   CLOSE_GRACE_MS: 400, // a lock made before the end may arrive a little after it
   MAX_MM: 200, // no phone is taller than 20 cm: anything past it is nonsense
-  TARGET_MM: [30, 75], // every round's target, whole mm (fits the shortest phone)
-  MIN_GAP_MM: 8, // the three targets differ at least this much
+  TARGET_CM: [1, 7], // every round's target: a whole cm in this range (fits the shortest phone)
 };
 
 const ROUNDS = [
@@ -57,29 +56,22 @@ const TOTAL_DURATION_MS =
 // ---------------------------------------------------------------- pure helpers
 
 /**
- * The targets in mm, one per round: random whole mm in TARGET_MM, every two at
- * least MIN_GAP_MM apart. Dev: TAPE_TARGETS=4.5,6,7.2 (cm) fixes them.
+ * The targets in mm, one per round: three different whole cm from TARGET_CM.
+ * Dev: TAPE_TARGETS=4,6,2 (cm) fixes them.
  */
 function pickTargets(env = process.env.TAPE_TARGETS, cfg = CONFIG) {
-  const [lo, hi] = cfg.TARGET_MM;
+  const [lo, hi] = cfg.TARGET_CM;
   const fixed = String(env || "")
     .split(",")
     .map((x) => Math.round(Number(x) * 10))
     .filter((mm) => Number.isFinite(mm) && mm > 0 && mm <= cfg.MAX_MM);
-  const out = [];
-  for (let i = 0; i < ROUNDS.length; i++) {
-    if (fixed[i] != null) {
-      out.push(fixed[i]);
-      continue;
-    }
-    let mm;
-    for (let tries = 0; tries < 50; tries++) {
-      mm = crypto.randomInt(lo, hi + 1);
-      if (out.every((o) => Math.abs(o - mm) >= cfg.MIN_GAP_MM)) break;
-    }
-    out.push(mm);
+  const free = [];
+  for (let c = lo; c <= hi; c++) free.push(c * 10);
+  for (let i = free.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(0, i + 1);
+    [free[i], free[j]] = [free[j], free[i]];
   }
-  return out;
+  return ROUNDS.map((_, i) => fixed[i] ?? free[i % free.length]);
 }
 
 /** A lock's length in mm: a number, on the tape (0..MAX_MM), to 0.1 mm. Else null. */

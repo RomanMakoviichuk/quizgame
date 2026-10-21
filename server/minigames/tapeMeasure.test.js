@@ -51,18 +51,21 @@ const toStart = (h) => h.advance(CONFIG.PRACTICE_MS + CONFIG.INTRO_MS);
 
 // ---------------------------------------------------------------- pure
 
-test("targets: whole mm in 3.0–7.5 cm, the three apart; TAPE_TARGETS (cm) fixes them", () => {
+test("targets: three different whole cm from 1 to 7; TAPE_TARGETS (cm) fixes them", () => {
+  const seen = new Set();
   for (let k = 0; k < 300; k++) {
     const t = tm.pickTargets("");
     assert.equal(t.length, 3);
+    assert.equal(new Set(t).size, 3, `${t}: no repeats`);
     t.forEach((mm) => {
-      assert.ok(Number.isInteger(mm));
-      assert.ok(mm >= CONFIG.TARGET_MM[0] && mm <= CONFIG.TARGET_MM[1], `${mm}`);
+      assert.equal(mm % 10, 0, "a whole cm");
+      assert.ok(mm >= CONFIG.TARGET_CM[0] * 10 && mm <= CONFIG.TARGET_CM[1] * 10, `${mm}`);
+      seen.add(mm);
     });
-    for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) assert.ok(Math.abs(t[i] - t[j]) >= CONFIG.MIN_GAP_MM, `${t}`);
   }
-  assert.deepEqual(tm.pickTargets("4.5,6,8.7"), [45, 60, 87]);
-  assert.equal(tm.pickTargets("4.5,x,99").length, 3, "bad values fall back to random");
+  assert.equal(seen.size, 7, "every cm from 1 to 7 comes up");
+  assert.deepEqual(tm.pickTargets("4,6,2"), [40, 60, 20]);
+  assert.equal(tm.pickTargets("4,x,99").length, 3, "bad values fall back to random");
 });
 
 test("a lock's length: on the tape, to 0.1 mm, never negative or past its end", () => {
