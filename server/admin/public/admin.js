@@ -78,10 +78,12 @@
   // -------------------------------------------------------------- login
 
   function renderLogin() {
-    var input = h("input", { type: "password", placeholder: "Пароль", id: "pw" });
-    var btn = h("button", { class: "btn", text: "Увійти" });
+    var input = h("input", { type: "password", placeholder: "Пароль", id: "pw", autocomplete: "current-password" });
+    var btn = h("button", { class: "btn block", text: "Увійти" });
     var form = h("form", { class: "card" }, [
-      h("h2", { text: "Керування питаннями" }),
+      h("div", { class: "login-logo", text: "🎉" }),
+      h("h2", { text: "Хто є хто!" }),
+      h("p", { class: "login-sub", text: "Керування питаннями" }),
       h("p", { class: "hint", text: "Введіть пароль адміністратора." }),
       h("div", { class: "field" }, [input]),
       btn,
@@ -106,22 +108,27 @@
 
   function shell(activeRoute, content) {
     var routes = [
-      ["#/dashboard", "Дашборд"],
-      ["#/categories", "Категорії"],
-      ["#/questions", "Питання"],
-      ["#/import", "Імпорт / Експорт"],
+      ["#/dashboard", "📊", "Дашборд"],
+      ["#/categories", "📚", "Категорії"],
+      ["#/questions", "❓", "Питання"],
+      ["#/import", "⇅", "Імпорт / Експорт", "Імпорт"],
     ];
-    var nav = h("nav", {}, routes.map(function (r) {
-      return h("a", {
-        href: r[0],
-        class: activeRoute === r[0] ? "active" : "",
-        text: r[1],
-      });
+    // one nav: in the top bar on a computer, a tab bar at the bottom on a phone
+    var nav = h("nav", { class: "nav" }, routes.map(function (r) {
+      return h("a", { href: r[0], class: activeRoute === r[0] ? "active" : "" }, [
+        h("span", { class: "nav-ico", text: r[1] }),
+        h("span", { class: "nav-long", text: r[2] }),
+        h("span", { class: "nav-short", text: r[3] || r[2] }),
+      ]);
     }));
     var top = h("div", { class: "topbar" }, [
-      h("span", { class: "brand", text: "🎉 Хто є хто!" }),
+      h("span", { class: "brand" }, [
+        h("span", { class: "brand-logo", text: "🎉" }),
+        h("span", { text: "Хто є хто!" }),
+        h("span", { class: "brand-sub", text: "адмін" }),
+      ]),
       nav,
-      h("button", { class: "btn secondary small", text: "Вийти", onclick: function () {
+      h("button", { class: "btn secondary small logout", text: "Вийти", onclick: function () {
         api("POST", "/api/admin/logout").catch(function () {}).then(logout);
       } }),
     ]);
@@ -130,6 +137,20 @@
     var wrap = h("div", { class: "wrap" });
     wrap.appendChild(content);
     app.appendChild(wrap);
+  }
+
+  // A table whose cells know their column (data-label): on a phone every row
+  // turns into a card and the column names become the captions inside it.
+  function table(headers, rows, empty) {
+    rows.forEach(function (tr) {
+      Array.prototype.forEach.call(tr.children, function (td, i) {
+        if (headers[i]) td.setAttribute("data-label", headers[i]);
+      });
+    });
+    return h("div", { class: "table-wrap" }, [h("table", { class: "cards" }, [
+      h("thead", {}, [h("tr", {}, headers.map(function (t) { return h("th", { text: t }); }))]),
+      h("tbody", {}, rows.length ? rows : [h("tr", { class: "empty" }, [h("td", { colspan: headers.length, text: empty })])]),
+    ])]);
   }
 
   function loadingCard() { return h("div", { class: "card", text: "Завантаження…" }); }
@@ -142,37 +163,32 @@
     container.appendChild(loadingCard());
     api("GET", "/api/admin/stats").then(function (s) {
       container.innerHTML = "";
-      container.appendChild(h("h1", { text: "Дашборд" }));
+      container.appendChild(h("h1", { class: "page-title", text: "Дашборд" }));
       container.appendChild(h("div", { class: "stat-grid" }, [
-        stat(s.totalCategories, "Категорій"),
-        stat(s.activeCategories, "Активних категорій"),
-        stat(s.inactiveCategories, "Неактивних категорій"),
-        stat(s.totalQuestions, "Питань усього"),
-        stat(s.activeQuestions, "Активних питань"),
+        stat(s.totalCategories, "Категорій", "📚"),
+        stat(s.activeCategories, "Активних категорій", "✅"),
+        stat(s.inactiveCategories, "Неактивних категорій", "💤"),
+        stat(s.totalQuestions, "Питань усього", "❓"),
+        stat(s.activeQuestions, "Активних питань", "⚡"),
       ]));
       var rows = s.perCategory.map(function (c) {
         return h("tr", {}, [
-          h("td", { text: (c.icon ? c.icon + " " : "") + c.name }),
+          h("td", { class: "cell-title", text: (c.icon ? c.icon + " " : "") + c.name }),
           h("td", {}, [h("span", { class: "tag " + (c.isActive ? "on" : "off"), text: c.isActive ? "активна" : "вимкнена" })]),
-          h("td", { text: String(c.total) }),
-          h("td", { text: String(c.active) }),
+          h("td", { class: "num-cell", text: String(c.total) }),
+          h("td", { class: "num-cell", text: String(c.active) }),
         ]);
       });
       container.appendChild(h("div", { class: "card" }, [
         h("h3", { text: "Питання за категоріями" }),
-        h("table", {}, [
-          h("thead", {}, [h("tr", {}, [
-            h("th", { text: "Категорія" }), h("th", { text: "Статус" }),
-            h("th", { text: "Питань" }), h("th", { text: "Активних" }),
-          ])]),
-          h("tbody", {}, rows.length ? rows : [h("tr", {}, [h("td", { colspan: 4, text: "Немає категорій" })])]),
-        ]),
+        table(["Категорія", "Статус", "Питань", "Активних"], rows, "Немає категорій"),
       ]));
     }).catch(function (e) { toast(e.message, "err"); });
   }
 
-  function stat(num, lbl) {
+  function stat(num, lbl, icon) {
     return h("div", { class: "stat" }, [
+      h("div", { class: "ico", text: icon || "" }),
       h("div", { class: "num", text: String(num) }),
       h("div", { class: "lbl", text: lbl }),
     ]);
@@ -191,18 +207,18 @@
     var container = h("div");
     shell("#/categories", container);
     container.appendChild(h("div", { class: "toolbar" }, [
-      h("h1", { text: "Категорії", class: "grow" }),
+      h("h1", { text: "Категорії", class: "grow page-title" }),
       h("button", { class: "btn", text: "+ Нова категорія", onclick: function () { categoryModal(null); } }),
     ]));
-    var tableCard = h("div", { class: "card", text: "Завантаження…" });
+    var tableCard = h("div", { class: "card flush", text: "Завантаження…" });
     container.appendChild(tableCard);
 
     loadCategories().then(function (cats) {
       tableCard.innerHTML = "";
       var rows = cats.map(function (c) {
         return h("tr", {}, [
-          h("td", {}, [
-            h("div", { text: (c.icon ? c.icon + " " : "") + c.name }),
+          h("td", { class: "cell-title" }, [
+            h("div", { class: "title", text: (c.icon ? c.icon + " " : "") + c.name }),
             h("div", { class: "hint", text: c.slug }),
             c.description ? h("div", { class: "hint", text: c.description }) : null,
           ]),
@@ -225,13 +241,7 @@
           ]),
         ]);
       });
-      tableCard.appendChild(h("table", {}, [
-        h("thead", {}, [h("tr", {}, [
-          h("th", { text: "Назва" }), h("th", { text: "Статус" }),
-          h("th", { text: "Питання" }), h("th", { text: "Дії" }),
-        ])]),
-        h("tbody", {}, rows.length ? rows : [h("tr", {}, [h("td", { colspan: 4, text: "Ще немає категорій" })])]),
-      ]));
+      tableCard.appendChild(table(["Назва", "Статус", "Питання", "Дії"], rows, "Ще немає категорій"));
     }).catch(function (e) { toast(e.message, "err"); });
   }
 
@@ -314,11 +324,11 @@
     Promise.resolve(state.categories.length ? state.categories : loadCategories()).then(function () {
       container.innerHTML = "";
       container.appendChild(h("div", { class: "toolbar" }, [
-        h("h1", { text: "Питання", class: "grow" }),
+        h("h1", { text: "Питання", class: "grow page-title" }),
         h("button", { class: "btn", text: "+ Нове питання", onclick: function () { questionModal(null); } }),
       ]));
 
-      var searchInput = h("input", { type: "text", placeholder: "Пошук за текстом…", value: qState.search });
+      var searchInput = h("input", { type: "search", placeholder: "Пошук за текстом…", value: qState.search });
       var catSelect = h("select", {}, [h("option", { value: "", text: "Усі категорії" })].concat(
         state.categories.map(function (c) {
           return h("option", { value: c.id, text: c.name, selected: c.id === qState.category ? "selected" : false });
@@ -356,15 +366,15 @@
         el.addEventListener("change", apply);
       });
 
-      container.appendChild(h("div", { class: "toolbar" }, [
-        h("div", { class: "grow" }, [label("Пошук"), searchInput]),
+      container.appendChild(h("div", { class: "filters card" }, [
+        h("div", { class: "f-search" }, [label("Пошук"), searchInput]),
         h("div", {}, [label("Категорія"), catSelect]),
         h("div", {}, [label("Статус"), statusSelect]),
         h("div", {}, [label("Складність"), diffSelect]),
         h("div", {}, [label("Сортування"), sortSelect]),
       ]));
 
-      var tableCard = h("div", { class: "card", text: "Завантаження…" });
+      var tableCard = h("div", { class: "card flush", text: "Завантаження…" });
       container.appendChild(tableCard);
 
       function loadRows() {
@@ -377,12 +387,12 @@
           var rows = res.items.map(function (q) {
             var correct = (q.answers.find(function (a) { return a.isCorrect; }) || {}).text || "—";
             return h("tr", {}, [
-              h("td", {}, [
-                h("div", { text: q.text }),
+              h("td", { class: "cell-title" }, [
+                h("div", { class: "title", text: q.text }),
                 h("div", { class: "hint", text: "складність: " + (DIFF_LABELS[q.difficulty] || "середня (не вказана)") }),
               ]),
               h("td", { text: q.categoryName }),
-              h("td", { text: correct }),
+              h("td", { class: "correct-cell", text: correct }),
               h("td", {}, [h("span", { class: "tag " + (q.isActive ? "on" : "off"), text: q.isActive ? "активне" : "вимкнене" })]),
               h("td", { class: "actions-cell" }, [
                 h("button", { class: "btn small secondary", text: "Редагувати", onclick: function () { questionModal(q); } }),
@@ -405,16 +415,10 @@
               ]),
             ]);
           });
-          tableCard.appendChild(h("table", {}, [
-            h("thead", {}, [h("tr", {}, [
-              h("th", { text: "Питання" }), h("th", { text: "Категорія" }),
-              h("th", { text: "Правильна" }), h("th", { text: "Статус" }), h("th", { text: "Дії" }),
-            ])]),
-            h("tbody", {}, rows.length ? rows : [h("tr", {}, [h("td", { colspan: 5, text: "Нічого не знайдено" })])]),
-          ]));
+          tableCard.appendChild(table(["Питання", "Категорія", "Правильна", "Статус", "Дії"], rows, "Нічого не знайдено"));
           tableCard.appendChild(h("div", { class: "pager" }, [
             h("button", { class: "btn small secondary", text: "‹ Назад", disabled: res.page <= 1 ? "disabled" : false, onclick: function () { qState.page = res.page - 1; loadRows(); } }),
-            h("span", { text: "Стор. " + res.page + " / " + res.totalPages + " · усього " + res.total }),
+            h("span", { class: "pager-info", html: "<b>" + res.page + "</b> / " + res.totalPages + " · усього " + res.total }),
             h("button", { class: "btn small secondary", text: "Далі ›", disabled: res.page >= res.totalPages ? "disabled" : false, onclick: function () { qState.page = res.page + 1; loadRows(); } }),
           ]));
         }).catch(function (e) { toast(e.message, "err"); });
@@ -439,7 +443,7 @@
     var textInput = h("textarea", {}, [q ? q.text : ""]);
     var diffSelect = h("select", {}, [h("option", { value: "", text: "— без складності —" })].concat(
       (state.meta.difficulties || []).map(function (d) {
-        return h("option", { value: d, text: d, selected: q && q.difficulty === d ? "selected" : false });
+        return h("option", { value: d, text: DIFF_LABELS[d] || d, selected: q && q.difficulty === d ? "selected" : false });
       })
     ));
     var activeCheck = h("input", { type: "checkbox" });
@@ -502,6 +506,7 @@
         api("POST", "/api/admin/questions", payload).then(function () {
           toast("Додано. Форма очищена.", "ok");
           if (mb) mb.remove();
+        document.body.classList.remove("modal-open");
           questionModal({ categoryId: catSelect.value });
           viewQuestions();
         }).catch(function (e) { showErrors(errBox, e); });
@@ -514,13 +519,13 @@
   function viewImport() {
     var container = h("div");
     shell("#/import", container);
-    container.appendChild(h("h1", { text: "Імпорт / Експорт" }));
+    container.appendChild(h("h1", { class: "page-title", text: "Імпорт / Експорт" }));
 
     // export
     container.appendChild(h("div", { class: "card" }, [
       h("h3", { text: "Експорт" }),
       h("p", { class: "hint", text: "CSV зручний для редагування у таблицях; JSON зберігає всю структуру." }),
-      h("div", { class: "row" }, [
+      h("div", { class: "btn-row" }, [
         h("button", { class: "btn secondary", text: "Завантажити CSV", onclick: function () { download("csv"); } }),
         h("button", { class: "btn secondary", text: "Завантажити JSON", onclick: function () { download("json"); } }),
       ]),
@@ -582,7 +587,7 @@
       h("div", { class: "row" }, [field("Формат", fmt), field("Файл", fileInput)]),
       field("Вміст", textArea),
       h("div", { class: "field checkline" }, [createMissing, h("span", { text: "Створювати відсутні категорії автоматично" })]),
-      importBtn,
+      h("div", { class: "btn-row" }, [importBtn]),
       resultBox,
     ]));
   }
@@ -606,15 +611,18 @@
   function modal(title, body, onSave, extraButtons) {
     var closeBtn = h("button", { class: "btn secondary", text: "Скасувати" });
     var saveBtn = h("button", { class: "btn", text: "Зберегти" });
+    var xBtn = h("button", { class: "modal-x", type: "button", "aria-label": "Закрити", text: "✕" });
     var back = h("div", { class: "modal-back" }, [
       h("div", { class: "modal" }, [
-        h("h2", { text: title }),
-        body,
+        h("div", { class: "modal-head" }, [h("h2", { text: title }), xBtn]),
+        h("div", { class: "modal-body" }, [body]),
         h("div", { class: "modal-foot" }, (extraButtons || []).concat([closeBtn, saveBtn])),
       ]),
     ]);
-    function close() { back.remove(); }
+    function close() { back.remove(); document.body.classList.remove("modal-open"); }
+    document.body.classList.add("modal-open");
     closeBtn.addEventListener("click", close);
+    xBtn.addEventListener("click", close);
     back.addEventListener("click", function (e) { if (e.target === back) close(); });
     saveBtn.addEventListener("click", function () { onSave(close, saveBtn); });
     document.body.appendChild(back);
