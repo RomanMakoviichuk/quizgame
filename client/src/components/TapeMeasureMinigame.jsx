@@ -643,8 +643,9 @@ export default function TapeMeasureMinigame({
   };
 
   // ---------------------------------------------------------------- sounds (TV)
-  const musicOn = isDisplay && (phase === "prep" || phase === "result" || phase === "final");
-  useEffect(() => (musicOn ? loop(SOUND.music, 0.7) : undefined), [musicOn]);
+  // a soft bed under the whole minigame, from the rules to the final board
+  const musicOn = isDisplay && phase !== "wait";
+  useEffect(() => (musicOn ? loop(SOUND.music, 0.22) : undefined), [musicOn]);
   const workshopOn = isDisplay && phase === "pull";
   useEffect(() => (workshopOn ? loop(SOUND.workshop, 0.5) : undefined), [workshopOn]);
   const lockedCount = progress.lockedIds.length;

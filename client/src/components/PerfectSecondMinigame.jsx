@@ -25,7 +25,7 @@ import { playVictory, randomVictory } from "../game/victory";
 const DIR = "/assets/minigames/perfect-second";
 // optional files of this minigame (see its README.md); the shared sounds stand in until they exist
 const SOUND = {
-  music: `${DIR}/background.mp3`, // the rules and the results — never under a round (no beat to count by)
+  music: `${DIR}/background.mp3`, // a soft bed under the whole minigame
   tension: `${DIR}/tension.mp3`, // looped while the timer is hidden
   beep: "/assets/sounds/beep.mp3",
   start: `${DIR}/start.mp3`,
@@ -291,10 +291,11 @@ export default function PerfectSecondMinigame({
   const target = go?.targetMs || round?.targetMs || 10000;
 
   // ---------------------------------------------------------------- sounds (TV)
-  const musicOn = isDisplay && (phase === "prep" || phase === "result" || phase === "final");
+  // a soft bed under the whole minigame, from the rules to the final board
+  const musicOn = isDisplay && phase !== "wait";
   useEffect(() => {
     if (!musicOn) return undefined;
-    return loop(SOUND.music, 0.8);
+    return loop(SOUND.music, 0.22);
   }, [musicOn]);
   const tensionOn = isDisplay && phase === "hidden";
   useEffect(() => {
