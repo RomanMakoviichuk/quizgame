@@ -86,6 +86,186 @@ const ColorDot = ({ color, small }) => (
   <i className={`mm-dot ${small ? "small" : ""}`} style={{ "--c": color ? MEMORY_COLORS[color].css : "transparent" }} title={color ? MEMORY_COLORS[color].label : "—"} />
 );
 
+// ---------------------------------------------------------------- the scramble (TV)
+
+/** Synthesized blips for the scramble: no sound files needed. */
+let audioCtx = null;
+function ac() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  } catch {
+    return null;
+  }
+}
+/** A short tick; the pitch climbs as the scramble speeds up. */
+function blip(freq, volume = 0.06) {
+  const c = ac();
+  if (!c) return;
+  const t = c.currentTime;
+  const o = c.createOscillator();
+  const g = c.createGain();
+  o.type = "triangle";
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(volume, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+  o.connect(g).connect(c.destination);
+  o.start(t);
+  o.stop(t + 0.07);
+}
+/** A balloon pop: a burst of noise closing down + a low thump. */
+function popSound(volume = 0.45) {
+  const c = ac();
+  if (!c) return;
+  const t = c.currentTime;
+  const len = Math.floor(c.sampleRate * 0.18);
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3;
+  const noise = c.createBufferSource();
+  noise.buffer = buf;
+  const f = c.createBiquadFilter();
+  f.type = "lowpass";
+  f.frequency.setValueAtTime(6000, t);
+  f.frequency.exponentialRampToValueAtTime(300, t + 0.15);
+  const g = c.createGain();
+  g.gain.value = volume;
+  noise.connect(f).connect(g).connect(c.destination);
+  noise.start(t);
+  const o = c.createOscillator();
+  const og = c.createGain();
+  o.frequency.setValueAtTime(240, t);
+  o.frequency.exponentialRampToValueAtTime(50, t + 0.12);
+  og.gain.setValueAtTime(volume * 0.8, t);
+  og.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+  o.connect(og).connect(c.destination);
+  o.start(t);
+  o.stop(t + 0.2);
+}
+
+const POP_BEFORE_MS = 2000; // the row pops this long before the answer phase
+const POP_STAGGER_MS = 150;
+const PARTICLES = 14;
+const rnd = (n) => Math.floor(Math.random() * n);
+
+/**
+ * The row runs away: items swap places and change colours, slowly at first,
+ * faster and faster (a wall of fake versions over the real one), then each
+ * one pops like a balloon in a burst of paint. Driven by the server clock:
+ * starts at `startAt`, pops POP_BEFORE_MS before `endAt` (the answer phase).
+ */
+function ScrambleRow({ lineup, palette, startAt, endAt, now }) {
+  const n = lineup.length;
+  const popAt = endAt - POP_BEFORE_MS;
+  const [slots, setSlots] = useState(() => lineup.map((_, i) => i)); // item -> slot
+  const [cols, setCols] = useState(() => lineup.map((it) => it.color));
+  const [tilt, setTilt] = useState(() => lineup.map(() => 0));
+  const [moveMs, setMoveMs] = useState(700);
+  const [speed, setSpeed] = useState(0); // 0..1
+  const [popping, setPopping] = useState(() => now() >= popAt);
+  const popOrder = useMemo(() => [...Array(n).keys()].sort(() => Math.random() - 0.5), [n]);
+  const bursts = useMemo(
+    () =>
+      lineup.map(() =>
+        Array.from({ length: PARTICLES }, (_, k) => {
+          const a = ((k + Math.random() * 0.6) / PARTICLES) * Math.PI * 2;
+          const r = 14 + Math.random() * 14; // vh
+          return { dx: `${Math.cos(a) * r}vh`, dy: `${Math.sin(a) * r}vh`, s: 0.6 + Math.random() * 1.1, white: k % 4 === 0 };
+        })
+      ),
+    [lineup]
+  );
+
+  useEffect(() => {
+    let alive = true;
+    let timer = null;
+    const step = () => {
+      if (!alive) return;
+      const t = now();
+      if (t >= popAt) {
+        setPopping(true);
+        return;
+      }
+      const p = Math.max(0, Math.min(1, (t - startAt) / Math.max(1, popAt - startAt)));
+      const gap = Math.round(110 + 850 * (1 - p) ** 2); // ~960 ms -> ~110 ms
+      setSpeed(p);
+      setMoveMs(Math.max(90, Math.round(gap * 0.85)));
+      // swap two (later sometimes two pairs at once)
+      setSlots((s) => {
+        const a = [...s];
+        const swaps = p > 0.6 && Math.random() < 0.5 ? 2 : 1;
+        for (let k = 0; k < swaps; k++) {
+          const i = rnd(n);
+          let j = rnd(n - 1);
+          if (j >= i) j++;
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      });
+      setTilt(lineup.map(() => (Math.random() - 0.5) * (6 + 14 * p)));
+      // repaint one or two items with another colour in play
+      if (palette.length > 1 && Math.random() < 0.45 + 0.45 * p) {
+        setCols((c) => {
+          const a = [...c];
+          const k = p > 0.5 && Math.random() < 0.5 ? 2 : 1;
+          for (let m = 0; m < k; m++) {
+            const i = rnd(n);
+            const other = palette.filter((x) => x !== a[i]);
+            a[i] = other[rnd(other.length)] || a[i];
+          }
+          return a;
+        });
+      }
+      blip(420 + 700 * p, 0.035 + 0.04 * p);
+      timer = gameClock.setTimeout(step, Math.min(gap, Math.max(0, popAt - t)));
+    };
+    const first = Math.max(0, startAt - now()) + 450; // a beat on the real row first
+    timer = gameClock.setTimeout(step, first);
+    return () => {
+      alive = false;
+      gameClock.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // the pops: one sound per balloon, in the pop order
+  useEffect(() => {
+    if (!popping) return undefined;
+    const ids = popOrder.map((_, k) => gameClock.setTimeout(() => popSound(0.4), k * POP_STAGGER_MS + 180));
+    return () => ids.forEach((id) => gameClock.clearTimeout(id));
+  }, [popping, popOrder]);
+
+  return (
+    <div className={`mm-sc-row ${speed > 0.65 && !popping ? "fast" : ""} ${popping ? "popping" : ""}`} style={{ "--n": n }}>
+      {lineup.map((it, i) => {
+        const c = MEMORY_COLORS[cols[i]]?.css || "#fff";
+        const pd = `${popOrder.indexOf(i) * POP_STAGGER_MS}ms`;
+        return (
+          <div
+            key={it.id}
+            className="mm-sc-slot"
+            style={{ "--slot": slots[i], "--move": `${moveMs}ms`, "--tilt": `${tilt[i]}deg`, "--c": c, "--pd": pd }}
+          >
+            <div className={`mm-card mm-sc-card ${popping ? "pop" : ""}`}>
+              <i className="mm-sc-splat" key={cols[i]} />
+              <TintedItem item={it} color={cols[i]} className="mm-item" />
+            </div>
+            {popping && (
+              <div className="mm-sc-burst" aria-hidden="true">
+                <i className="mm-sc-ring" />
+                {bursts[i].map((b, k) => (
+                  <b key={k} style={{ "--dx": b.dx, "--dy": b.dy, "--s": b.s, "--pc": b.white ? "#fff" : c }} />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function Lives({ n }) {
   if (!Number.isFinite(n)) return null;
   if (n <= 0) return <p className="mm-lives dead">💀 Життів не лишилось — тепер ти привид</p>;
@@ -137,6 +317,7 @@ export default function MemoryMinigame({
       if (!d || !Number.isFinite(Number(d.showAt))) return;
       setGo({
         showAt: +d.showAt,
+        scrambleAt: Number.isFinite(Number(d.scrambleAt)) && +d.scrambleAt > 0 ? +d.scrambleAt : +d.answerAt,
         answerAt: +d.answerAt,
         endAt: +d.endAt,
         count: +d.count || 5,
@@ -149,6 +330,7 @@ export default function MemoryMinigame({
       if (Array.isArray(d?.lineup)) {
         setLineup(d.lineup);
         d.lineup.forEach((it) => tintedUrl(it, it.color).catch(() => {}));
+        preloadTints(d.lineup, COLOR_IDS); // the scramble repaints them: every colour ready
       }
     };
     const onTask = (d) => {
@@ -191,9 +373,20 @@ export default function MemoryMinigame({
   const sinceReveal = isResults ? gameClock.now() - revealT0.current : 0;
 
   const now = go ? gameClock.now() + go.offset : 0;
-  const phase = !go ? "wait" : now < go.showAt ? "prep" : now < go.answerAt ? "show" : now < go.endAt ? "answer" : "over";
+  const phase = !go
+    ? "wait"
+    : now < go.showAt
+      ? "prep"
+      : now < go.scrambleAt
+        ? "show"
+        : now < go.answerAt
+          ? "scramble"
+          : now < go.endAt
+            ? "answer"
+            : "over";
   const countdown = phase === "prep" ? Math.max(1, Math.ceil((go.showAt - now) / 1000)) : null;
-  const showLeft = go ? Math.max(0, go.answerAt - now) : 0;
+  const showLeft = go ? Math.max(0, go.scrambleAt - now) : 0;
+  const scrambleLeft = go ? Math.max(0, go.answerAt - now) : 0;
   const answerLeft = go ? Math.max(0, go.endAt - now) : 0;
 
   // ---------------------------------------------------------------- sounds (TV)
@@ -472,7 +665,17 @@ export default function MemoryMinigame({
             <i />
           </div>
           <p className="mm-big">ДИВИСЬ НА ЕКРАН!</p>
-          <TimeBar msLeft={showLeft} totalMs={go.answerAt - go.showAt} />
+          <TimeBar msLeft={showLeft} totalMs={go.scrambleAt - go.showAt} />
+        </section>
+      );
+    }
+    if (phase === "scramble") {
+      return (
+        <section className={`${cls} mm-phone-watch`}>
+          <Splash />
+          <p className="mm-big">🌀 НЕ ПЛУТАЙСЯ!</p>
+          <p className="mm-muted">Предмети тікають і перефарбовуються. Тримай у голові ОРИГІНАЛ!</p>
+          <TimeBar msLeft={scrambleLeft} totalMs={go.answerAt - go.scrambleAt} />
         </section>
       );
     }
@@ -592,7 +795,13 @@ export default function MemoryMinigame({
             <b>👀</b>
             <span>
               Запам'ятай <u>предмети</u>, їхній <u>порядок</u> і <u>кольори</u>
-              {go ? ` — ${Math.round((go.answerAt - go.showAt) / 1000)} секунд` : ""}
+              {go ? ` — ${Math.round((go.scrambleAt - go.showAt) / 1000)} секунд` : ""}
+            </span>
+          </div>
+          <div className="mm-rule" style={{ "--i": 0.5 }}>
+            <b>🌀</b>
+            <span>
+              Потім вони <u>перемішаються й перефарбуються</u>, щоб збити тебе. Пам'ятай <u>оригінал</u>!
             </span>
           </div>
           <div className="mm-rule" style={{ "--i": 1 }}>
@@ -648,7 +857,29 @@ export default function MemoryMinigame({
             </div>
           ))}
         </div>
-        <TimeBar msLeft={showLeft} totalMs={go.answerAt - go.showAt} big />
+        <TimeBar msLeft={showLeft} totalMs={go.scrambleAt - go.showAt} big />
+      </section>
+    );
+  }
+
+  if (phase === "scramble") {
+    const popped = now >= go.answerAt - POP_BEFORE_MS + (go.count - 1) * POP_STAGGER_MS + 450;
+    return (
+      <section className={`${cls} mm-show mm-scramble`}>
+        <Splash />
+        <p className={`mm-banner scramble ${popped ? "puff" : ""}`} key={popped ? "puff" : "run"}>
+          {popped ? "💥 ПУФ! А ТЕПЕР — ПРИГАДАЙ ОРИГІНАЛ!" : "🌀 ВОНИ ТІКАЮТЬ! ПАМ'ЯТАЙ ОРИГІНАЛ, НЕ ЦЕ!"}
+        </p>
+        {lineup && (
+          <ScrambleRow
+            lineup={lineup}
+            palette={go.palette || COLOR_IDS}
+            startAt={go.scrambleAt}
+            endAt={go.answerAt}
+            now={() => gameClock.now() + go.offset}
+          />
+        )}
+        <TimeBar msLeft={scrambleLeft} totalMs={go.answerAt - go.scrambleAt} big />
       </section>
     );
   }

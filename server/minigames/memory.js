@@ -15,7 +15,8 @@
  *     item its colour), 50/50. The mode stays secret until the answer phase.
  *
  * Timeline (server clock): PREP (rules + 3-2-1) -> SHOW (the coloured row, on
- * the TV only) -> ANSWER (phones get the task) -> results. Phones never get the
+ * the TV only) -> SCRAMBLE (the TV shuffles and repaints the row, faster and
+ * faster, then pops it) -> ANSWER (phones get the task) -> results. Phones never get the
  * coloured row: `mem:show` goes to the display socket only, and the colour task
  * carries no colours.
  *
@@ -54,10 +55,13 @@ const CONFIG = {
   COUNT: Number(process.env.MEMORY_COUNT) || 5,
   PREP_MS: Number(process.env.MEMORY_PREP_MS) || 15000, // title + rules + 3-2-1
   SHOW_MS: Number(process.env.MEMORY_SHOW_MS) || 10000, // remember
+  // then the TV scrambles the row (swaps + repaints, faster and faster) and pops it:
+  // a wall of fake versions to wash the real one out of the players' heads
+  SCRAMBLE_MS: Number(process.env.MEMORY_SCRAMBLE_MS) || 9000, // ~7 s of shuffling + the 2 s pop
   ANSWER_MS: Number(process.env.MEMORY_ANSWER_MS) || 15000,
   CLOSE_GRACE_MS: 250,
 };
-const TOTAL_DURATION_MS = CONFIG.PREP_MS + CONFIG.SHOW_MS + CONFIG.ANSWER_MS + 8000; // server hard stop
+const TOTAL_DURATION_MS = CONFIG.PREP_MS + CONFIG.SHOW_MS + CONFIG.SCRAMBLE_MS + CONFIG.ANSWER_MS + 8000; // server hard stop
 
 // ---------------------------------------------------------------- item registry
 
@@ -146,6 +150,7 @@ function onStart(mg) {
     order: round.lineup.map((it) => it.id), // the right answer for "order"
     colors: round.lineup.map((it) => it.color), // the right answer for "color"
     showAt: 0,
+    scrambleAt: 0,
     answerAt: 0,
     endAt: 0,
     answers: {}, // playerId -> { order: [id|null] } | { colors: [color|null] }
@@ -171,6 +176,7 @@ function taskPayload(mg) {
 }
 const goPayload = (mg, now) => ({
   showAt: mg.mem.showAt,
+  scrambleAt: mg.mem.scrambleAt,
   answerAt: mg.mem.answerAt,
   endAt: mg.mem.endAt,
   serverNow: now,
@@ -183,12 +189,13 @@ const progressPayload = (mg) => ({ done: Object.keys(mg.mem.locked).length, tota
 function onSync(mg, nowTs, ctx) {
   const s = mg.mem;
   s.showAt = nowTs + CONFIG.PREP_MS;
-  s.answerAt = s.showAt + CONFIG.SHOW_MS;
+  s.scrambleAt = s.showAt + CONFIG.SHOW_MS;
+  s.answerAt = s.scrambleAt + CONFIG.SCRAMBLE_MS;
   s.endAt = s.answerAt + CONFIG.ANSWER_MS;
   ctx.emitAll("mem:go", goPayload(mg, nowTs));
   ctx.setTimer(() => {
-    // the coloured row: the TV only
-    ctx.emitDisplay?.("mem:show", { lineup: s.lineup.map((it) => card(it, true)), answerAt: s.answerAt, serverNow: ctx.now() });
+    // the coloured row: the TV only (it scrambles it itself from scrambleAt)
+    ctx.emitDisplay?.("mem:show", { lineup: s.lineup.map((it) => card(it, true)), scrambleAt: s.scrambleAt, answerAt: s.answerAt, serverNow: ctx.now() });
     ctx.setTimer(() => {
       ctx.emitAll("mem:task", { ...taskPayload(mg), serverNow: ctx.now() });
       ctx.emitAll("mem:progress", progressPayload(mg));

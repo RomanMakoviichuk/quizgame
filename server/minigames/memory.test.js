@@ -198,7 +198,8 @@ function harness(n = 3) {
 test("the coloured row goes to the TV only; phones get the task at the answer phase", () => {
   const h = harness();
   const s = h.mg.mem;
-  assert.equal(s.answerAt - s.showAt, mem.CONFIG.SHOW_MS);
+  assert.equal(s.scrambleAt - s.showAt, mem.CONFIG.SHOW_MS);
+  assert.equal(s.answerAt - s.scrambleAt, mem.CONFIG.SCRAMBLE_MS);
   assert.equal(s.endAt - s.answerAt, mem.CONFIG.ANSWER_MS);
   h.advanceTo(s.showAt);
   assert.equal(h.display.length, 1);
