@@ -258,6 +258,19 @@ function Tape({ mm, windowMm, maxMm = 1000, className = "" }) {
  */
 function VTape({ mm, scale, locked, onMax, className = "", children, ...stageProps }) {
   const winRef = useRef(null);
+  // the visible height: a mobile browser's bars (Chrome's bottom toolbar on iOS) sit over the rest
+  const [visibleH, setVisibleH] = useState(null);
+  useLayoutEffect(() => {
+    const vv = window.visualViewport;
+    const measure = () => setVisibleH(Math.round(vv ? vv.height : window.innerHeight));
+    measure();
+    vv?.addEventListener("resize", measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      vv?.removeEventListener("resize", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
   useLayoutEffect(() => {
     const el = winRef.current;
     if (!el) return undefined;
@@ -274,7 +287,7 @@ function VTape({ mm, scale, locked, onMax, className = "", children, ...stagePro
   const marks = [];
   if (scale) for (let c = 1; c * 10 <= mm; c++) marks.push(c);
   return (
-    <div className={`tm-vtape ${locked ? "locked" : ""} ${className}`} style={{ "--mm": `${PX_PER_MM}px` }} {...stageProps}>
+    <div className={`tm-vtape ${locked ? "locked" : ""} ${className}`} style={{ "--mm": `${PX_PER_MM}px`, ...(visibleH ? { maxHeight: `${visibleH}px` } : null) }} {...stageProps}>
       <div className="tm-vwindow" ref={winRef}>
         <div className={`tm-vblade ${scale ? "scaled" : ""}`} style={{ height: `${mm * PX_PER_MM}px` }}>
           {marks.map((c) => (

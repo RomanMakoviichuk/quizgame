@@ -217,11 +217,12 @@
 
 /* the phone's pulling screen: the tape owns the whole screen */
 .tm-phone-pull { padding: 0; }
-.tm-mobile.tm-phone-pull > .tm-vtape { position: absolute; inset: 0; }
+/* only the visible part of the screen: a mobile browser's own bars (e.g. Chrome's bottom toolbar on iOS) cover the rest of 100vh */
+.tm-mobile.tm-phone-pull > .tm-vtape { position: absolute; top: 0; left: 0; right: 0; bottom: auto; height: 100%; height: min(100%, 100dvh); }
 .tm-vtape {
   --blade: calc(var(--mm) * 16); /* a 16 mm blade */
   --case: calc(var(--mm) * 62); /* ...and its real 62 mm case */
-  --show: 150px; /* how much of the case shows above the screen's bottom edge */
+  --show: calc(170px + env(safe-area-inset-bottom, 0px)); /* how much of the case shows above the screen's bottom edge */
   touch-action: none; /* the finger pulls the blade, the page never scrolls */
   user-select: none;
   -webkit-user-select: none;
@@ -312,7 +313,7 @@
   position: absolute;
   z-index: 4;
   left: 50%;
-  bottom: 18px;
+  bottom: calc(26px + env(safe-area-inset-bottom, 0px));
   width: min(72vw, 300px);
   padding: 1.6vh 0;
   transform: translateX(-50%);
