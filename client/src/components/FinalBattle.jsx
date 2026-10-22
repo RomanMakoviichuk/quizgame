@@ -139,7 +139,7 @@ function useParticles(count, seed) {
   }, [count, seed]);
 }
 
-export default function FinalBattle({ uiMode = "display", socket, intro, myPlayerId }) {
+export default function FinalBattle({ uiMode = "display", socket, intro, myPlayerId, onFinished }) {
   const isDisplay = uiMode === "display";
   const clock = useMemo(() => {
     let offset = 0;
@@ -230,10 +230,14 @@ export default function FinalBattle({ uiMode = "display", socket, intro, myPlaye
   // reloaded or dropped out (an iPhone with its screen off) missed the intro and the
   // open question, and without the line-up it could not find itself in the race
   const syncRef = useRef(null);
+  const onFinishedRef = useRef(onFinished);
+  onFinishedRef.current = onFinished;
   useEffect(() => {
     if (!socket) return undefined;
     const sync = () =>
       socket.emit("finalSync", {}, (d) => {
+        // the race is over and this screen missed "gameFinished" (it was offline)
+        if (d?.stage === "finished" && d.finished) return onFinishedRef.current?.(d.finished);
         if (!d || !Array.isArray(d.participants)) return;
         // the TV keeps its own intro show; after a reload mid-race it takes the snapshot
         if (isDisplay && d.stage === "intro") return;
@@ -338,6 +342,19 @@ export default function FinalBattle({ uiMode = "display", socket, intro, myPlaye
     return () => gameClock.clearInterval(t);
   }, [lost]);
 
+  // watchdog: a screen that missed an event (a dropped connection, a sleeping tab)
+  // would freeze on the old scene. The server moves the race on by itself, so a
+  // question past its end or a reveal that has run its course asks where things are.
+  const deadline = stage === "question" ? question?.endsAt : null;
+  useEffect(() => {
+    const t = gameClock.setInterval(() => {
+      if (stage === "intro" && isDisplay) return; // the TV's own show; the server falls back anyway
+      const overdue = stage === "question" ? deadline != null && clock.now() > deadline + 3000 : true;
+      if (overdue) syncRef.current?.();
+    }, stage === "question" ? 2000 : 8000);
+    return () => gameClock.clearInterval(t);
+  }, [stage, deadline, isDisplay, clock]);
+
   const msLeft = useMsLeft(!isDisplay && stage === "question" ? question?.endsAt : null, clock);
 
   const sendAnswer = (idx) => {
@@ -360,6 +377,7 @@ export default function FinalBattle({ uiMode = "display", socket, intro, myPlaye
         result={result}
         winner={winner}
         audio={audio}
+        winSrc={winSrc}
         shake={shake}
         moves={intro?.rules?.moves || [4, 3, 2]}
         otherMove={intro?.rules?.otherMove ?? 1}
@@ -387,7 +405,7 @@ export default function FinalBattle({ uiMode = "display", socket, intro, myPlaye
 
 // ======================================================================= TV
 
-function DisplayScene({ race, stage, introPart, countNum, question, timeLeft, answeredIds, result, winner, audio, shake, moves, otherMove }) {
+function DisplayScene({ race, stage, introPart, countNum, question, timeLeft, answeredIds, result, winner, audio, winSrc, shake, moves, otherMove }) {
   const { exit, darkness, participants } = race;
   const vp = useViewport();
   const n = Math.max(1, participants.length);

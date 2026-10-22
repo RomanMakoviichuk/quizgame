@@ -28,6 +28,7 @@ import FunBackdrop from "./components/FunBackdrop";
 import RoundResults from "./components/RoundResults";
 import WelcomePlayers from "./components/WelcomePlayers";
 import MinigameHost from "./components/MinigameHost";
+import SceneGuard from "./components/SceneGuard";
 import TrueFalseAftermath from "./components/TrueFalseAftermath";
 import FinalBattle, { FinalCredits, FinalResults } from "./components/FinalBattle";
 import { createFinalPreview } from "./components/finalBattlePreview";
@@ -570,6 +571,23 @@ function App() {
   };
 
 
+  /**
+   * The game is over: standings + credits. From "gameFinished", or — for a screen
+   * that was offline when it went out — from a resume / the final's sync.
+   * Setters only, so the socket effect below can use it as captured.
+   */
+  function applyFinished(d) {
+    if (!d) return;
+    setPlayers(d.players || []);
+    setFinalResult(d);
+    setGameState(GAME_PHASE.FINISHED);
+    setScreen("game");
+    setQuestion(null);
+    setAnswerResult(null);
+    setTrueFalseStart(false);
+    setTrueFalseResultsPayload(null);
+  }
+
   useEffect(() => {
     const s = io(SOCKET_URL, { transports: ["websocket", "polling"] });
     setSocket(s);
@@ -592,6 +610,18 @@ function App() {
           setPlayers(r.players || []);
           setLobbyCategoryName(r.categoryName || "");
           setRoundIndex(r.roundIndex || 1);
+          // the game ended while the TV was away: straight to the credits / standings
+          if (r.finished) {
+            applyFinished(r.finished);
+            return;
+          }
+          // the final started while the TV was away (it missed "finalBattle"): into the
+          // race, FinalBattle catches up with it through finalSync
+          if (r.gameState === GAME_PHASE.FINAL_BATTLE) {
+            setGameState(GAME_PHASE.FINAL_BATTLE);
+            setScreen("game");
+            return;
+          }
           // after a reload the TV starts on the menu: open the game; a TV that only
           // reconnected keeps its screen, the next server event moves it on
           if (screenRef.current === "menu") {
@@ -630,6 +660,10 @@ function App() {
         }
         if (!r.gameState || r.gameState === GAME_PHASE.WAITING) {
           setScreen("lobby");
+          return;
+        }
+        if (r.finished) {
+          applyFinished(r.finished);
           return;
         }
         setScreen("game");
@@ -1004,14 +1038,7 @@ function App() {
       setTrueFalseStart(false);
       setTrueFalseResultsPayload(null);
     });
-    socket.on("gameFinished", (d) => {
-      setPlayers(d.players || []);
-      setFinalResult(d || null);
-      setGameState(GAME_PHASE.FINISHED);
-      setQuestion(null);
-      setAnswerResult(null);
-      setTrueFalseResultsPayload(null);
-    });
+    socket.on("gameFinished", applyFinished);
     socket.on("categorySelected", (d) => {
       setLobbyCategoryName(d?.categoryName || "");
       if (d?.categoryId) setSelectedCategoryId(d.categoryId);
@@ -2127,8 +2154,8 @@ function App() {
         (trueFalseStart ||
           (trueFalseResultsPayload &&
             (trueFalseResultsPayload.minigameId || "trueFalse") !== "trueFalse")) && (
+        <SceneGuard name={`minigame ${minigameId} (TV)`} key={`mg-${roundIndex}-${minigameId}`}>
         <MinigameHost
-          key={`mg-${roundIndex}-${minigameId}`}
           minigameId={minigameId}
           uiMode="display"
           isActive={trueFalseStart}
@@ -2145,6 +2172,7 @@ function App() {
           onVideoStartedAt={minigameSyncCb}
           onSceneDone={minigameSceneDoneCb}
         />
+        </SceneGuard>
       )}
       {!isMobile() &&
         isDisplay &&
@@ -2190,13 +2218,15 @@ function App() {
         !roundGap &&
         (roundIndex !== 1 || hasPlayedRulesVideo) && <RoundIntro roundIndex={roundIndex} />}
       {!isMobile() && isDisplay && gameState === GAME_PHASE.FINAL_BATTLE && (
-        <FinalBattle
-          key={`final-${roomCode}`}
-          uiMode="display"
-          socket={socket}
-          intro={finalIntro}
-          myPlayerId={null}
-        />
+        <SceneGuard name="final (TV)" key={`final-${roomCode}`}>
+          <FinalBattle
+            uiMode="display"
+            socket={socket}
+            intro={finalIntro}
+            myPlayerId={null}
+            onFinished={applyFinished}
+          />
+        </SceneGuard>
       )}
       {isMobile() && !isDisplay && <FunBackdrop calm />}
       <div className={`app-inner ${!isMobile() ? "app-inner-over-video" : ""}`}>
@@ -2410,9 +2440,9 @@ function App() {
           {/* the minigame takes the phone only once it has really started (until then the
               phone shows the scores), and keeps it for its result screen for a while */}
           {!phoneMgDone && ((trueFalseStart && trueFalseContestantIds.length > 0) || !!trueFalseResultsPayload) && (
+            <SceneGuard name={`minigame ${minigameId} (phone)`} key={`minigame-${roundIndex}-${minigameId}`}>
             <MinigameHost
               minigameId={minigameId}
-              key={`minigame-${roundIndex}-${minigameId}`}
               uiMode="mobile"
               isActive={trueFalseStart && trueFalseContestantIds.length > 0}
               canAnswer={isTrueFalseActive}
@@ -2428,6 +2458,7 @@ function App() {
               results={trueFalseResultsPayload}
               statements={trueFalseStatements}
             />
+            </SceneGuard>
           )}
         </>
       )}
@@ -2437,13 +2468,15 @@ function App() {
       )}
 
       {gameState === GAME_PHASE.FINAL_BATTLE && isMobile() && (
-        <FinalBattle
-          key={`final-m-${roomCode}`}
-          uiMode="mobile"
-          socket={socket}
-          intro={finalIntro}
-          myPlayerId={myPlayerId}
-        />
+        <SceneGuard name="final (phone)" key={`final-m-${roomCode}`}>
+          <FinalBattle
+            uiMode="mobile"
+            socket={socket}
+            intro={finalIntro}
+            myPlayerId={myPlayerId}
+            onFinished={applyFinished}
+          />
+        </SceneGuard>
       )}
 
       {gameState === GAME_PHASE.FINISHED && finalResult?.standings?.length > 0 && (

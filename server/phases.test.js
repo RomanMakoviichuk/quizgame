@@ -259,6 +259,12 @@ test("final race end to end: questions, 3/2/1, winner once, gameFinished", (t) =
   assert.equal(room.gameState, GAME_STATE.FINISHED);
   phases.finishGame(room);
   assert.equal(events(io, "gameFinished").length, 1);
+
+  // a screen that was offline when "gameFinished" went out still gets it
+  const snap = phases.finalSnapshot(room, a);
+  assert.equal(snap.stage, "finished");
+  assert.deepEqual(snap.finished, fin[0].data);
+  assert.deepEqual(phases.resumeSnapshot(room, players[0]).finished, fin[0].data);
 });
 
 test("final: unanswered questions time out and the darkness ends the game", (t) => {

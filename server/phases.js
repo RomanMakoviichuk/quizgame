@@ -403,6 +403,9 @@ module.exports = function createPhases(io) {
    * lost its connection mid-final and missed "finalBattle" / "finalQuestion".
    */
   function finalSnapshot(room, playerId) {
+    // the race ended while this screen was away: hand it the outcome it missed
+    if (room.gameState === GAME_STATE.FINISHED && room.finishedPayload)
+      return { stage: "finished", finished: room.finishedPayload, serverNow: clock.now(room) };
     const race = room.finalBattle;
     if (room.gameState !== GAME_STATE.FINAL_BATTLE || !race) return null;
     const open = race.stage === "question" && race.open && race.question;
@@ -445,12 +448,14 @@ module.exports = function createPhases(io) {
     unwatchTv(room);
     step(room, "game over");
     const race = opts.ending ? null : room.finalBattle;
-    to(room).emit("gameFinished", {
+    // kept: a screen that was offline when it went out gets it on resume / finalSync
+    room.finishedPayload = {
       players: getPlayersList(room).sort((a, b) => b.score - a.score),
       winnerId: race?.winnerId || null,
       ending: opts.ending || race?.ending || null,
       standings: race ? finalBattle.standings(race) : standingsWithoutRace(room),
-    });
+    };
+    to(room).emit("gameFinished", room.finishedPayload);
   }
 
   // ------------------------------------------------------------------ minigame
@@ -764,6 +769,7 @@ module.exports = function createPhases(io) {
       answered: !!player.hasAnswered,
       answerIndex: player.hasAnswered ? player.lastAnswerIndex : null,
       minigame: null,
+      finished: room.gameState === GAME_STATE.FINISHED ? room.finishedPayload || null : null,
     };
     if (room.gameState === GAME_STATE.ANSWER_PHASE) {
       snap.question = room.rounds[room.currentRoundIndex]?.question || null;

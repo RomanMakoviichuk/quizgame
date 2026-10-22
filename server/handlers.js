@@ -412,6 +412,8 @@ module.exports = function registerHandlers(io) {
         categoryName: category ? category.name : null,
         difficulty: room.difficulty,
         paused: clock.isPaused(room),
+        // the game ended while the TV was away: it goes straight to the credits / standings
+        finished: room.gameState === GAME_STATE.FINISHED ? room.finishedPayload || null : null,
       });
     });
 
