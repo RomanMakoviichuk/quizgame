@@ -159,13 +159,33 @@ function startRound(mg, ctx) {
   s.choices = {};
   s.choiceAt = {};
   const deadlineAt = ctx.now() + CHOICE_MS;
-  ctx.emitAll("rps:round", {
+  s.roundPayload = {
     round: s.round,
-    alive: s.alive,
+    alive: [...s.alive],
     deadlineAt,
     choiceMs: CHOICE_MS,
-  });
+  };
+  s.revealPayload = null;
+  ctx.emitAll("rps:round", s.roundPayload);
   ctx.setTimer(() => finishChoosing(mg, ctx), CHOICE_MS + 50);
+}
+
+/** A phone / the TV (re)opened the minigame: the clock, the round, its own pick, the reveal. */
+function onHello(mg, send, ctx, playerId) {
+  const s = mg.rps;
+  if (!s) return;
+  if (s.startAt) send("rps:go", { startAt: s.startAt, serverNow: ctx.now() });
+  if (!s.roundPayload) return;
+  send("rps:round", s.roundPayload);
+  if (s.phase === "choosing") {
+    if (playerId && s.choices[playerId]) send("rps:locked", { round: s.round, choice: s.choices[playerId] });
+    send("rps:progress", {
+      round: s.round,
+      submitted: s.alive.filter((id) => s.choices[id]).length,
+      total: s.alive.length,
+      lockedIds: s.alive.filter((id) => s.choices[id]),
+    });
+  } else if (s.revealPayload) send("rps:reveal", s.revealPayload);
 }
 
 function onClientEvent(mg, playerId, name, data, ctx) {
@@ -215,7 +235,7 @@ function finishChoosing(mg, ctx) {
     eliminated: [...outcome.eliminated],
   });
 
-  ctx.emitAll("rps:reveal", {
+  s.revealPayload = {
     round: s.round,
     choices: roundChoices,
     winningChoice: outcome.winningChoice,
@@ -224,7 +244,8 @@ function finishChoosing(mg, ctx) {
     replay: outcome.replay,
     scores: outcome.scores,
     outChoices: outcome.outChoices,
-  });
+  };
+  ctx.emitAll("rps:reveal", s.revealPayload);
 
   const nextAlive = outcome.replay ? s.alive : outcome.continued;
   const decisive = nextAlive.length === 1 && outcome.eliminated.length > 0;
@@ -301,6 +322,7 @@ module.exports = {
   onStart,
   onSync,
   onClientEvent,
+  onHello,
   resolveLosers,
   resolveWinner,
   buildResults,

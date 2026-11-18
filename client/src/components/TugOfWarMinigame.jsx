@@ -457,6 +457,13 @@ export default function TugOfWarMinigame({
     return () => gameClock.clearTimeout(t);
   }, [isDisplay, isActive, onVideoStartedAt]);
 
+  // (re)mounted mid-game (a reload, a dropped phone, a TV that came back): ask the server
+  // for the minigame as it is now, or this screen stays empty until the next move
+  useEffect(() => {
+    if (!socket || !isActive) return;
+    socket.emit("minigameHello");
+  }, [socket, isActive]);
+
   useEffect(() => {
     if (!socket) return;
     const sync = (d) => {

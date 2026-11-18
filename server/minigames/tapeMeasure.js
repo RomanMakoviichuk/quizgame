@@ -287,6 +287,7 @@ module.exports = {
   onStart,
   onSync,
   onClientEvent,
+  HELLO: "tm:hello",
   onDisplayEvent,
   resolveLosers,
   resolveWinner,

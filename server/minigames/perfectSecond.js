@@ -262,6 +262,7 @@ module.exports = {
   onStart,
   onSync,
   onClientEvent,
+  HELLO: "ps:hello",
   onDisplayEvent,
   resolveLosers,
   resolveWinner,

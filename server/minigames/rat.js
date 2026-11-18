@@ -80,6 +80,14 @@ function onSync(mg, nowTs, ctx) {
   ctx.scheduleResolve(s.voteEndAt - ctx.now() + CONFIG.CLOSE_GRACE_MS);
 }
 
+/** A TV that reloaded mid-minigame: the clock and how many have voted (never what). */
+function onDisplayHello(mg, send, ctx) {
+  const s = mg.rat;
+  if (!s) return;
+  if (s.voteStartAt) send("rat:go", goPayload(mg, ctx.now()));
+  send("rat:progress", progressPayload(mg));
+}
+
 /** Is the vote window open right now (server clock)? */
 const votingOpen = (mg, now) => !mg.rat.outcome && mg.rat.voteStartAt > 0 && now >= mg.rat.voteStartAt && now < mg.rat.voteEndAt;
 
@@ -194,6 +202,8 @@ module.exports = {
   onStart,
   onSync,
   onClientEvent,
+  HELLO: "rat:hello",
+  onDisplayHello,
   decide,
   resolveLosers,
   resolveWinner,

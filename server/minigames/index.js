@@ -17,6 +17,7 @@
  *   mathRush  — 1+ player wrong
  *   perfectSecond — 1+ player wrong, everyone plays (stop the clock at 10.00 s)
  *   tapeMeasure — 1+ player wrong, everyone plays (pull the tape to N cm)
+ *   shellShock — 1+ player wrong, everyone plays (the shell game, 3 rounds)
  *
  * Candidates — a minigame NEVER repeats within a game: only the ones not played
  * yet, in random order. From RARE_FROM_ROUND on, a RARE minigame still unplayed
@@ -37,8 +38,9 @@ const memory = require("./memory");
 const tune = require("./nameThatTune");
 const perfectSecond = require("./perfectSecond");
 const tapeMeasure = require("./tapeMeasure");
+const shellShock = require("./shellShock");
 
-const MINIGAMES = [trueFalse, mathRush, rps, hotBomb, tugOfWar, rat, memory, tune, perfectSecond, tapeMeasure];
+const MINIGAMES = [trueFalse, mathRush, rps, hotBomb, tugOfWar, rat, memory, tune, perfectSecond, tapeMeasure, shellShock];
 
 const REGISTRY = Object.fromEntries(MINIGAMES.map((def) => [def.ID, def]));
 

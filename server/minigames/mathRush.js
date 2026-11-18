@@ -162,6 +162,17 @@ function onSync(mg, nowTs, ctx) {
   ctx.scheduleResolve(mg.playEndAt - ctx.now() + 400);
 }
 
+/** A phone / the TV (re)opened the minigame: the clock, its own question, the scores. */
+function onHello(mg, send, ctx, playerId) {
+  if (!mg.mr) return;
+  const now = ctx.now();
+  if (mg.playStartAt) {
+    send("mathRush:go", { playStartAt: mg.playStartAt, playEndAt: mg.playEndAt, serverNow: now, maxLevel: !!mg.maxLevel });
+    if (playerId && mg.mr[playerId]) send("mathRush:question", questionFor(mg, playerId));
+  }
+  send("mathRush:scores", { scoresById: snapshot(mg) });
+}
+
 function onClientEvent(mg, playerId, name, data, ctx) {
   if (name !== "mathRush:answer") return;
   const st = mg.mr[playerId];
@@ -272,6 +283,7 @@ module.exports = {
   onStart,
   onSync,
   onClientEvent,
+  onHello,
   resolveLosers,
   resolveWinner,
   buildResults,

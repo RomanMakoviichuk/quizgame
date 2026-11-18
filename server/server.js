@@ -18,6 +18,7 @@ const registerHandlers = require("./handlers");
 const apiRoutes = require("./admin/routes");
 const media = require("./media");
 const tune = require("./minigames/nameThatTune");
+const shellShock = require("./minigames/shellShock");
 require("./content/store"); // load / seed the question database at boot
 
 const app = express();
@@ -67,6 +68,8 @@ app.use(media.ROUNDS_URL, express.static(media.ROUNDS_DIR));
 app.get("/api/media/round-videos", (_req, res) =>
   res.json(Object.fromEntries(Object.keys(media.POOLS).map((k) => [k, media.listPool(k)])))
 );
+// «Не кліпай!»: the things under the cups are a drop-in folder too (see minigames/shellShock.js)
+app.use(shellShock.ITEMS_URL, express.static(shellShock.ITEMS_DIR));
 // what the TV downloads up front (see client/src/components/MediaPreloader.jsx)
 app.get("/api/media/manifest", (_req, res) => res.set("Cache-Control", "no-store").json(media.preloadManifest()));
 

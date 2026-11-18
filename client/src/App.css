@@ -3945,6 +3945,36 @@ html.phone-locked *::-webkit-scrollbar { width: 0; height: 0; }
   .app-game-mobile .option { height: auto; }
 }
 
+/* phone answers: a long answer is never cut off. Every button is at least the comfortable
+   height but grows with its text (no 2-line clamp); long answers get a smaller font and one
+   column; if the four together are still taller than the card, the buttons scroll inside it. */
+@media (max-width: 768px) {
+  .app-game-mobile .options {
+    grid-template-rows: repeat(4, minmax(clamp(48px, 8svh, 64px), auto)) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+  }
+  .app-game-mobile .option {
+    height: auto !important;
+    max-height: none !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+  .app-game-mobile .opt-text {
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    overflow: visible !important;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: auto;
+    line-height: 1.18;
+  }
+  .app-game-mobile .options.opts-l,
+  .app-game-mobile .options.opts-xl { grid-template-columns: 1fr !important; }
+  .app-game-mobile .options.opts-l .option { font-size: clamp(0.84rem, 2vh, 0.98rem) !important; }
+  .app-game-mobile .options.opts-xl .option { font-size: clamp(0.76rem, 1.8vh, 0.88rem) !important; line-height: 1.12; }
+}
+
 /* ---------------------------------------------------------------- join screen logo */
 .join-logo {
   position: relative;

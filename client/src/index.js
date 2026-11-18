@@ -8,9 +8,9 @@ import { installLiteMode } from './game/liteMode';
 import MediaPreloader from './components/MediaPreloader';
 import SoundUnlock from './components/SoundUnlock';
 
-// the TV: one loudness for every sound and video (phones play little and are left alone)
+// sounds and videos play at their own recorded volume (the leveler is off)
 const isPhone = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent);
-if (!isPhone) installAudioLeveler();
+// if (!isPhone) installAudioLeveler();
 // weak TV computers drop the heaviest effects (blur over videos and the like)
 if (!isPhone) installLiteMode();
 

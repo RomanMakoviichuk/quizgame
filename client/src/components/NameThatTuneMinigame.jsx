@@ -489,6 +489,11 @@ export default function NameThatTuneMinigame({
   }, [socket, isDisplay, tvPreload, tvPlay]);
 
   const amContestant = contestantIds.includes(myPlayerId);
+  // a TV that reloaded mid-minigame asks the server for the minigame as it is now
+  useEffect(() => {
+    if (!socket || !isActive || !isDisplay) return;
+    socket.emit("minigameHello");
+  }, [socket, isActive, isDisplay]);
   useEffect(() => {
     if (isDisplay || !isActive || !socket || !amContestant) return;
     socket.emit("minigameEvent", { name: "tune:hello", data: {} });

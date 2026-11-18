@@ -116,6 +116,12 @@ function markDisconnected(race, playerId) {
   if (p) p.disconnected = true;
 }
 
+/** The phone came back: it races again from the next question. */
+function markReconnected(race, playerId) {
+  const p = byId(race, playerId);
+  if (p) p.disconnected = false;
+}
+
 /**
  * Close the question and apply it. Order inside a step:
  *   1. correct answers move by server arrival: FINAL.MOVES for the first three
@@ -230,6 +236,7 @@ module.exports = {
   submitAnswer,
   allAnswered,
   markDisconnected,
+  markReconnected,
   resolveStep,
   standings,
   publicState,

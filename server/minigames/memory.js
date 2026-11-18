@@ -223,6 +223,19 @@ function sanitize(mg, data) {
   return { colors: colors.map((c) => (s.palette.includes(c) ? c : null)) };
 }
 
+/** A TV that reloaded mid-minigame: the clock, the coloured row (once shown), the task. */
+function onDisplayHello(mg, send, ctx) {
+  const s = mg.mem;
+  if (!s || !s.showAt) return;
+  const now = ctx.now();
+  send("mem:go", goPayload(mg, now));
+  if (now >= s.showAt) send("mem:show", { lineup: s.lineup.map((it) => card(it, true)), scrambleAt: s.scrambleAt, answerAt: s.answerAt, serverNow: now });
+  if (now >= s.answerAt) {
+    send("mem:task", { ...taskPayload(mg), serverNow: now });
+    send("mem:progress", progressPayload(mg));
+  }
+}
+
 function onClientEvent(mg, playerId, name, data, ctx) {
   const s = mg.mem;
   if (!s) return;
@@ -323,6 +336,8 @@ module.exports = {
   onStart,
   onSync,
   onClientEvent,
+  HELLO: "mem:hello",
+  onDisplayHello,
   resolveLosers,
   resolveWinner,
   buildResults,

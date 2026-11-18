@@ -534,18 +534,61 @@
 
   // -------------------------------------------------------------- import / export
 
+  /* Checkbox lists "which categories / which difficulties". Nothing ticked = all.
+     picker.value() -> { categoryIds: [...], difficulties: [...] } */
+  function scopePicker() {
+    function group(title, items) {
+      var boxes = items.map(function (it) {
+        var cb = h("input", { type: "checkbox", value: it[0] });
+        return { cb: cb, label: h("label", { class: "checkline" }, [cb, h("span", { text: it[1] })]) };
+      });
+      var all = h("input", { type: "checkbox", checked: "checked" });
+      function sync() {
+        var any = boxes.some(function (b) { return b.cb.checked; });
+        all.checked = !any;
+      }
+      all.addEventListener("change", function () {
+        boxes.forEach(function (b) { b.cb.checked = false; });
+        all.checked = true;
+      });
+      boxes.forEach(function (b) { b.cb.addEventListener("change", sync); });
+      var el = h("div", { class: "field" }, [
+        h("label", { text: title }),
+        h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.35rem .9rem" },
+          [h("label", { class: "checkline" }, [all, h("strong", { text: "Усі" })])].concat(boxes.map(function (b) { return b.label; }))),
+      ]);
+      return {
+        el: el,
+        value: function () { return boxes.filter(function (b) { return b.cb.checked; }).map(function (b) { return b.cb.value; }); },
+      };
+    }
+    var cats = group("Категорії", state.categories.map(function (c) { return [c.id, c.name]; }));
+    var diffs = group("Складність", [["easy", "Легкі"], ["medium", "Середні (і без складності)"], ["hard", "Складні"]]);
+    return {
+      el: h("div", {}, [cats.el, diffs.el]),
+      value: function () { return { categoryIds: cats.value(), difficulties: diffs.value() }; },
+    };
+  }
+
   function viewImport() {
     var container = h("div");
     shell("#/import", container);
     container.appendChild(h("h1", { class: "page-title", text: "Імпорт / Експорт" }));
+    Promise.resolve(state.categories.length ? state.categories : loadCategories()).then(function () {
+      renderImport(container);
+    });
+  }
 
+  function renderImport(container) {
     // export
+    var exportScope = scopePicker();
     container.appendChild(h("div", { class: "card" }, [
       h("h3", { text: "Експорт" }),
-      h("p", { class: "hint", text: "CSV зручний для редагування у таблицях; JSON зберігає всю структуру." }),
+      h("p", { class: "hint", text: "Оберіть категорії та складність, які потрібно вивантажити (нічого не обрано — усі). CSV зручний для редагування у таблицях; JSON зберігає всю структуру." }),
+      exportScope.el,
       h("div", { class: "btn-row" }, [
-        h("button", { class: "btn secondary", text: "Завантажити CSV", onclick: function () { download("csv"); } }),
-        h("button", { class: "btn secondary", text: "Завантажити JSON", onclick: function () { download("json"); } }),
+        h("button", { class: "btn secondary", text: "Завантажити CSV", onclick: function () { download("csv", exportScope.value()); } }),
+        h("button", { class: "btn secondary", text: "Завантажити JSON", onclick: function () { download("json", exportScope.value()); } }),
       ]),
     ]));
 
@@ -556,6 +599,7 @@
     var createMissing = h("input", { type: "checkbox", checked: "checked" });
     var resultBox = h("div");
     var importBtn = h("button", { class: "btn", text: "Перевірити та імпортувати" });
+    var importScope = scopePicker();
 
     fileInput.addEventListener("change", function () {
       var file = fileInput.files[0];
@@ -574,10 +618,13 @@
         format: fmt.value,
         data: textArea.value,
         createMissingCategories: createMissing.checked,
+        categoryIds: importScope.value().categoryIds,
+        difficulties: importScope.value().difficulties,
       }).then(function (r) {
         importBtn.disabled = false;
         resultBox.appendChild(h("div", { class: "errbox", html:
           "<strong>Готово.</strong> Додано питань: " + r.inserted +
+          (r.skipped ? ", пропущено (не з обраних категорій / складності): " + r.skipped : "") +
           (r.createdCategories ? ", створено категорій: " + r.createdCategories : "") }));
         toast("Імпортовано " + r.inserted + " питань", "ok");
         loadCategories();
@@ -604,20 +651,36 @@
         "</code>. Дані перевіряються повністю перед вставкою — за наявності хоча б однієї помилки не додається нічого." }),
       h("div", { class: "row" }, [field("Формат", fmt), field("Файл", fileInput)]),
       field("Вміст", textArea),
+      h("p", { class: "hint", text: "Імпортувати лише питання з обраних категорій і складності; решта рядків файлу пропускається. Нічого не обрано — імпортується все. Якщо обрано категорії, нові категорії з файлу не створюються." }),
+      importScope.el,
       h("div", { class: "field checkline" }, [createMissing, h("span", { text: "Створювати відсутні категорії автоматично" })]),
       h("div", { class: "btn-row" }, [importBtn]),
       resultBox,
     ]));
   }
 
-  function download(format) {
-    fetch("/api/admin/export?format=" + format, { headers: { Authorization: "Bearer " + state.token } })
-      .then(function (r) { return r.blob(); })
+  function download(format, scope) {
+    scope = scope || { categoryIds: [], difficulties: [] };
+    var qs = "format=" + format +
+      "&categories=" + encodeURIComponent(scope.categoryIds.join(",")) +
+      "&difficulties=" + encodeURIComponent(scope.difficulties.join(","));
+    // file name says what is inside: quizgame-<category>-<difficulty>.csv
+    var parts = [];
+    if (scope.categoryIds.length) {
+      parts.push(scope.categoryIds.map(function (id) {
+        var c = state.categories.find(function (x) { return x.id === id; });
+        return c ? (c.slug || c.name) : id;
+      }).join("+"));
+    }
+    if (scope.difficulties.length) parts.push(scope.difficulties.join("+"));
+    var base = "quizgame-" + (parts.length ? parts.join("-") : (format === "csv" ? "questions" : "content"));
+    fetch("/api/admin/export?" + qs, { headers: { Authorization: "Bearer " + state.token } })
+      .then(function (r) { if (!r.ok) throw new Error("Помилка експорту (" + r.status + ")"); return r.blob(); })
       .then(function (blob) {
         var url = URL.createObjectURL(blob);
         var a = document.createElement("a");
         a.href = url;
-        a.download = format === "csv" ? "quizgame-questions.csv" : "quizgame-content.json";
+        a.download = base + "." + format;
         document.body.appendChild(a); a.click(); a.remove();
         URL.revokeObjectURL(url);
       })

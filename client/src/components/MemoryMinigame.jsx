@@ -310,6 +310,12 @@ export default function MemoryMinigame({
     return () => gameClock.clearTimeout(t);
   }, [isDisplay, isActive, onVideoStartedAt]);
 
+  // a TV that reloaded mid-minigame asks the server for the minigame as it is now
+  useEffect(() => {
+    if (!socket || !isActive || !isDisplay) return;
+    socket.emit("minigameHello");
+  }, [socket, isActive, isDisplay]);
+
   useEffect(() => {
     if (!socket) return;
     const offsetOf = (d) => Number(d?.serverNow ?? gameClock.now()) - gameClock.now();

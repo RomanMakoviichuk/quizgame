@@ -197,6 +197,15 @@ function finish(mg, ctx) {
   ctx.resolveNow();
 }
 
+/** A phone / the TV (re)opened the minigame: the teams, the clock, the rope as it is. */
+function onHello(mg, send, ctx) {
+  const s = mg.tow;
+  if (!s) return;
+  const now = ctx.now();
+  if (s.startAt) send("tow:go", { startAt: s.startAt, endsAt: s.endsAt, serverNow: now, teams: s.teams });
+  send("tow:state", publicState(mg, now));
+}
+
 function onClientEvent(mg, playerId, name, data, ctx) {
   if (name !== "tow:pull") return;
   const s = mg.tow;
@@ -263,6 +272,7 @@ module.exports = {
   onStart,
   onSync,
   onClientEvent,
+  onHello,
   resolveLosers,
   buildResults,
   publicState,

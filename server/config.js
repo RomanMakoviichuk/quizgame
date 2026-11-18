@@ -31,7 +31,7 @@ module.exports = {
   // TEST MODE: the admin can add bots in the lobby (server/bots.js). Remove before release.
   TEST_BOTS: process.env.TEST_BOTS !== "0",
   // a phone that drops out (reload, network) keeps its seat this long to come back
-  RECONNECT_GRACE_MS: 3 * 60 * 1000,
+  RECONNECT_GRACE_MS: Number(process.env.RECONNECT_GRACE_MS) || 3 * 60 * 1000,
   CHARACTER_SLOTS: 8,
 
   TOTAL_ROUNDS: 9, // 9 quiz rounds, then the final battle
@@ -48,7 +48,7 @@ module.exports = {
   SMALL_GAME_MAX_PLAYERS: 8,
 
   // Timings (ms)
-  ANSWER_TIMER_MS: 25000, // ends earlier when everyone has answered
+  ANSWER_TIMER_MS: Number(process.env.ANSWER_TIMER_MS) || 25000, // ends earlier when everyone has answered
   INTRO_DURATION_MS: 180000, // hard cap on the cinematic intro
   ROUND1_ANSWER_DELAY_MS: 6000, // round 1: fixed delay from question start to answer phase (2.5s scene + the text)
 

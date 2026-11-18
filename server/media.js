@@ -58,9 +58,9 @@ const POOLS = {
 
 // Old single clips, used only when a results folder is empty.
 const LEGACY_RESULT = {
-  allCorrect: `${ROUNDS_URL}/results/fallback/score-all-correct.mp4`,
-  partial: `${ROUNDS_URL}/results/fallback/score.mp4`,
-  allWrong: `${ROUNDS_URL}/results/fallback/score.mp4`,
+  allCorrect: `${ROUNDS_URL}/results/fallback/score-all-correct.1.mp4`,
+  partial: `${ROUNDS_URL}/results/fallback/score.1.mp4`,
+  allWrong: `${ROUNDS_URL}/results/fallback/score.1.mp4`,
 };
 
 function listPool(pool, dir = ROUNDS_DIR) {

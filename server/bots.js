@@ -164,6 +164,12 @@ function wire(bot) {
     const mm = Number(d.targetMm) + (Math.random() + Math.random() - 1) * spread;
     later(startsIn + rnd(4000, 16000), () => mg("tm:lock", { round: d.round, mm }));
   });
+  // Не кліпай: the bots don't see the cups — a guess once the answers open; now and then none
+  s.on("ss:round", (d) => {
+    if (!bot.inMg || Math.random() < 0.08) return;
+    const opensIn = Number(d.answerAt) - Number(d.serverNow);
+    later(opensIn + rnd(700, 4500), () => mg("ss:pick", { round: d.round, pos: pick([1, 2, 3]) }));
+  });
   s.on("rps:round", (d) => {
     if (!(d.alive || []).includes(bot.id)) return;
     later(rnd(800, 4000), () => mg("rps:choose", { choice: pick(["rock", "scissors", "paper", "solder", "yanukovych"]) }));

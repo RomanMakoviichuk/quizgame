@@ -622,6 +622,26 @@ function App() {
             setScreen("game");
             return;
           }
+          // a minigame is on (or its results scene is due): mount it again; it asks the
+          // server for its own state (the same deal, never a new one)
+          if (r.minigame) {
+            const m = r.minigame;
+            setGameState(GAME_PHASE.SCORES);
+            setScreen("game");
+            setMinigameId(m.minigameId);
+            setTrueFalseContestantIds(m.contestantIds || []);
+            setTrueFalseStatements(Array.isArray(m.statements) ? m.statements : null);
+            if (Number.isFinite(Number(m.startedAtTs)))
+              setTrueFalseSyncData({ startedAtTs: Number(m.startedAtTs), serverTime: Number(m.serverNow ?? m.startedAtTs), receivedAt: gameClock.now() });
+            if (m.results) {
+              setTrueFalseStart(false);
+              setTrueFalseResultsPayload(m.results);
+            } else {
+              setTrueFalseResultsPayload(null);
+              setTrueFalseStart(true);
+            }
+            return;
+          }
           // after a reload the TV starts on the menu: open the game; a TV that only
           // reconnected keeps its screen, the next server event moves it on
           if (screenRef.current === "menu") {
@@ -631,7 +651,11 @@ function App() {
         });
         return;
       }
-      // a phone with a seat: take it back (after a reload, or socket.io's own reconnect)
+      resumePhone();
+    });
+    // a phone with a seat: take it back (after a reload, socket.io's own reconnect, or
+    // the screen coming back on — events sent while it slept may never have arrived)
+    function resumePhone() {
       const saved = isMobile() && !isDisplayRef.current ? readSession() : null;
       if (!saved) return;
       setResuming(true);
@@ -675,16 +699,38 @@ function App() {
           setAnswerResult(null);
         }
         if (r.minigame) {
-          setMinigameId(r.minigame.minigameId);
-          setTrueFalseContestantIds(r.minigame.contestantIds || []);
-          setTrueFalseStatements(Array.isArray(r.minigame.statements) ? r.minigame.statements : null);
+          const m = r.minigame;
+          setMinigameId(m.minigameId);
+          setTrueFalseContestantIds(m.contestantIds || []);
+          setTrueFalseStatements(Array.isArray(m.statements) ? m.statements : null);
+          if (Number.isFinite(Number(m.startedAtTs)) && Number(m.startedAtTs) > 0)
+            setTrueFalseSyncData({ startedAtTs: Number(m.startedAtTs), serverTime: Number(m.serverNow ?? m.startedAtTs), receivedAt: gameClock.now() });
+          if (m.results) {
+            // the minigame is over: its result screen, like the phones that stayed
+            setTrueFalseStart(false);
+            setTrueFalseResultsPayload(m.results);
+          } else {
+            setTrueFalseResultsPayload(null);
+            setTrueFalseStart(true);
+          }
+        } else {
+          // no minigame on any more: a phone that dropped mid-minigame must not stay on it
+          setTrueFalseStart(false);
           setTrueFalseResultsPayload(null);
-          setTrueFalseStart(true);
         }
       });
-    });
+    }
+    const onVisible = () => {
+      if (document.visibilityState !== "visible" || !isMobile() || isDisplayRef.current) return;
+      if (s.connected) resumePhone();
+      else s.connect();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     s.on("disconnect", () => setConnected(false));
-    return () => s.close();
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      s.close();
+    };
   }, []);
 
   const loadCategories = () => {
@@ -2096,7 +2142,7 @@ function App() {
           autoPlay
           loop
           playsInline
-          muted={gameState === GAME_PHASE.FINAL_BATTLE || gameState === GAME_PHASE.FINISHED || (["rps", "hotBomb", "tugOfWar", "mathRush", "rat", "memory", "tune", "perfectSecond", "tapeMeasure"].includes(minigameId) && !!(trueFalseStart || trueFalseResultsPayload))}
+          muted={gameState === GAME_PHASE.FINAL_BATTLE || gameState === GAME_PHASE.FINISHED || (["rps", "hotBomb", "tugOfWar", "mathRush", "rat", "memory", "tune", "perfectSecond", "tapeMeasure", "shellShock"].includes(minigameId) && !!(trueFalseStart || trueFalseResultsPayload))}
           onLoadedMetadata={(e) => {
             const isQuestionPhase =
               isDisplay &&
@@ -2374,7 +2420,13 @@ function App() {
               totalSeconds={answerTotal}
             />
           </div>
-          <div className="options">
+          <div
+            className={`options ${(() => {
+              // long answers get a smaller font and taller buttons (phone), so nothing is cut off
+              const longest = Math.max(0, ...question.options.map((o) => String(o ?? "").length));
+              return longest > 55 ? "opts-xl" : longest > 30 ? "opts-l" : "";
+            })()}`}
+          >
             {question.options.map((opt, idx) => (
               <button
                 key={idx}

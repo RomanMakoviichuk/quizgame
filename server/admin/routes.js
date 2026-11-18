@@ -18,8 +18,8 @@
  *     PUT    /api/admin/questions/:id
  *     DELETE /api/admin/questions/:id
  *     POST   /api/admin/questions/:id/duplicate
- *     GET    /api/admin/export?format=csv|json&category=
- *     POST   /api/admin/import            { format:"csv"|"json", data, createMissingCategories? }
+ *     GET    /api/admin/export?format=csv|json&categories=id,id&difficulties=easy,hard
+ *     POST   /api/admin/import            { format:"csv"|"json", data, createMissingCategories?, categoryIds?, difficulties? }
  *     GET    /api/admin/meta              difficulties / question types / answer count
  *
  * Admin CRUD and gameplay reads are deliberately separate: the game only ever
@@ -169,29 +169,41 @@ router.post("/api/admin/questions/:id/duplicate", (req, res) => {
 
 // ------------------------------------------------------------- import/export
 
+const listParam = (v) =>
+  (Array.isArray(v) ? v : String(v || "").split(","))
+    .map((x) => String(x).trim())
+    .filter(Boolean);
+
 router.get("/api/admin/export", (req, res) => {
   const format = (req.query.format || "json").toLowerCase();
-  const categoryId = req.query.category || null;
+  const filter = {
+    categoryIds: listParam(req.query.categories || req.query.category),
+    difficulties: listParam(req.query.difficulties || req.query.difficulty),
+  };
   if (format === "csv") {
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
       "Content-Disposition",
       'attachment; filename="quizgame-questions.csv"'
     );
-    return res.send(store.exportCSV({ categoryId }));
+    return res.send(store.exportCSV(filter));
   }
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader(
     "Content-Disposition",
     'attachment; filename="quizgame-content.json"'
   );
-  res.send(JSON.stringify(store.exportJSON(), null, 2));
+  res.send(JSON.stringify(store.exportJSON(filter), null, 2));
 });
 
 router.post("/api/admin/import", (req, res) => {
   const body = req.body || {};
   const format = (body.format || "csv").toLowerCase();
-  const opts = { createMissingCategories: body.createMissingCategories !== false };
+  const opts = {
+    createMissingCategories: body.createMissingCategories !== false,
+    categoryIds: listParam(body.categoryIds),
+    difficulties: listParam(body.difficulties),
+  };
   let result;
   try {
     if (format === "csv") {

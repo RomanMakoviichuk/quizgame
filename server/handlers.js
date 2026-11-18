@@ -315,6 +315,15 @@ module.exports = function registerHandlers(io) {
       phases.syncMinigame(room);
     });
 
+    // a minigame was (re)mounted on a phone or the TV: send it the state as it is now
+    socket.on("minigameHello", () => {
+      const room = roomOf();
+      if (!room) return;
+      if (socket.isDisplay) return phases.minigameHello(room, null, (ev, d) => socket.emit(ev, d));
+      const player = playerOf(room);
+      if (player) phases.minigameHello(room, player.id, (ev, d) => socket.emit(ev, d));
+    });
+
     onGame("trueFalseScore", (data) => {
       const room = roomOf();
       if (!room || room.gameState !== GAME_STATE.SCORES) return;
@@ -414,7 +423,10 @@ module.exports = function registerHandlers(io) {
         paused: clock.isPaused(room),
         // the game ended while the TV was away: it goes straight to the credits / standings
         finished: room.gameState === GAME_STATE.FINISHED ? room.finishedPayload || null : null,
+        // a minigame on (or its results scene due): the TV mounts it again
+        minigame: phases.displayMinigameSnapshot(room),
       });
+      phases.minigameHello(room, null, (ev, d) => socket.emit(ev, d));
     });
 
     // A phone that comes back (page reload, dropped Wi-Fi): same player, new socket.
@@ -430,6 +442,15 @@ module.exports = function registerHandlers(io) {
         player.dropTimer = null;
       }
       player.disconnected = false;
+      phases.handleFinalReturn(room, player.id);
+      // the admin's phone dropped for a moment (screen lock, Wi-Fi): it gets the role (start / pause) back
+      let adminRestored = false;
+      if (room.droppedAdminId === player.id) {
+        room.droppedAdminId = null;
+        for (const p of room.players.values()) p.isAdmin = false;
+        player.isAdmin = true;
+        adminRestored = true;
+      }
       if (oldSid !== socket.id) {
         rekeyPlayer(room, oldSid, socket.id); // first, so the stale socket below finds nobody to drop
         io.sockets.sockets.get(oldSid)?.disconnect(true); // a stale tab of the same player
@@ -452,9 +473,11 @@ module.exports = function registerHandlers(io) {
           room.gameState === GAME_STATE.WAITING && room.introStarted ? (room.rulesStarted ? "rules" : "intro") : null,
         ...phases.resumeSnapshot(room, player),
       });
+      if (adminRestored) io.to(code).emit("adminChanged", { players });
       io.to(code).emit("playersUpdate", { players });
-      const snapMg = room.minigame;
-      if (snapMg && snapMg.startEmitted && !snapMg.resolved) snapMg.def.onReconnect?.(snapMg, player.id, phases.minigameCtxFor(room));
+      // a phone whose minigame is still on screen (only the connection dropped) gets its state now;
+      // one that reloaded asks itself once the minigame is mounted ("minigameHello")
+      phases.minigameHello(room, player.id, (ev, d) => socket.emit(ev, d));
     });
 
     // ---------------------------------------------------------- leave/disconnect
@@ -503,7 +526,17 @@ module.exports = function registerHandlers(io) {
         if (player.dropTimer) clearTimeout(player.dropTimer);
         player.dropTimer = setTimeout(() => {
           player.dropTimer = null;
-          if (room.players.get(sid) === player && player.disconnected) removePlayer(room, sid, player, false);
+          if (room.players.get(sid) !== player || !player.disconnected) return;
+          if (gameRunning(room)) {
+            // mid-game the seat is kept to the end (a long phone call, a dead battery,
+            // no signal): the phone can always come back with resumeSession. Only the
+            // minigame / the final stop waiting for it.
+            console.warn(`[game] room ${room.code}: ${player.name} is still away — the seat is kept`);
+            phases.handleFinalDeparture(room, player.id);
+            phases.handleMinigameDeparture(room, player.id);
+            return;
+          }
+          removePlayer(room, sid, player, false);
         }, RECONNECT_GRACE_MS);
         player.dropTimer.unref?.();
         // the admin dropped out: hand the admin role (start / pause) to the next player
@@ -513,6 +546,7 @@ module.exports = function registerHandlers(io) {
           if (next) {
             player.isAdmin = false;
             next.isAdmin = true;
+            room.droppedAdminId = player.id; // gets the role back on resumeSession
             io.to(room.code).emit("adminChanged", { players: getPlayersList(room) });
           }
         }
@@ -522,6 +556,9 @@ module.exports = function registerHandlers(io) {
       removePlayer(room, socket.id, player, true);
     }
 
+    const gameRunning = (room) =>
+      room.gameState !== GAME_STATE.WAITING && room.gameState !== GAME_STATE.FINISHED;
+
     /** The player is gone for good: out of the room, out of the race / minigame, admin handed on. */
     function removePlayer(room, sid, player, viaLeave) {
       if (player.dropTimer) {
@@ -529,6 +566,7 @@ module.exports = function registerHandlers(io) {
         player.dropTimer = null;
       }
       const wasAdmin = player.isAdmin;
+      if (room.droppedAdminId === player.id) room.droppedAdminId = null;
       room.players.delete(sid);
       phases.handleFinalDeparture(room, player.id);
       phases.handleMinigameDeparture(room, player.id);

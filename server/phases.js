@@ -398,6 +398,13 @@ module.exports = function createPhases(io) {
     if (nobodyLeft || finalBattle.allAnswered(race)) resolveFinalStep(room);
   }
 
+  /** A player whose phone dropped mid-final came back: they race again. */
+  function handleFinalReturn(room, playerId) {
+    const race = room.finalBattle;
+    if (room.gameState !== GAME_STATE.FINAL_BATTLE || !race || !playerId) return;
+    finalBattle.markReconnected(race, playerId);
+  }
+
   /**
    * The final as one phone should see it right now — for a phone that reloaded or
    * lost its connection mid-final and missed "finalBattle" / "finalQuestion".
@@ -477,6 +484,7 @@ module.exports = function createPhases(io) {
           name: p.name,
           lives: p.lives ?? LIVES_PER_PLAYER,
           characterSlot: p.characterSlot ?? 1,
+          disconnected: !!p.disconnected, // the phone dropped (it may come back)
         })),
       emitAll: (event, data) => to(room).emit(event, data),
       // the TV only (e.g. what the players must not see on their phones)
@@ -653,6 +661,23 @@ module.exports = function createPhases(io) {
     mg.def.onDisplayEvent(mg, name, data || {}, minigameCtx(room));
   }
 
+  /**
+   * A phone or the TV (re)opened the running minigame — a reload, a dropped
+   * connection, a phone call: send it the minigame as it is now, only to it
+   * (`send`). playerId is null for the TV. Minigames with their own "x:hello"
+   * (HELLO) answer through it; the rest through onHello.
+   */
+  function minigameHello(room, playerId, send) {
+    const mg = room.minigame;
+    if (room.gameState !== GAME_STATE.SCORES || !mg || !mg.startEmitted || mg.resolved) return;
+    const ctx = minigameCtx(room);
+    if (mg.def.onHello) return mg.def.onHello(mg, send, ctx, playerId);
+    if (playerId == null && mg.def.onDisplayHello) return mg.def.onDisplayHello(mg, send, ctx);
+    if (!mg.def.HELLO) return;
+    if (playerId == null) mg.def.onDisplayEvent?.(mg, mg.def.HELLO, {}, ctx);
+    else if (mg.contestantIds.includes(playerId)) mg.def.onClientEvent?.(mg, playerId, mg.def.HELLO, {}, ctx);
+  }
+
   /** A contestant left the room while a minigame runs (e.g. the bomb holder). */
   function handleMinigameDeparture(room, playerId) {
     const mg = room.minigame;
@@ -689,7 +714,8 @@ module.exports = function createPhases(io) {
     }
     const extra = mg.def.buildResults ? mg.def.buildResults(mg) : {};
 
-    to(room).emit("trueFalseResults", {
+    // kept for a TV that reloads before the results scene is over (displayMinigameSnapshot)
+    mg.resultsPayload = {
       minigameId: mg.minigameId,
       roundIndex: mg.roundIndex,
       mode: mg.mode,
@@ -702,7 +728,8 @@ module.exports = function createPhases(io) {
       bonusWinnerId: mg.pendingWinnerId,
       bonusPoints: mg.pendingWinnerId ? MINIGAME_WIN_BONUS : 0,
       safePoints: MINIGAME_SAFE_POINTS, // every other contestant who kept their life
-    });
+    };
+    to(room).emit("trueFalseResults", mg.resultsPayload);
     to(room).emit("playersUpdate", { players: getPlayersList(room) });
   }
 
@@ -777,22 +804,50 @@ module.exports = function createPhases(io) {
       snap.answerMs = ANSWER_TIMER_MS;
     }
     const mg = room.minigame;
-    if (room.gameState === GAME_STATE.SCORES && mg && mg.startEmitted && !mg.resolved) {
+    if (room.gameState === GAME_STATE.SCORES && mg && mg.startEmitted && !mg.livesApplied) {
       snap.minigame = {
         minigameId: mg.minigameId,
         roundIndex: mg.roundIndex,
         contestantIds: mg.contestantIds,
         mode: mg.mode,
         ...(mg.def.startPayload?.(mg) || {}),
+        // the phone missed "trueFalseSync" while it was away: without it its 3-2-1 never starts
+        startedAtTs: mg.startedAtTs ?? null,
+        serverNow: clock.now(room),
+        // the minigame is over and its results are on the TV: the phone shows them too
+        results: mg.resolved ? mg.resultsPayload || null : null,
       };
     }
     return snap;
   }
 
+  /**
+   * The minigame as a TV that reloaded mid-way should mount it again: which one,
+   * who plays, its start payload, its clock (the sync) — or its results, while
+   * the results scene is still due. The minigame itself then sends its own state
+   * on the TV's hello (never a new deal). null when no minigame is on.
+   */
+  function displayMinigameSnapshot(room) {
+    const mg = room.minigame;
+    if (room.gameState !== GAME_STATE.SCORES || !mg || !mg.startEmitted || mg.livesApplied) return null;
+    return {
+      minigameId: mg.minigameId,
+      roundIndex: mg.roundIndex,
+      contestantIds: mg.contestantIds,
+      mode: mg.mode,
+      ...(mg.def.startPayload?.(mg) || {}),
+      startedAtTs: mg.startedAtTs ?? null,
+      serverNow: clock.now(room),
+      results: mg.resolved ? mg.resultsPayload || null : null,
+    };
+  }
+
   return {
     resumeSnapshot,
+    displayMinigameSnapshot,
     finalSnapshot,
     minigameCtxFor: (room) => minigameCtx(room),
+    minigameHello,
     handleMinigameDeparture,
     startGame,
     emitQuestionAnnounce,
@@ -808,6 +863,7 @@ module.exports = function createPhases(io) {
     submitFinalAnswer,
     resolveFinalStep,
     handleFinalDeparture,
+    handleFinalReturn,
     finishGame,
     handleScoresDone,
     startMinigame,

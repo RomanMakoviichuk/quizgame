@@ -60,7 +60,7 @@ test("roundVideos: right folder by result, new files picked up, no immediate rep
 
   // empty folder -> old score clip; a file dropped in later is used right away
   const none = media.roundVideos(room, [{ lastCorrect: false }], dir);
-  assert.equal(none.afterResult, "/assets/rounds/results/fallback/score.mp4");
+  assert.equal(none.afterResult, "/assets/rounds/results/fallback/score.1.mp4");
   fs.writeFileSync(path.join(dir, "results/all-wrong", "w1.mp4"), "x");
   assert.match(media.roundVideos(room, [{ lastCorrect: false }], dir).afterResult, /all-wrong\/w1\.mp4$/);
 });

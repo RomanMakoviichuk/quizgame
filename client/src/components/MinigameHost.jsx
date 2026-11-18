@@ -8,6 +8,7 @@ import MemoryMinigame from "./MemoryMinigame";
 import NameThatTuneMinigame from "./NameThatTuneMinigame";
 import PerfectSecondMinigame from "./PerfectSecondMinigame";
 import TapeMeasureMinigame from "./TapeMeasureMinigame";
+import ShellShockMinigame from "./ShellShockMinigame";
 
 /**
  * Renders the active minigame by id — the single switch point for every minigame.
@@ -29,6 +30,7 @@ const MINIGAME_COMPONENTS = {
   tune: NameThatTuneMinigame,
   perfectSecond: PerfectSecondMinigame,
   tapeMeasure: TapeMeasureMinigame,
+  shellShock: ShellShockMinigame,
 };
 
 export default function MinigameHost({ minigameId = "trueFalse", ...props }) {

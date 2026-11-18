@@ -349,6 +349,22 @@ function onClientEvent(mg, playerId, name, data, ctx) {
   if (waiting.length === 0) closeRound(mg, i, ctx);
 }
 
+/** A TV that reloaded mid-minigame: the clock, the clips to load, the round (and its song) now. */
+function onDisplayHello(mg, send, ctx) {
+  const t = mg.tune;
+  if (!t || !t.introEndsAt) return;
+  const now = ctx.now();
+  send("tune:go", { rounds: t.rounds.length, introEndsAt: t.introEndsAt, serverNow: now, points: CONFIG.POINTS, losers: losersFor(mg.contestantIds.length) });
+  send("tune:preload", { urls: t.rounds.map((r) => r.url) });
+  const i = t.index;
+  if (i < 0) return;
+  const r = t.rounds[i];
+  send("tune:round", { ...publicRound(mg, i), serverNow: now });
+  if (r.status === "announce" || r.status === "live") send("tune:play", { index: i, url: r.url, startAt: r.startAt, serverNow: now, start: r.song.start });
+  send("tune:progress", progressPayload(mg, i));
+  if (r.status === "done" || r.status === "void") send("tune:result", { ...roundResult(mg, i), serverNow: now });
+}
+
 /** The TV: "tune:ready" (clips loaded) or "tune:audioFail" { index } (can't play this round). */
 function onDisplayEvent(mg, name, data, ctx) {
   const t = mg.tune;
@@ -458,6 +474,8 @@ module.exports = {
   onStart,
   onSync,
   onClientEvent,
+  HELLO: "tune:hello",
+  onDisplayHello,
   onDisplayEvent,
   resolveLosers,
   resolveWinner,

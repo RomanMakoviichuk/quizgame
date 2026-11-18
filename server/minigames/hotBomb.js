@@ -84,9 +84,19 @@ function onStart(mg) {
 
 const active = (mg) => mg.contestantIds.filter((id) => !mg.hb.out.includes(id) && !mg.hb.left.includes(id));
 
-/** The next player still in the game after `from`, going round the circle. */
-function nextAfter(mg, from) {
-  const ring = mg.contestantIds.filter((id) => id === from || active(mg).includes(id));
+/** Players in the game whose phone is connected right now (the bomb is not handed to a
+ * dropped phone when anybody else can take it). */
+function online(mg, ctx) {
+  const off = new Set((ctx?.players?.() || []).filter((p) => p.disconnected).map((p) => p.id));
+  const ids = active(mg);
+  const on = ids.filter((id) => !off.has(id));
+  return on.length ? on : ids;
+}
+
+/** The next player still in the game after `from`, going round the circle (connected ones first). */
+function nextAfter(mg, from, ctx) {
+  const on = online(mg, ctx);
+  const ring = mg.contestantIds.filter((id) => id === from || on.includes(id));
   const i = ring.indexOf(from);
   for (let k = 1; k <= ring.length; k++) {
     const id = ring[(i + k) % ring.length];
@@ -163,8 +173,9 @@ function newBomb(mg, ctx, notTo) {
   s.word = start.word;
   s.chain.push({ word: start.word, by: null });
   s.letter = words.chainLetter(start.key, s.used);
-  const pool = ids.filter((id) => id !== notTo);
-  giveBomb(mg, ctx, pick(pool.length ? pool : ids));
+  const on = online(mg, ctx);
+  const pool = on.filter((id) => id !== notTo);
+  giveBomb(mg, ctx, pick(pool.length ? pool : on));
 }
 
 function giveBomb(mg, ctx, to) {
@@ -275,7 +286,7 @@ function onClientEvent(mg, playerId, name, data, ctx) {
   // a right word passes the bomb at once: to the player picked in advance, else the next one round the circle
   const pre = s.target[playerId];
   if (pre && pass(mg, ctx, playerId, pre)) return;
-  const next = nextAfter(mg, playerId);
+  const next = nextAfter(mg, playerId, ctx);
   if (next && pass(mg, ctx, playerId, next)) return;
   s.awaitingTarget = true; // nobody else to take it (cannot really happen with 2+ players)
   broadcast(mg, ctx, { accepted: { by: playerId, word: res.word } });
@@ -290,8 +301,18 @@ function onPlayerLeft(mg, playerId, ctx) {
   const ids = active(mg);
   if (s.phase === "prep") return broadcast(mg, ctx);
   if (ids.length < 2) return finish(mg, ctx);
-  if (s.phase === "live" && s.holder === playerId) return giveBomb(mg, ctx, pick(ids));
+  if (s.phase === "live" && s.holder === playerId) return giveBomb(mg, ctx, pick(online(mg, ctx)));
   broadcast(mg, ctx);
+}
+
+/** A phone / the TV (re)opened the minigame: the clock and the bomb as they are now. */
+function onHello(mg, send, ctx, playerId) {
+  const s = mg.hb;
+  if (!s) return;
+  const now = ctx.now();
+  if (s.startAt) send("hb:go", { startAt: s.startAt, endsAt: s.endsAt, serverNow: now });
+  send("hb:state", publicState(mg, now));
+  if (playerId && s.target[playerId]) send("hb:targetAck", { seq: s.seq, targetId: s.target[playerId] });
 }
 
 // ---------------------------------------------------------------- results
@@ -322,6 +343,7 @@ module.exports = {
   onSync,
   onClientEvent,
   onPlayerLeft,
+  onHello,
   resolveLosers,
   buildResults,
   publicState,

@@ -500,22 +500,53 @@ function createStore(filePath) {
     "active",
   ];
 
-  function exportJSON() {
+  /**
+   * Export / import filter: { categoryIds: [id]|null, difficulties: [d]|null }.
+   * Empty or missing lists mean "all". A question without a difficulty counts
+   * as medium (as in the game).
+   */
+  function filterSets({ categoryIds = null, difficulties = null } = {}) {
+    const cats = categoryIds && categoryIds.length ? new Set(categoryIds) : null;
+    const diffs =
+      difficulties && difficulties.length
+        ? new Set(difficulties.map((d) => normalizeDifficulty(d)).filter(Boolean))
+        : null;
+    return { cats, diffs };
+  }
+
+  function filteredQuestions(filter) {
+    const { cats, diffs } = filterSets(filter);
+    return data.questions.filter(
+      (q) =>
+        (!cats || cats.has(q.categoryId)) &&
+        (!diffs || diffs.has(q.difficulty || "medium"))
+    );
+  }
+
+  function exportJSON(filter = {}) {
     ensureLoaded();
+    const questions = filteredQuestions(filter);
+    const { cats, diffs } = filterSets(filter);
+    const usedCats = new Set(questions.map((q) => q.categoryId));
     return {
       version: data.version || 1,
       exportedAt: nowIso(),
-      categories: data.categories.map(serializeCategory),
-      questions: data.questions.map(serializeQuestion),
+      filter: {
+        categoryIds: cats ? [...cats] : null,
+        difficulties: diffs ? [...diffs] : null,
+      },
+      categories: data.categories
+        .filter((c) => (cats || diffs ? usedCats.has(c.id) || (cats && cats.has(c.id)) : true))
+        .map(serializeCategory),
+      questions: questions.map(serializeQuestion),
     };
   }
 
-  function exportCSV({ categoryId = null } = {}) {
+  function exportCSV(filter = {}) {
     ensureLoaded();
     const catName = (cid) =>
       (data.categories.find((c) => c.id === cid) || {}).name || "";
-    const rows = data.questions
-      .filter((q) => (categoryId ? q.categoryId === categoryId : true))
+    const rows = filteredQuestions(filter)
       .map((q) => {
         const correct = q.answers.find((a) => a.isCorrect);
         return {
@@ -536,13 +567,45 @@ function createStore(filePath) {
   /**
    * Validate every row first; insert nothing unless the whole batch is valid.
    * New category names are created on the fly. Returns
-   *   { ok, inserted, createdCategories, errors:[{ row, message }] }
+   *   { ok, inserted, skipped, createdCategories, errors:[{ row, message }] }
+   * With categoryIds / difficulties only the matching rows are taken, the rest
+   * of the file is skipped (counted in `skipped`).
    */
-  function importRows(rows, { createMissingCategories = true } = {}) {
+  function importRows(
+    rows,
+    { createMissingCategories = true, categoryIds = null, difficulties = null } = {}
+  ) {
     return mutate(() => {
       const errors = [];
       const staged = [];
       const pendingCategories = new Map(); // lowerName -> {name}
+      const { cats, diffs } = filterSets({ categoryIds, difficulties });
+      const allowedCatNames = cats
+        ? new Set(
+            data.categories
+              .filter((c) => cats.has(c.id))
+              .flatMap((c) => [c.name.toLowerCase(), c.slug])
+          )
+        : null;
+      let skipped = 0;
+      rows = rows.filter((raw) => {
+        const name = String(raw.category || "").trim();
+        if (
+          allowedCatNames &&
+          !allowedCatNames.has(name.toLowerCase()) &&
+          !allowedCatNames.has(makeSlug(name))
+        ) {
+          skipped += 1;
+          return false;
+        }
+        const d = normalizeDifficulty(raw.difficulty);
+        // an unknown difficulty is kept so it is reported as an error
+        if (diffs && (d || !raw.difficulty) && !diffs.has(d || "medium")) {
+          skipped += 1;
+          return false;
+        }
+        return true;
+      });
 
       const findCategory = (name) => {
         const key = String(name || "").trim().toLowerCase();
@@ -629,7 +692,7 @@ function createStore(filePath) {
       });
 
       if (errors.length) {
-        return { ok: false, inserted: 0, createdCategories: 0, errors };
+        return { ok: false, inserted: 0, skipped, createdCategories: 0, errors };
       }
 
       // Commit: create categories, then questions.
@@ -680,6 +743,7 @@ function createStore(filePath) {
       return {
         ok: true,
         inserted: staged.length,
+        skipped,
         createdCategories: createdNames.length,
         createdCategoryNames: createdNames,
         errors: [],
