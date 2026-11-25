@@ -1502,6 +1502,14 @@ function App() {
         setJoinError(d?.error || "Кімнату не знайдено");
         return;
       }
+      if (d.exam) {
+        // the teacher's test, not a game: straight to the questions, no characters
+        try {
+          if (playerName.trim()) localStorage.setItem("quizgame_exam_name", JSON.stringify(playerName.trim()));
+        } catch {}
+        window.location.href = `/test?code=${d.roomCode}`;
+        return;
+      }
       setTakenSlots(d.taken || []);
       setPickedSlot(null);
       setJoinStep("character");
@@ -1804,7 +1812,7 @@ function App() {
               type="text"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="Ваш нікнейм"
+              placeholder="Нікнейм (для тесту — ім'я)"
               maxLength={20}
             />
             {joinError && <p className="join-error">{joinError}</p>}
@@ -1812,7 +1820,7 @@ function App() {
               Далі: обрати персонажа
             </button>
             <a className="join-exam-link" href="/test">
-              Пройти тест від учителя →
+              Тест від учителя? Введіть його код вище →
             </a>
           </form>
         </div>

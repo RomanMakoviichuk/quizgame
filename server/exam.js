@@ -20,6 +20,7 @@ const path = require("path");
 const crypto = require("crypto");
 const store = require("./content/store");
 const { isValid: isAdminToken } = require("./admin/auth");
+const { getRoom } = require("./rooms");
 
 const DIR = process.env.EXAM_DIR || path.join(__dirname, "data", "exams");
 const MAX_STUDENTS = 80;
@@ -54,7 +55,8 @@ function grade12(correct, total) {
 function newCode() {
   for (let i = 0; i < 200; i++) {
     const c = String(crypto.randomInt(1000, 10000));
-    if (!exams.has(c)) return c;
+    // never the code of a game room: students type both into the same field
+    if (!exams.has(c) && !getRoom(c)) return c;
   }
   return String(crypto.randomInt(10000, 100000));
 }
@@ -576,4 +578,10 @@ function csvFor({ id, code, teacherToken }) {
   }
 }
 
-module.exports = { register, listSaved, csvFor, grade12, _internal: { exams, create, start, answer, finish, studentView, teacherView, toCSV, questionStats, startStudent } };
+/** Is there a test students can still join under this code? (the game's join field asks) */
+function isJoinable(code) {
+  const exam = exams.get(String(code || ""));
+  return !!exam && exam.status !== "finished";
+}
+
+module.exports = { isJoinable, register, listSaved, csvFor, grade12, _internal: { exams, create, start, answer, finish, studentView, teacherView, toCSV, questionStats, startStudent } };

@@ -391,6 +391,8 @@ module.exports = function registerHandlers(io) {
     socket.on("roomSlots", (data, callback) => {
       const code = String(data?.roomCode || "").replace(/\D/g, "").padStart(4, "0").slice(0, 4);
       const room = getRoom(code);
+      // a teacher's test under this code: the phone goes to the test page instead
+      if (!room && require("./exam").isJoinable(code)) return callback?.({ exam: true, roomCode: code });
       if (!room) return callback?.({ error: "Кімнату не знайдено" });
       if (roomIsFull(room)) return callback?.({ error: `Кімната заповнена (макс. ${MAX_PLAYERS} гравців)` });
       if (room.gameState !== GAME_STATE.WAITING) return callback?.({ error: "Гра вже почалася" });
