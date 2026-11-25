@@ -22,6 +22,7 @@ const route = window.location.pathname.replace(/\/+$/, '');
 if (route === '/test' || route === '/teacher') {
   document.title = 'Перевірка знань';
   document.body.style.background = '#f3f5f9';
+  document.documentElement.classList.add('exam-page'); // ordinary vertical scroll (exam.css)
   root.render(<React.StrictMode>{route === '/test' ? <ExamStudent /> : <ExamTeacher />}</React.StrictMode>);
 } else {
   root.render(

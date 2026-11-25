@@ -1,3 +1,20 @@
+/* The game's global CSS pins html/body/#root (position fixed, overflow hidden)
+   so the TV never scrolls. The test pages (/test, /teacher — index.js puts
+   .exam-page on <html>) scroll like any ordinary web page instead. */
+html.exam-page,
+html.exam-page body,
+html.exam-page #root {
+  position: static !important;
+  height: auto !important;
+  min-height: 100%;
+  overflow: visible !important;
+}
+html.exam-page {
+  overflow-y: auto !important;
+  overscroll-behavior-y: auto;
+  touch-action: pan-x pan-y;
+}
+
 /* «Перевірка знань» — a calm, light theme of its own (nothing from the game's styles) */
 .ex-root {
   --ex-bg: #f3f5f9;
@@ -14,12 +31,6 @@
   --ex-mid: #e0a100;
   min-height: 100vh;
   min-height: 100svh;
-  /* the game's global CSS pins html/body/#root (fixed, overflow hidden):
-     these pages scroll inside their own root instead */
-  height: 100%;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
   background: var(--ex-bg);
   color: var(--ex-text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
