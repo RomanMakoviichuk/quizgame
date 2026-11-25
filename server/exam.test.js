@@ -95,3 +95,30 @@ test("a student who joins late starts at once", () => {
   const s = addStudent(e, "Гліб");
   assert.equal(studentView(e, s).phase, "question");
 });
+
+test("a set number of students: the test ends by itself once all of them have finished", () => {
+  const cat = someCategory(3);
+  const { exam: e } = create({ categoryId: cat.id, count: 2, timeLimitMin: 0, players: 2 });
+  assert.equal(e.players, 2);
+  assert.equal(teacherView(e).players, 2);
+  const a = addStudent(e, "Аня");
+  const b = addStudent(e, "Богдан");
+  start(e);
+  for (let i = 0; i < 2; i++) answer(e, a, i, rightShown(e, a));
+  assert.equal(e.status, "running", "one of two finished: still running");
+  for (let i = 0; i < 2; i++) answer(e, b, i, rightShown(e, b));
+  assert.equal(e.status, "finished");
+  assert.equal(studentView(e, b).result.grade, 12);
+  finish(e, "test");
+});
+
+test("any number of students (players 0): finishing everybody does not end the test", () => {
+  const cat = someCategory(3);
+  const { exam: e } = create({ categoryId: cat.id, count: 1, timeLimitMin: 0 });
+  assert.equal(e.players, 0);
+  const a = addStudent(e, "Аня");
+  start(e);
+  answer(e, a, 0, rightShown(e, a));
+  assert.equal(e.status, "running");
+  finish(e, "test");
+});

@@ -216,6 +216,7 @@ function teacherView(exam) {
     count: exam.questions.length,
     timeLimitMin: exam.timeLimitMin,
     showReview: exam.showReview,
+    players: exam.players || 0,
     createdAt: exam.createdAt,
     startedAt: exam.startedAt,
     endsAt: exam.endsAt,
@@ -301,7 +302,7 @@ function finish(exam, why) {
   pushAll(exam);
 }
 
-function create({ categoryId, count, timeLimitMin, showReview, title }) {
+function create({ categoryId, count, timeLimitMin, showReview, title, players }) {
   const cat = store.getCategory(categoryId);
   if (!cat) return { error: "Категорію не знайдено." };
   const pool = store.getPlayableQuestions(categoryId).filter((q) => q.answers.length >= 2 && q.answers.some((a) => a.isCorrect));
@@ -317,6 +318,9 @@ function create({ categoryId, count, timeLimitMin, showReview, title }) {
     status: "lobby",
     timeLimitMin: Math.max(0, Math.min(240, Math.floor(Number(timeLimitMin) || 0))),
     showReview: showReview !== false,
+    // how many students take the test (0 = any number): nobody extra can join,
+    // and the test ends by itself once all of them have finished
+    players: Math.max(0, Math.min(MAX_STUDENTS, Math.floor(Number(players) || 0))),
     createdAt: Date.now(),
     startedAt: null,
     endsAt: null,
@@ -350,6 +354,14 @@ function start(exam) {
   pushAll(exam);
 }
 
+/** A test for a set number of students is over once that many have answered everything. */
+function allDone(exam) {
+  if (!exam.players) return false;
+  let done = 0;
+  for (const st of exam.students.values()) if (st.finishedAt) done++;
+  return done >= exam.players;
+}
+
 function answer(exam, s, position, choice) {
   if (exam.status !== "running" || s.finishedAt) return { error: "closed" };
   // the phone says which question it answers: a resent tap for an old one is ignored
@@ -361,6 +373,10 @@ function answer(exam, s, position, choice) {
   const orig = s.answerOrders[qi][shown];
   s.answers.push({ q: qi, choice: orig, correct: orig === q.correct, at: Date.now() });
   if (s.answers.length >= exam.questions.length) s.finishedAt = Date.now();
+  if (s.finishedAt && allDone(exam)) {
+    finish(exam, "all-done"); // saves and pushes everybody
+    return { ok: true };
+  }
   save(exam);
   pushStudent(exam, s);
   pushTeacher(exam);
@@ -461,6 +477,8 @@ function register(ioServer) {
         return reply({ code: exam.code, studentId: same.id, token: same.token, state: studentView(exam, same) });
       }
       if (exam.students.size >= MAX_STUDENTS) return reply({ error: "У тесті вже максимум учнів." });
+      if (exam.players && exam.students.size >= exam.players)
+        return reply({ error: `У тесті вже ${exam.players} з ${exam.players} учнів — вільних місць немає.` });
       const s = { id: rid(6), token: rid(), name, socketId: socket.id, joinedAt: Date.now(), order: null, answerOrders: null, answers: [], startedAt: null, finishedAt: null };
       exam.students.set(s.id, s);
       if (exam.status === "running") startStudent(exam, s); // came late: starts right away

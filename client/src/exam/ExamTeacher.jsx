@@ -191,6 +191,7 @@ function Setup({ adminToken, onCreate, onAuthLost }) {
   const [count, setCount] = useState(20);
   const [timeLimitMin, setTime] = useState(0);
   const [showReview, setShowReview] = useState(true);
+  const [players, setPlayers] = useState(0);
   const [title, setTitle] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -220,7 +221,7 @@ function Setup({ adminToken, onCreate, onAuthLost }) {
     e.preventDefault();
     if (!cat) return;
     setBusy(true);
-    setErr((await onCreate({ categoryId, count: n, timeLimitMin, showReview, title: title.trim() })) || "");
+    setErr((await onCreate({ categoryId, count: n, timeLimitMin, showReview, players, title: title.trim() })) || "");
     setBusy(false);
   };
 
@@ -260,6 +261,18 @@ function Setup({ adminToken, onCreate, onAuthLost }) {
                 </option>
               ))}
             </select>
+          </label>
+          <label>
+            Кількість учнів
+            <select value={players} onChange={(e) => setPlayers(Number(e.target.value))}>
+              <option value={0}>будь-яка</option>
+              {Array.from({ length: 39 }, (_, i) => i + 2).map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+            </select>
+            <span className="ex-muted small">{players ? "зайвих не пустить; тест завершиться, щойно всі дадуть відповіді" : ""}</span>
           </label>
         </div>
         <label className="ex-check">
@@ -328,6 +341,7 @@ function Lobby({ exam, studentUrl, socket, onClose }) {
       <div className="ex-card ex-lobby">
         <p className="ex-muted">
           {exam.categoryName} · {exam.count} питань · {exam.timeLimitMin ? `${exam.timeLimitMin} хв` : "без обмеження часу"}
+          {exam.players ? ` · ${exam.players} учнів` : ""}
         </p>
         <h1>{exam.title}</h1>
         <div className="ex-join-info">
@@ -351,7 +365,9 @@ function Lobby({ exam, studentUrl, socket, onClose }) {
               setBusy(false);
             }}
           >
-            Почати тест ({exam.students.length})
+            {exam.players && exam.students.length >= exam.players
+              ? `Усі ${exam.players} на місці — почати тест`
+              : `Почати тест (${exam.students.length}${exam.players ? `/${exam.players}` : ""})`}
           </button>
           <button className="ex-link" type="button" onClick={onClose}>
             Скасувати
@@ -360,7 +376,10 @@ function Lobby({ exam, studentUrl, socket, onClose }) {
         <p className="ex-muted small">Учні, які приєднаються пізніше, почнуть одразу.</p>
       </div>
       <div className="ex-card">
-        <h2>Учні ({exam.students.length})</h2>
+        <h2>
+          Учні ({exam.students.length}
+          {exam.players ? `/${exam.players}` : ""})
+        </h2>
         {!exam.students.length && <p className="ex-muted">Поки нікого…</p>}
         <ul className="ex-names">
           {[...exam.students]
@@ -397,7 +416,7 @@ function Running({ exam, offset, studentUrl, socket }) {
         <div className="ex-big-stats">
           <div>
             <b>
-              {done}/{exam.students.length}
+              {done}/{Math.max(exam.students.length, exam.players || 0)}
             </b>
             <span>завершили</span>
           </div>
