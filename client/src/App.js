@@ -20,6 +20,7 @@ const GAME_DIFFICULTIES = [
 const ROUND_GAP_MS = 700; // rounds 2-9: a pause in the dark before the round announcement
 const MINIGAME_GAP_MS = 1200;
 const PRE_ROUND_DARK_MS = 1500; // after the welcome, before round 1
+const ROUND_INTRO_VOLUME = 0.8; // round intro clips are loud: 20% quieter than recorded
 const PHONE_MG_RESULT_MS = 6500; // phone: how long a minigame's result screen stays // a pause in the dark between the round's results and its minigame
 const ANSWER_SECONDS = 25; // fallback; the server sends the real answer time with answerPhase
 const QUESTION_REVEAL_MS = 2500; // the question scene's video plays alone this long before the question appears
@@ -340,6 +341,10 @@ function App() {
   const [question, setQuestion] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [answerResult, setAnswerResult] = useState(null);
+  // the phone's pick until the server confirms it (a tap during a dropped connection is resent after resuming)
+  const pendingAnswerRef = useRef(null);
+  const sendPendingAnswerRef = useRef(null);
+  const [answerLate, setAnswerLate] = useState(false);
   /** Final race: intro payload ("finalBattle") and outcome ("gameFinished"). */
   const [finalIntro, setFinalIntro] = useState(null);
   const [finalResult, setFinalResult] = useState(null);
@@ -590,6 +595,28 @@ function App() {
 
   useEffect(() => {
     const s = io(SOCKET_URL, { transports: ["websocket", "polling"] });
+    // Game messages sent while the connection is down wait here until the seat is ours again.
+    // socket.io's own buffer would send them on reconnect BEFORE "resumeSession", from a socket
+    // the server does not know yet — they were dropped (a word in the bomb, a tap in a minigame).
+    const SEAT_EVENTS = new Set(["resumeSession", "resumeDisplay", "joinRoom", "createRoom", "leaveRoom"]);
+    const rawEmit = s.emit.bind(s);
+    let seated = true;
+    let held = [];
+    s.emit = (ev, ...args) => {
+      if (seated || SEAT_EVENTS.has(ev)) return rawEmit(ev, ...args);
+      held.push([ev, args]);
+      if (held.length > 40) held.shift();
+      return s;
+    };
+    const releaseHeld = (send) => {
+      seated = true;
+      const q = held;
+      held = [];
+      if (send) for (const [ev, args] of q) rawEmit(ev, ...args);
+    };
+    s.on("disconnect", () => {
+      seated = false;
+    });
     setSocket(s);
     s.on("connect", () => {
       setConnected(true);
@@ -597,6 +624,7 @@ function App() {
       const tv = !isMobile() ? readDisplaySession() : null;
       if (tv) {
         s.emit("resumeDisplay", tv, (r) => {
+          releaseHeld(!!r && !r.error);
           if (!r || r.error) {
             clearDisplaySession();
             // this TV was running a game that is gone: back to the menu instead of a frozen scene
@@ -657,10 +685,12 @@ function App() {
     // the screen coming back on — events sent while it slept may never have arrived)
     function resumePhone() {
       const saved = isMobile() && !isDisplayRef.current ? readSession() : null;
-      if (!saved) return;
+      if (!saved) return releaseHeld(true);
       setResuming(true);
       s.emit("resumeSession", saved, (r) => {
         setResuming(false);
+        // the seat is back: what was tapped meanwhile goes now (after the state is restored below)
+        window.setTimeout(() => releaseHeld(!!r && !r.error), 0);
         if (!r || r.error) {
           clearSession();
           setJoinCodeInput((v) => v || saved.roomCode || "");
@@ -695,7 +725,18 @@ function App() {
           setQuestion({ ...r.question, index: r.roundIndex, total: TOTAL_ROUNDS });
           if (r.answerMs) setAnswerTotal(Math.round(r.answerMs / 1000));
           setAnswerTimeLeft(Math.max(0, Math.ceil((r.answerMsLeft || 0) / 1000)));
-          setSelectedAnswer(r.answered ? r.answerIndex : null);
+          const pend = pendingAnswerRef.current;
+          if (r.answered) {
+            pendingAnswerRef.current = null;
+            setSelectedAnswer(r.answerIndex);
+          } else if (pend && pend.roundIndex === r.roundIndex) {
+            // tapped while the connection was down: the pick stays and goes now
+            setSelectedAnswer(pend.answerIndex);
+            sendPendingAnswerRef.current?.(s);
+          } else {
+            pendingAnswerRef.current = null;
+            setSelectedAnswer(null);
+          }
           setAnswerResult(null);
         }
         if (r.minigame) {
@@ -1018,6 +1059,8 @@ function App() {
       setQuestion({ ...d.question, index: d.roundIndex, total: TOTAL_ROUNDS });
       setQuestionPlayData(null);
       setSelectedAnswer(null);
+      pendingAnswerRef.current = null;
+      setAnswerLate(false);
       setAnswerResult(null);
       setGameState(GAME_PHASE.ANSWER_PHASE);
       const total = Math.round((d.answerMs || ANSWER_SECONDS * 1000) / 1000);
@@ -1544,6 +1587,23 @@ function App() {
     setScreen("game");
   };
 
+  /** Send the pick waiting for the server's word. Only over a live connection: a packet
+   * buffered while offline would reach the server before this phone has its seat back. */
+  function sendPendingAnswer(s) {
+    const p = pendingAnswerRef.current;
+    if (!s || !p || !s.connected) return;
+    s.emit("answer", { answerIndex: p.answerIndex }, (r) => {
+      if (pendingAnswerRef.current !== p) return;
+      if (r?.ok) pendingAnswerRef.current = null;
+      else if (r?.error === "closed") {
+        pendingAnswerRef.current = null;
+        setAnswerLate(true);
+      }
+      // "no-seat": kept, resent once resumeSession gives the seat back
+    });
+  }
+  sendPendingAnswerRef.current = sendPendingAnswer;
+
   const handleMobileIntroSkip = () => {
     if (socket && isAdmin) socket.emit("startGame");
   };
@@ -1551,7 +1611,8 @@ function App() {
   const handleAnswer = (i) => {
     if (socket && question && selectedAnswer === null) {
       setSelectedAnswer(i);
-      socket.emit("answer", { answerIndex: i });
+      pendingAnswerRef.current = { answerIndex: i, roundIndex: question.index };
+      sendPendingAnswer(socket);
     }
   };
 
@@ -2252,7 +2313,7 @@ function App() {
       )}
       {!isMobile() && isDisplay && gameState === GAME_PHASE.QUESTION_ANNOUNCE && roundIntroVideo && (
         <>
-          <CinemaClip key={roundIntroVideo} src={roundIntroVideo} fit="cover" onDone={finishAnnounce} />
+          <CinemaClip key={roundIntroVideo} src={roundIntroVideo} fit="cover" volume={ROUND_INTRO_VOLUME} onDone={finishAnnounce} />
           {/* warm up the question video so the question scene starts without a stutter */}
           {questionVideo && <video className="video-preload-only" src={questionVideo} preload="auto" muted aria-hidden />}
         </>
@@ -2441,7 +2502,9 @@ function App() {
             ))}
           </div>
           {isMobile() && selectedAnswer !== null && (
-            <p className="m-answer-locked">✅ Відповідь прийнято — чекаємо інших</p>
+            <p className="m-answer-locked">
+              {answerLate ? "⏱ Не встигли — час на відповідь вийшов" : "✅ Відповідь прийнято — чекаємо інших"}
+            </p>
           )}
           {answerResult && !isMobile() && (
             <div className={`result-message ${answerResult.correct ? "correct" : "wrong"}`}>

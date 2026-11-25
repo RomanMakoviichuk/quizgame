@@ -3957,8 +3957,8 @@ html.phone-locked *::-webkit-scrollbar { width: 0; height: 0; }
   .app-game-mobile .option {
     height: auto !important;
     max-height: none !important;
-    padding-top: 6px !important;
-    padding-bottom: 6px !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
   }
   .app-game-mobile .opt-text {
     display: block !important;
@@ -3966,13 +3966,30 @@ html.phone-locked *::-webkit-scrollbar { width: 0; height: 0; }
     overflow: visible !important;
     overflow-wrap: break-word;
     word-break: normal;
-    hyphens: auto;
-    line-height: 1.18;
+    hyphens: manual; /* whole words: «захи-щає» mid-word breaks are hard to read */
+    line-height: 1.22;
+    text-align: left;
   }
+  /* long answers: one per row, the full width, a readable font; the buttons take the
+     card's free height (the group scrolls only if four of them still do not fit) */
   .app-game-mobile .options.opts-l,
-  .app-game-mobile .options.opts-xl { grid-template-columns: 1fr !important; }
-  .app-game-mobile .options.opts-l .option { font-size: clamp(0.84rem, 2vh, 0.98rem) !important; }
-  .app-game-mobile .options.opts-xl .option { font-size: clamp(0.76rem, 1.8vh, 0.88rem) !important; line-height: 1.12; }
+  .app-game-mobile .options.opts-xl {
+    grid-template-columns: 1fr !important;
+    /* max-content: a row is never shorter than its answer (the group scrolls instead) */
+    grid-template-rows: repeat(4, max-content) !important;
+    align-content: safe center;
+    gap: clamp(6px, 1.2svh, 10px) !important;
+  }
+  /* the answers need the room: the question above them gets a little smaller */
+  .app-game-mobile .question-screen:has(.opts-xl) .question-text {
+    font-size: clamp(0.92rem, 2.5svh, 1.15rem) !important;
+    line-height: 1.2;
+    margin-bottom: 4px !important;
+  }
+  .app-game-mobile .options.opts-l .option { font-size: clamp(0.9rem, 2.3svh, 1.02rem) !important; }
+  .app-game-mobile .options.opts-xl .option { font-size: clamp(0.86rem, 2.15svh, 0.98rem) !important; }
+  .app-game-mobile .options.opts-l .option { min-height: clamp(52px, 8svh, 64px); padding-top: 10px !important; padding-bottom: 10px !important; }
+  .app-game-mobile .options.opts-xl .option { min-height: clamp(48px, 7.5svh, 64px); padding-top: clamp(5px, 1svh, 10px) !important; padding-bottom: clamp(5px, 1svh, 10px) !important; }
 }
 
 /* ---------------------------------------------------------------- join screen logo */

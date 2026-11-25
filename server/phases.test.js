@@ -286,7 +286,7 @@ test("final: unanswered questions time out and the darkness ends the game", (t) 
 
 test("pause: the answer window and the final race stand still until resume", (t) => {
   const clock = require("./clock");
-  const { ANSWER_TIMER_MS } = require("./config");
+  const { ANSWER_TIMER_MS, ANSWER_GRACE_MS } = require("./config");
   const { io, phases, room, cleanup } = setup(2);
   t.after(cleanup);
   t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
@@ -300,6 +300,8 @@ test("pause: the answer window and the final race stand still until resume", (t)
   assert.equal(room.gameState, GAME_STATE.ANSWER_PHASE); // frozen, not timed out
   clock.resume(room);
   t.mock.timers.tick(ANSWER_TIMER_MS - 5000);
+  assert.equal(room.gameState, GAME_STATE.ANSWER_PHASE); // the grace for a late tap's network trip
+  t.mock.timers.tick(ANSWER_GRACE_MS);
   assert.equal(room.gameState, GAME_STATE.SCORES);
 
   // final race: the question deadline sent to phones is in game time

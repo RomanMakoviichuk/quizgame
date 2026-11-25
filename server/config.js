@@ -49,6 +49,7 @@ module.exports = {
 
   // Timings (ms)
   ANSWER_TIMER_MS: Number(process.env.ANSWER_TIMER_MS) || 25000, // ends earlier when everyone has answered
+  ANSWER_GRACE_MS: 1200, // server-side slack after the answer timer (network latency)
   INTRO_DURATION_MS: 180000, // hard cap on the cinematic intro
   ROUND1_ANSWER_DELAY_MS: 6000, // round 1: fixed delay from question start to answer phase (2.5s scene + the text)
 

@@ -249,10 +249,11 @@ module.exports = function registerHandlers(io) {
       phases.startAnswerPhase(room);
     });
 
-    onGame("answer", (data) => {
+    onGame("answer", (data, callback) => {
+      const ack = typeof callback === "function" ? callback : () => {};
       const room = roomOf();
-      if (!room) return;
-      phases.submitAnswer(room, socket.id, data?.answerIndex);
+      if (!room) return ack({ error: "no-seat" });
+      ack(phases.submitAnswer(room, socket.id, data?.answerIndex) || { error: "closed" });
     });
 
     onGame("scoresDone", () => {

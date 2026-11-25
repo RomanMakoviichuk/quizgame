@@ -35,6 +35,7 @@ const {
   GHOST_SCORE_SHARE,
   LIVES_PER_PLAYER,
   ANSWER_TIMER_MS,
+  ANSWER_GRACE_MS,
   ROUND1_ANSWER_DELAY_MS,
   FINAL,
 } = require("./config");
@@ -192,7 +193,8 @@ module.exports = function createPhases(io) {
       roundIndex: room.currentRoundIndex + 1,
       answerMs: ANSWER_TIMER_MS,
     });
-    room.questionTimer = clock.schedule(room, () => checkAnswers(room), ANSWER_TIMER_MS);
+    // a little longer than the phones show: a tap in the last second still gets here over a slow network
+    room.questionTimer = clock.schedule(room, () => checkAnswers(room), ANSWER_TIMER_MS + ANSWER_GRACE_MS);
   }
 
   /** Everyone answered, or the answer timer ran out: on to the results. */
@@ -207,15 +209,12 @@ module.exports = function createPhases(io) {
 
   function submitAnswer(room, socketId, answerIndex) {
     const player = room.players.get(socketId);
-    if (
-      !player ||
-      room.gameState !== GAME_STATE.ANSWER_PHASE ||
-      player.hasAnswered
-    )
-      return;
+    if (!player) return { error: "no-seat" }; // a socket not (yet) tied to a seat: the phone resends after resuming
+    if (room.gameState !== GAME_STATE.ANSWER_PHASE) return { error: "closed" };
+    if (player.hasAnswered) return { ok: true, already: true };
 
     const roundData = room.rounds[room.currentRoundIndex];
-    if (!roundData?.question) return;
+    if (!roundData?.question) return { error: "closed" };
 
     const isCorrect = answerIndex === roundData.question.correctIndex;
     player.hasAnswered = true;
@@ -234,6 +233,7 @@ module.exports = function createPhases(io) {
 
     // everyone answered: the round ends right away
     if ([...room.players.values()].every((p) => p.hasAnswered)) checkAnswers(room);
+    return { ok: true };
   }
 
   function emitScores(room) {
