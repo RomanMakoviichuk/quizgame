@@ -8,13 +8,12 @@ const store = require("./content/store");
 const exam = require("./exam");
 const { create, start, answer, finish, studentView, teacherView, toCSV, startStudent } = exam._internal;
 
-test("grade12: the share of right answers on the 12-point scale, never below 1", () => {
-  assert.equal(exam.grade12(20, 20), 12);
-  assert.equal(exam.grade12(19, 20), 11);
-  assert.equal(exam.grade12(10, 20), 6);
-  assert.equal(exam.grade12(1, 20), 1);
-  assert.equal(exam.grade12(0, 20), 1);
+test("grade12: 17–20 of 20 is 12, nothing right is 1, evenly in between", () => {
+  const scale = Array.from({ length: 21 }, (_, c) => exam.grade12(c, 20));
+  assert.deepEqual(scale, [1, 2, 2, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 9, 10, 11, 11, 12, 12, 12, 12]);
   assert.equal(exam.grade12(0, 0), 0);
+  assert.equal(exam.grade12(5, 5), 12);
+  assert.equal(exam.grade12(0, 5), 1);
 });
 
 function someCategory(min) {

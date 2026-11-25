@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "./exam.css";
-import { SERVER_URL, connectExam, call, readJSON, writeJSON, gradeLevel, fmtDuration } from "./examApi";
+import { SERVER_URL, connectExam, call, readJSON, writeJSON, gradeLevel, gradeScale, fmtDuration } from "./examApi";
 
 /**
  * The teacher's page (/teacher, on the classroom computer / projector):
@@ -280,8 +280,20 @@ function Setup({ adminToken, onCreate, onAuthLost }) {
           Після завершення тесту показати учням їхні помилки й правильні відповіді
         </label>
         <p className="ex-muted small">
-          Кожен учень отримує ті самі {n || "…"} питань, але в іншому порядку і з перемішаними варіантами. Оцінка: частка правильних × 12 (мінімум 1).
+          Кожен учень отримує ті самі {n || "…"} питань, але в іншому порядку і з перемішаними варіантами. Питання без відповіді рахуються як неправильні.
         </p>
+        {n > 0 && (
+          <>
+            <p className="ex-muted small">Шкала оцінок для {n} питань (правильних → бал):</p>
+            <div className="ex-scale">
+              {gradeScale(n).map((r) => (
+                <span key={r.grade}>
+                  {r.from === r.to ? r.from : `${r.from}–${r.to}`} → <b>{r.grade}</b>
+                </span>
+              ))}
+            </div>
+          </>
+        )}
         {err && <p className="ex-error">{err}</p>}
         <button className="ex-btn primary" disabled={!cat || busy}>
           {busy ? "Створюємо…" : "Створити тест"}

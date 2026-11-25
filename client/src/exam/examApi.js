@@ -36,6 +36,25 @@ export const writeJSON = (key, value) => {
   }
 };
 
+/** Same as server/exam.js grade12: 85%+ (17–20 of 20) is 12, nothing right is 1. */
+export function grade12(correct, total) {
+  if (!total) return 0;
+  if (correct * 20 >= total * 17) return 12;
+  return 1 + Math.round(((correct * 20) / (total * 17)) * 11);
+}
+
+/** For N questions: grade -> the range of right answers that gives it ("17–20"). */
+export function gradeScale(total) {
+  const out = [];
+  for (let c = 0; c <= total; c++) {
+    const g = grade12(c, total);
+    const last = out[out.length - 1];
+    if (last && last.grade === g) last.to = c;
+    else out.push({ grade: g, from: c, to: c });
+  }
+  return out.reverse();
+}
+
 /** 12-point grade → a word teachers use. */
 export function gradeLevel(g) {
   if (g >= 10) return "високий";

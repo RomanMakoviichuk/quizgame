@@ -46,10 +46,13 @@ const cleanName = (s) =>
     .trim()
     .slice(0, NAME_MAX);
 
-/** 12-point scale: the share of right answers × 12, rounded; never below 1. */
+/** 12-point scale: 85% and more right (17–20 of 20) is 12, nothing right is 1, evenly in between. */
 function grade12(correct, total) {
   if (!total) return 0;
-  return Math.max(1, Math.min(12, Math.round((correct / total) * 12)));
+  // 85% and more (17–20 of 20) is 12; below that the 1..11 steps go evenly up
+  // from nothing right (1). Integers, so 17/20 is never a float hair short.
+  if (correct * 20 >= total * 17) return 12;
+  return 1 + Math.round(((correct * 20) / (total * 17)) * 11);
 }
 
 function newCode() {

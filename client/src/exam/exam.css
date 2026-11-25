@@ -14,6 +14,12 @@
   --ex-mid: #e0a100;
   min-height: 100vh;
   min-height: 100svh;
+  /* the game's global CSS pins html/body/#root (fixed, overflow hidden):
+     these pages scroll inside their own root instead */
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   background: var(--ex-bg);
   color: var(--ex-text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
@@ -697,4 +703,23 @@
   .ex-teacher .ex-card {
     overflow-x: auto;
   }
+}
+
+/* the grading scale under the test settings */
+.ex-scale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 12px;
+}
+.ex-scale span {
+  border: 1px solid var(--ex-line);
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-size: 13px;
+  background: var(--ex-bg);
+  white-space: nowrap;
+}
+.ex-scale b {
+  color: var(--ex-accent);
 }
