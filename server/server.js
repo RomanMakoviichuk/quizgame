@@ -15,6 +15,8 @@ const { Server } = require("socket.io");
 
 const { PORT, ADMIN_PASSWORD } = require("./config");
 const registerHandlers = require("./handlers");
+const exam = require("./exam");
+const { requireAuth } = require("./admin/auth");
 const apiRoutes = require("./admin/routes");
 const media = require("./media");
 const tune = require("./minigames/nameThatTune");
@@ -38,6 +40,28 @@ app.use((req, res, next) => {
 });
 
 registerHandlers(io);
+exam.register(io); // «Перевірка знань»: /teacher + /test
+
+// test results as CSV (Excel opens it): a live test by its code + the teacher's token,
+// a saved one by id from the admin token (history on the teacher page)
+const sendCsv = (res, file) => {
+  if (!file) return res.status(404).json({ error: "Не знайдено." });
+  res.set("Content-Type", "text/csv; charset=utf-8");
+  res.set("Content-Disposition", `attachment; filename="${file.name}"`);
+  res.send(file.body);
+};
+app.get("/api/exam/:code/results.csv", (req, res) => sendCsv(res, exam.csvFor({ code: req.params.code, teacherToken: String(req.query.t || "") })));
+// this computer's addresses in the local network: the teacher's page shows students where to go
+app.get("/api/exam/lan", (_req, res) => {
+  const ips = [];
+  for (const list of Object.values(require("os").networkInterfaces()))
+    for (const a of list || []) if (a.family === "IPv4" && !a.internal) ips.push(a.address);
+  // a home/school Wi-Fi (192.168.x / 10.x) first, virtual adapters (172.x of WSL/Docker) last
+  ips.sort((a, b) => (/^(192\.168|10)\./.test(b) ? 1 : 0) - (/^(192\.168|10)\./.test(a) ? 1 : 0));
+  res.json({ ips });
+});
+app.get("/api/admin/exams", requireAuth, (_req, res) => res.json({ exams: exam.listSaved() }));
+app.get("/api/admin/exams/:id/results.csv", requireAuth, (req, res) => sendCsv(res, exam.csvFor({ id: req.params.id })));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -96,6 +120,12 @@ app.get("/media-sw.js", (_req, res) =>
 // Serve the production client build when it exists. In development the CRA dev
 // server on :3000 serves the app and its assets instead — this is a no-op then.
 app.use(express.static(path.join(__dirname, "..", "client", "build")));
+// the test pages are routes of the same client app
+app.get(["/test", "/teacher"], (_req, res, next) => {
+  const index = path.join(__dirname, "..", "client", "build", "index.html");
+  if (!fs.existsSync(index)) return next();
+  res.set("Cache-Control", "no-store").sendFile(index);
+});
 
 server.listen(PORT, () => {
   console.log(`Сервер на http://localhost:${PORT}`);

@@ -1,0 +1,700 @@
+/* «Перевірка знань» — a calm, light theme of its own (nothing from the game's styles) */
+.ex-root {
+  --ex-bg: #f3f5f9;
+  --ex-card: #ffffff;
+  --ex-text: #1d2433;
+  --ex-muted: #667085;
+  --ex-line: #e3e7ee;
+  --ex-accent: #2f6fed;
+  --ex-accent-soft: #e8f0ff;
+  --ex-ok: #1f9d55;
+  --ex-ok-soft: #e6f6ec;
+  --ex-bad: #d64545;
+  --ex-bad-soft: #fdecec;
+  --ex-mid: #e0a100;
+  min-height: 100vh;
+  min-height: 100svh;
+  background: var(--ex-bg);
+  color: var(--ex-text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  padding: 0 16px 32px;
+  box-sizing: border-box;
+  text-align: left;
+  display: flow-root; /* a child's top margin stays inside (no black strip of the page above) */
+}
+.ex-root *,
+.ex-root *::before,
+.ex-root *::after {
+  box-sizing: border-box;
+}
+.ex-root h1 {
+  font-size: 1.5rem;
+  margin: 0 0 8px;
+  line-height: 1.2;
+}
+.ex-root h2 {
+  font-size: 1.15rem;
+  margin: 0 0 12px;
+}
+.ex-root h3 {
+  font-size: 1.05rem;
+  margin: 0 0 10px;
+}
+.ex-muted {
+  color: var(--ex-muted);
+}
+.small {
+  font-size: 0.85rem;
+}
+
+/* top bar */
+.ex-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 14px 0;
+}
+.ex-top-wide {
+  max-width: 1200px;
+}
+.ex-top-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.ex-brand {
+  font-weight: 700;
+  color: var(--ex-accent);
+  letter-spacing: 0.01em;
+}
+.ex-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ex-bad);
+  display: inline-block;
+}
+.ex-dot.on {
+  background: var(--ex-ok);
+}
+
+/* cards & forms */
+.ex-card {
+  background: var(--ex-card);
+  border: 1px solid var(--ex-line);
+  border-radius: 14px;
+  padding: 20px;
+  max-width: 560px;
+  margin: 0 auto 16px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+.ex-center {
+  text-align: center;
+}
+.ex-join label,
+.ex-setup label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.ex-root input:not([type="checkbox"]),
+.ex-root select {
+  font: inherit;
+  font-weight: 400;
+  padding: 12px 14px;
+  border: 1px solid #cfd6e2;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ex-text);
+  width: 100%;
+  min-height: 48px;
+}
+.ex-root input:focus,
+.ex-root select:focus {
+  outline: 2px solid var(--ex-accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+.ex-check {
+  flex-direction: row !important;
+  align-items: flex-start;
+  font-weight: 400 !important;
+}
+.ex-check input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex: none;
+}
+.ex-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.ex-narrow {
+  margin-top: 10vh;
+  max-width: 400px;
+}
+.ex-error {
+  color: var(--ex-bad);
+  background: var(--ex-bad-soft);
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin: 0 0 12px;
+}
+
+/* buttons */
+.ex-btn {
+  font: inherit;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  min-height: 52px;
+  width: 100%;
+  cursor: pointer;
+  background: #e9edf3;
+  color: var(--ex-text);
+}
+.ex-btn.primary {
+  background: var(--ex-accent);
+  color: #fff;
+}
+.ex-btn.danger {
+  background: var(--ex-bad);
+  color: #fff;
+  width: auto;
+}
+.ex-btn.big {
+  font-size: 1.15rem;
+  min-height: 60px;
+}
+.ex-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.ex-link {
+  font: inherit;
+  background: none;
+  border: none;
+  color: var(--ex-accent);
+  cursor: pointer;
+  padding: 8px 4px;
+  text-decoration: none;
+  display: inline-block;
+}
+.ex-x {
+  border: none;
+  background: none;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ex-muted);
+  padding: 0 4px;
+}
+
+/* student: waiting */
+.ex-name {
+  font-weight: 700;
+  font-size: 1.15rem;
+  margin: 8px 0 16px;
+}
+.ex-spinner {
+  width: 42px;
+  height: 42px;
+  margin: 8px auto 16px;
+  border: 4px solid var(--ex-accent-soft);
+  border-top-color: var(--ex-accent);
+  border-radius: 50%;
+  animation: ex-spin 0.9s linear infinite;
+}
+@keyframes ex-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* student: question */
+.ex-q-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--ex-muted);
+  margin-bottom: 8px;
+}
+.ex-q-head b {
+  color: var(--ex-text);
+}
+.ex-timer {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--ex-text);
+}
+.ex-timer.hot {
+  color: var(--ex-bad);
+}
+.ex-progress {
+  height: 8px;
+  background: #e9edf3;
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.ex-progress span {
+  display: block;
+  height: 100%;
+  background: var(--ex-accent);
+  border-radius: 99px;
+  transition: width 0.3s;
+}
+.ex-progress.small {
+  height: 6px;
+  margin: 0 0 2px;
+  max-width: 180px;
+}
+.ex-q-text {
+  font-size: 1.2rem !important;
+  line-height: 1.35;
+  margin: 0 0 16px !important;
+}
+.ex-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ex-option {
+  font: inherit;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  padding: 12px 14px;
+  min-height: 56px;
+  border: 2px solid var(--ex-line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ex-text);
+  cursor: pointer;
+  width: 100%;
+}
+.ex-option.picked {
+  border-color: var(--ex-accent);
+  background: var(--ex-accent-soft);
+}
+.ex-letter {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #eef1f6;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.ex-option.picked .ex-letter {
+  background: var(--ex-accent);
+  color: #fff;
+}
+.ex-opt-text {
+  padding-top: 3px;
+  overflow-wrap: anywhere;
+}
+.ex-send {
+  position: sticky;
+  bottom: 12px;
+}
+
+/* student: done */
+.ex-grade {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  margin: 8px auto 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--ex-accent-soft);
+  color: var(--ex-accent);
+}
+.ex-grade b {
+  font-size: 3.4rem;
+  line-height: 1;
+}
+.ex-grade.g4 {
+  background: var(--ex-ok-soft);
+  color: var(--ex-ok);
+}
+.ex-grade.g1 {
+  background: var(--ex-bad-soft);
+  color: var(--ex-bad);
+}
+.ex-level {
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+.ex-stats {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ex-stats div {
+  flex: 1;
+  max-width: 130px;
+  border-radius: 12px;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+}
+.ex-stats b {
+  font-size: 1.6rem;
+}
+.ex-stats span {
+  font-size: 0.8rem;
+}
+.ex-stats .ok {
+  background: var(--ex-ok-soft);
+  color: var(--ex-ok);
+}
+.ex-stats .bad {
+  background: var(--ex-bad-soft);
+  color: var(--ex-bad);
+}
+.ex-stats .skip {
+  background: #eef1f6;
+  color: var(--ex-muted);
+}
+.ex-review ol {
+  padding-left: 22px;
+  margin: 0;
+}
+.ex-review li {
+  margin-bottom: 14px;
+}
+.ex-review p {
+  margin: 2px 0;
+}
+.ex-review-q {
+  font-weight: 600;
+}
+.ex-review .ok p:last-child,
+.ex-review .right {
+  color: var(--ex-ok);
+}
+.ex-review .yours {
+  color: var(--ex-bad);
+}
+
+/* teacher */
+.ex-teacher .ex-card {
+  max-width: 1200px;
+}
+.ex-teacher .ex-narrow {
+  max-width: 400px;
+}
+.ex-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.ex-setup,
+.ex-history {
+  max-width: 720px !important;
+}
+.ex-lobby {
+  text-align: center;
+}
+.ex-join-info {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+.ex-join-info > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ex-url {
+  font-size: clamp(1.4rem, 3vw, 2.4rem);
+  color: var(--ex-text);
+}
+.ex-code {
+  font-size: clamp(3rem, 9vw, 6rem);
+  letter-spacing: 0.12em;
+  line-height: 1;
+  color: var(--ex-accent);
+}
+.ex-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+.ex-actions.col {
+  margin: 0;
+}
+.ex-names {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ex-names li {
+  background: var(--ex-accent-soft);
+  border-radius: 99px;
+  padding: 6px 8px 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ex-names li.off {
+  opacity: 0.5;
+}
+.ex-running-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.ex-running-head h1 {
+  margin: 0;
+}
+.ex-running-head p {
+  margin: 4px 0 0;
+}
+.ex-big-stats {
+  display: flex;
+  gap: 28px;
+}
+.ex-big-stats > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ex-big-stats b {
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+}
+.ex-big-stats span {
+  color: var(--ex-muted);
+  font-size: 0.85rem;
+}
+.ex-big-stats .hot b {
+  color: var(--ex-bad);
+}
+.ex-levels {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  text-align: center;
+}
+.ex-levels div {
+  display: flex;
+  flex-direction: column;
+}
+.ex-levels b {
+  font-size: 1.8rem;
+}
+.ex-levels span {
+  color: var(--ex-muted);
+  font-size: 0.85rem;
+}
+.ex-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ex-sort button {
+  font: inherit;
+  border: 1px solid var(--ex-line);
+  background: #fff;
+  border-radius: 99px;
+  padding: 4px 12px;
+  margin-left: 4px;
+  cursor: pointer;
+}
+.ex-sort button.on {
+  background: var(--ex-accent);
+  border-color: var(--ex-accent);
+  color: #fff;
+}
+.ex-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+.ex-table th {
+  text-align: left;
+  color: var(--ex-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--ex-line);
+  padding: 8px 10px;
+}
+.ex-table td {
+  border-bottom: 1px solid var(--ex-line);
+  padding: 10px;
+  vertical-align: top;
+}
+.ex-table tr.off td {
+  opacity: 0.6;
+}
+.ex-table tr.click {
+  cursor: pointer;
+}
+.ex-table tr.click:hover td {
+  background: #f7f9fc;
+}
+.ex-table td.ok {
+  color: var(--ex-ok);
+  font-weight: 700;
+}
+.ex-table td.bad {
+  color: var(--ex-bad);
+  font-weight: 700;
+}
+.ex-tag {
+  margin-left: 8px;
+  font-size: 0.75rem;
+  background: var(--ex-accent-soft);
+  color: var(--ex-accent);
+  border-radius: 99px;
+  padding: 2px 8px;
+}
+.ex-tag.warn {
+  background: #fff4d6;
+  color: #9a6b00;
+}
+.ex-g {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--ex-accent-soft);
+  color: var(--ex-accent);
+}
+.ex-g.g4 {
+  background: var(--ex-ok-soft);
+  color: var(--ex-ok);
+}
+.ex-g.g1 {
+  background: var(--ex-bad-soft);
+  color: var(--ex-bad);
+}
+.ex-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  max-width: 260px;
+}
+.ex-marks i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: #e3e7ee;
+}
+.ex-marks i.ok {
+  background: var(--ex-ok);
+}
+.ex-marks i.bad {
+  background: var(--ex-bad);
+}
+.ex-pct {
+  position: relative;
+  width: 140px;
+  height: 22px;
+  background: #eef1f6;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.ex-pct span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ex-ok);
+  opacity: 0.35;
+}
+.ex-pct.mid span {
+  background: var(--ex-mid);
+}
+.ex-pct.bad span {
+  background: var(--ex-bad);
+}
+.ex-pct b {
+  position: relative;
+  padding-left: 8px;
+  font-size: 0.85rem;
+  line-height: 22px;
+}
+.ex-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 24, 40, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 10;
+}
+.ex-modal .ex-card {
+  max-width: 720px;
+  width: 100%;
+  max-height: 85vh;
+  overflow: auto;
+  margin: 0;
+}
+.ex-detail {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.ex-detail li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ex-line);
+}
+.ex-detail li span {
+  display: inline-block;
+  width: 22px;
+  font-weight: 700;
+}
+.ex-detail li.ok span {
+  color: var(--ex-ok);
+}
+.ex-detail li.bad span {
+  color: var(--ex-bad);
+}
+
+@media (max-width: 700px) {
+  .ex-row {
+    grid-template-columns: 1fr;
+  }
+  .ex-levels {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ex-table {
+    font-size: 0.85rem;
+  }
+  .ex-table th,
+  .ex-table td {
+    padding: 8px 6px;
+  }
+  .ex-teacher .ex-card {
+    overflow-x: auto;
+  }
+}

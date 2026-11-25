@@ -3169,6 +3169,23 @@ body {
   --glow-color: hsl(355, 99%, 45%);
 }
 
+.menu-glowing-btn-exam {
+  --glow-color: hsl(205, 90%, 62%);
+}
+
+/* phone join screen: the way into a teacher's test (/test) */
+.join-exam-link {
+  display: block;
+  margin-top: 14px;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: inherit;
+  opacity: 0.8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 @keyframes faulty-flicker {
   0% { opacity: 0.1; }
   2% { opacity: 0.1; }

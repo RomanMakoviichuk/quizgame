@@ -7,6 +7,8 @@ import { installAudioLeveler } from './game/audioLeveler';
 import { installLiteMode } from './game/liteMode';
 import MediaPreloader from './components/MediaPreloader';
 import SoundUnlock from './components/SoundUnlock';
+import ExamStudent from './exam/ExamStudent';
+import ExamTeacher from './exam/ExamTeacher';
 
 // sounds and videos play at their own recorded volume (the leveler is off)
 const isPhone = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent);
@@ -15,12 +17,20 @@ const isPhone = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|webOS/i.te
 if (!isPhone) installLiteMode();
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <React.StrictMode>
-    {/* the TV downloads all media up front so nothing stalls mid-game; phones start right away */}
-    {isPhone ? <App /> : <><MediaPreloader><App /></MediaPreloader><SoundUnlock /></>}
-  </React.StrictMode>
-);
+// «Перевірка знань»: its own pages, nothing of the game (no media, no sounds)
+const route = window.location.pathname.replace(/\/+$/, '');
+if (route === '/test' || route === '/teacher') {
+  document.title = 'Перевірка знань';
+  document.body.style.background = '#f3f5f9';
+  root.render(<React.StrictMode>{route === '/test' ? <ExamStudent /> : <ExamTeacher />}</React.StrictMode>);
+} else {
+  root.render(
+    <React.StrictMode>
+      {/* the TV downloads all media up front so nothing stalls mid-game; phones start right away */}
+      {isPhone ? <App /> : <><MediaPreloader><App /></MediaPreloader><SoundUnlock /></>}
+    </React.StrictMode>
+  );
+}
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

@@ -34,3 +34,6 @@ yarn-error.log*
 # runtime state: which questions / statements / songs were already played (server/content/usage.js)
 /server/content/usage.json
 /server/content/usage.json.tmp
+
+# test results (students’ names) — kept on this computer only
+/server/data/exams/

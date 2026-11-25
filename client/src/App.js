@@ -1811,6 +1811,9 @@ function App() {
             <button type="submit" disabled={!connected || !joinCodeInput.trim()} onClick={playClickSound}>
               Далі: обрати персонажа
             </button>
+            <a className="join-exam-link" href="/test">
+              Пройти тест від учителя →
+            </a>
           </form>
         </div>
       </div>
@@ -1866,6 +1869,16 @@ function App() {
               >
                 <span className="glowing-txt">
                   Г<span className="faulty-letter">Р</span>АТИ
+                </span>
+              </button>
+              <button
+                className="glowing-btn menu-glowing-btn menu-glowing-btn-exam"
+                onClick={withClick(() => { window.location.href = "/teacher"; })}
+                aria-label="Тест для учнів"
+                type="button"
+              >
+                <span className="glowing-txt">
+                  Т<span className="faulty-letter">Е</span>СТ
                 </span>
               </button>
               <button
