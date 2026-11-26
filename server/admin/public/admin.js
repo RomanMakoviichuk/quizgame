@@ -625,6 +625,7 @@
         resultBox.appendChild(h("div", { class: "errbox", html:
           "<strong>Готово.</strong> Додано питань: " + r.inserted +
           (r.skipped ? ", пропущено (не з обраних категорій / складності): " + r.skipped : "") +
+          (r.duplicates ? ", вже були в базі (не додано вдруге): " + r.duplicates : "") +
           (r.createdCategories ? ", створено категорій: " + r.createdCategories : "") }));
         toast("Імпортовано " + r.inserted + " питань", "ok");
         loadCategories();

@@ -73,6 +73,64 @@ function roundPlan(difficulty, count) {
 
 const levelOf = (q) => (PREFERENCE[q.difficulty] ? q.difficulty : "medium");
 
+/** Question text as people read it: case, spaces and the final punctuation do not matter. */
+const textKey = (q) =>
+  String(q.text || "")
+    .toLowerCase()
+    .replace(/[\s ]+/g, " ")
+    .replace(/[\s?!.…:]+$/u, "")
+    .trim();
+
+/**
+ * Pure helper (unit-tested): one question per text. A question imported twice
+ * (two ids, the same words) would otherwise come up twice — even back to back.
+ * The first one (by admin order) stays.
+ */
+function uniqueByText(questions) {
+  const seen = new Set();
+  const out = [];
+  for (const q of [...questions].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))) {
+    const k = textKey(q);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(q);
+  }
+  return out;
+}
+
+// no repeats between games (content/usage.js): one log per category — every
+// question of it (main rounds and the final) is played once before any comes back
+const usageKind = (categoryId) => `quiz:${categoryId}`;
+const LEVELS = ["easy", "medium", "hard"];
+
+/** Ids of the category's questions already played in the current cycle. */
+function playedSet(categoryId, questions = uniqueByText(store.getPlayableQuestions(categoryId))) {
+  const kind = usageKind(categoryId);
+  if (!usage.has(kind)) {
+    // the older logs were kept per difficulty: they open the category's cycle once
+    const before = LEVELS.flatMap((l) => [...usage.usedSet(`quiz:${categoryId}:${l}`)]);
+    const all = questions.map((q) => q.id);
+    const known = new Set(all);
+    const ids = [...new Set(before)].filter((id) => known.has(id));
+    if (ids.length && ids.length < all.length) usage.mark(kind, ids, all);
+  }
+  return usage.usedSet(kind);
+}
+
+/** Log these questions as played (main rounds and every final-battle question). */
+function markPlayed(categoryId, ids, questions = uniqueByText(store.getPlayableQuestions(categoryId))) {
+  const kind = usageKind(categoryId);
+  const all = questions.map((q) => q.id);
+  const known = new Set(all);
+  const used = usage.usedSet(kind);
+  const mine = ids.filter((id) => known.has(id));
+  const fresh = mine.filter((id) => !used.has(id));
+  const again = mine.filter((id) => used.has(id));
+  // the last new ones close the cycle; a repeat then counts for the next one
+  if (fresh.length) usage.mark(kind, fresh, all);
+  if (again.length) usage.mark(kind, again, all);
+}
+
 /**
  * Pure helper (unit-tested): like pickRounds, but every round takes a random
  * unused question of its wanted difficulty, falling back to the nearest one.
@@ -83,15 +141,16 @@ function pickRoundsByDifficulty(questions, difficulty, count, playedIds = new Se
   if (!Array.isArray(questions) || questions.length < count) {
     return { error: NOT_ENOUGH_MESSAGE, available: questions ? questions.length : 0 };
   }
-  const level = levelOf;
-  const pools = { easy: [], medium: [], hard: [] };
-  // pop() takes from the end: played ones first in the array, new ones last
-  const shuffled = cryptoShuffle(questions);
-  for (const q of [...shuffled.filter((x) => playedIds.has(x.id)), ...shuffled.filter((x) => !playedIds.has(x.id))])
-    pools[level(q)].push(q);
+  // per difficulty: the questions not played yet in this cycle, and the played ones
+  const fresh = { easy: [], medium: [], hard: [] };
+  const old = { easy: [], medium: [], hard: [] };
+  for (const q of cryptoShuffle(questions)) (playedIds.has(q.id) ? old : fresh)[levelOf(q)].push(q);
+  // a new question of the nearest difficulty beats a repeat of the wanted one:
+  // nothing comes back before the whole category has been played
   const chosen = roundPlan(normalizeGameDifficulty(difficulty), count).map((want) => {
-    const from = PREFERENCE[want].find((d) => pools[d].length > 0);
-    return pools[from].pop();
+    const pref = PREFERENCE[want];
+    const from = pref.find((d) => fresh[d].length > 0);
+    return from ? fresh[from].pop() : old[pref.find((d) => old[d].length > 0)].pop();
   });
   const rounds = chosen.map((q, i) => ({
     roundIndex: i + 1,
@@ -103,7 +162,7 @@ function pickRoundsByDifficulty(questions, difficulty, count, playedIds = new Se
 
 /** How many active questions a category currently has (host-facing check). */
 function categoryReadiness(categoryId) {
-  const questions = store.getPlayableQuestions(categoryId);
+  const questions = uniqueByText(store.getPlayableQuestions(categoryId));
   return {
     available: questions.length,
     needed: MIN_QUESTIONS_PER_GAME,
@@ -120,36 +179,28 @@ function getRounds(categoryId, difficulty = DEFAULT_GAME_DIFFICULTY) {
   if (!category || !category.isActive) {
     return { error: "Категорія недоступна для гри." };
   }
-  const questions = store.getPlayableQuestions(categoryId);
-  // no repeats between games (content/usage.js): one log per category + difficulty,
-  // each starts over once all its questions have been played
-  const kind = (level) => `quiz:${categoryId}:${level}`;
-  const played = new Set(["easy", "medium", "hard"].flatMap((l) => [...usage.usedSet(kind(l))]));
-  const result = pickRoundsByDifficulty(questions, difficulty, TOTAL_ROUNDS, played);
-  if (result.rounds) {
-    const byId = new Map(questions.map((q) => [q.id, q]));
-    for (const l of ["easy", "medium", "hard"]) {
-      const ids = result.rounds.map((r) => r.question.id).filter((id) => levelOf(byId.get(id) || {}) === l);
-      if (ids.length) usage.mark(kind(l), ids, questions.filter((q) => levelOf(q) === l).map((q) => q.id));
-    }
-  }
+  const questions = uniqueByText(store.getPlayableQuestions(categoryId));
+  const result = pickRoundsByDifficulty(questions, difficulty, TOTAL_ROUNDS, playedSet(categoryId, questions));
+  if (result.rounds) markPlayed(categoryId, result.rounds.map((r) => r.question.id), questions);
   return result;
 }
 
 /**
- * Pure helper (unit-tested): the final race deck. Questions not played in the
- * main rounds come first (short ones first, for a quick read on the TV); when
- * the category runs dry the already-played ones follow, then the deck cycles.
- * Stays inside the chosen category on purpose.
+ * Pure helper (unit-tested): the final race deck. First the questions nobody has
+ * seen lately (not in this game's rounds, not in earlier games of the current
+ * cycle — short ones first, for a quick read on the TV), then the ones from
+ * earlier games, then this game's rounds; when the category runs dry the deck
+ * cycles. Stays inside the chosen category on purpose.
  */
-function pickFinalDeck(questions, usedIds = [], size = FINAL.DECK_SIZE) {
+function pickFinalDeck(questions, usedIds = [], size = FINAL.DECK_SIZE, playedBefore = new Set()) {
   if (!Array.isArray(questions) || questions.length === 0) return [];
   const used = new Set(usedIds);
   const short = (q) => (q.text || "").length <= FINAL.SHORT_QUESTION_CHARS;
-  const fresh = cryptoShuffle(questions.filter((q) => !used.has(q.id)));
+  const fresh = cryptoShuffle(questions.filter((q) => !used.has(q.id) && !playedBefore.has(q.id)));
   const ordered = [
     ...fresh.filter(short),
     ...fresh.filter((q) => !short(q)),
+    ...cryptoShuffle(questions.filter((q) => !used.has(q.id) && playedBefore.has(q.id))),
     ...cryptoShuffle(questions.filter((q) => used.has(q.id))),
   ];
   const deck = [];
@@ -160,11 +211,14 @@ function pickFinalDeck(questions, usedIds = [], size = FINAL.DECK_SIZE) {
 }
 
 function getFinalDeck(categoryId, usedIds) {
-  return pickFinalDeck(store.getPlayableQuestions(categoryId), usedIds);
+  const questions = uniqueByText(store.getPlayableQuestions(categoryId));
+  return pickFinalDeck(questions, usedIds, FINAL.DECK_SIZE, playedSet(categoryId, questions));
 }
 
 module.exports = {
   getRounds,
+  uniqueByText,
+  markPlayed,
   pickFinalDeck,
   getFinalDeck,
   pickRounds,

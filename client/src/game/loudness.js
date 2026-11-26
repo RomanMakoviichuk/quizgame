@@ -1,4 +1,8 @@
 /**
+ * NOTE: the leveler is off — the files themselves are leveled now
+ * (server/tools/normalize-media.py: clips/effects -18 LUFS, music -21 LUFS),
+ * so the numbers below describe the old, unleveled files.
+ *
  * Measured loudness of the game's media (dBFS, gated RMS over 0.4 s blocks,
  * measured in the browser from the actual files) and the level each kind of
  * sound should play at. audioLeveler.js turns the difference into a gain for

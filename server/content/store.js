@@ -334,6 +334,35 @@ function createStore(filePath) {
     });
   }
 
+  /**
+   * Remove questions that repeat another one of the same category word for word
+   * (same text and the same answers): the oldest copy stays. Returns the count.
+   */
+  function removeDuplicateQuestions() {
+    return mutate(() => {
+      const key = (q) =>
+        [
+          q.categoryId,
+          String(q.text || "").toLowerCase().replace(/[\s ]+/g, " ").replace(/[\s?!.…:]+$/u, "").trim(),
+          ...q.answers.map((a) => `${a.isCorrect ? "+" : "-"}${String(a.text).trim().toLowerCase()}`).sort(),
+        ].join("|");
+      const seen = new Set();
+      const keep = [];
+      let removed = 0;
+      for (const q of [...data.questions].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)) || (a.order ?? 0) - (b.order ?? 0))) {
+        const k = key(q);
+        if (seen.has(k)) removed += 1;
+        else {
+          seen.add(k);
+          keep.push(q.id);
+        }
+      }
+      const ids = new Set(keep);
+      data.questions = data.questions.filter((q) => ids.has(q.id));
+      return removed;
+    });
+  }
+
   function duplicateQuestion(id) {
     return mutate(() => {
       const src = data.questions.find((q) => q.id === id);
@@ -715,9 +744,27 @@ function createStore(filePath) {
       const catIdByName = {};
       for (const c of data.categories) catIdByName[c.name.toLowerCase()] = c.id;
 
+      // the same question imported again (same category, same words) is not added
+      // twice: a game would otherwise show it twice, even back to back
+      const textKey = (t) =>
+        String(t || "")
+          .toLowerCase()
+          .replace(/[\s ]+/g, " ")
+          .replace(/[\s?!.…:]+$/u, "")
+          .trim();
+      const existing = new Set(data.questions.map((q) => `${q.categoryId}|${textKey(q.text)}`));
+      let duplicates = 0;
+      let inserted = 0;
       let order = data.questions.reduce((m, q) => Math.max(m, q.order || 0), -1);
       for (const s of staged) {
         const categoryId = s.categoryId || catIdByName[s.categoryName.toLowerCase()];
+        const key = `${categoryId}|${textKey(s.text)}`;
+        if (existing.has(key)) {
+          duplicates += 1;
+          continue;
+        }
+        existing.add(key);
+        inserted += 1;
         order += 1;
         data.questions.push({
           id: newId("q"),
@@ -742,7 +789,8 @@ function createStore(filePath) {
 
       return {
         ok: true,
-        inserted: staged.length,
+        inserted,
+        duplicates,
         skipped,
         createdCategories: createdNames.length,
         createdCategoryNames: createdNames,
@@ -811,6 +859,7 @@ function createStore(filePath) {
     updateQuestion,
     deleteQuestion,
     duplicateQuestion,
+    removeDuplicateQuestions,
     validateQuestionInput,
     // dashboard
     stats,

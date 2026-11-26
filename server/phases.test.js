@@ -526,3 +526,29 @@ test("a minigame's hard stop counts from its sync, not from its start", (t) => {
   t.mock.timers.tick(2_000);
   assert.equal(events(io, "trueFalseResults").length, 1);
 });
+
+test("uniqueByText: a question stored twice (two ids, same words) is played once", () => {
+  const { uniqueByText, pickRoundsByDifficulty } = require("./questions");
+  const mk = (id, text, order) => ({ id, text, order, difficulty: "easy", answers: [{ text: "a", isCorrect: true }, { text: "b", isCorrect: false }] });
+  const qs = [];
+  for (let i = 0; i < 12; i++) {
+    qs.push(mk(`a${i}`, `Питання ${i}?`, i));
+    qs.push(mk(`b${i}`, ` питання  ${i} `, 100 + i));
+  }
+  const u = uniqueByText(qs);
+  assert.equal(u.length, 12);
+  assert.ok(u.every((q) => q.id.startsWith("a")), "the first copy stays");
+  const { rounds } = pickRoundsByDifficulty(u, "easy", 9);
+  assert.equal(new Set(rounds.map((r) => r.question.text.toLowerCase().trim())).size, 9);
+});
+
+test("no repeats: a new question of another difficulty beats a repeat of the wanted one", () => {
+  const { pickRoundsByDifficulty } = require("./questions");
+  const mk = (id, difficulty) => ({ id, text: id, difficulty, answers: [{ text: "a", isCorrect: true }, { text: "b", isCorrect: false }] });
+  const qs = [...Array.from({ length: 9 }, (_, i) => mk(`e${i}`, "easy")), ...Array.from({ length: 9 }, (_, i) => mk(`m${i}`, "medium"))];
+  const played = new Set(qs.filter((q) => q.difficulty === "easy").slice(0, 6).map((q) => q.id)); // 3 easy left new
+  const { rounds } = pickRoundsByDifficulty(qs, "easy", 9, played);
+  const ids = rounds.map((r) => r.question.id);
+  assert.ok(ids.every((id) => !played.has(id)), "no played question while new ones exist");
+  assert.equal(ids.filter((id) => id.startsWith("e")).length, 3, "all new easy ones are taken first");
+});

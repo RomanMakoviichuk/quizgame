@@ -21,6 +21,7 @@ const crypto = require("crypto");
 const store = require("./content/store");
 const { isValid: isAdminToken } = require("./admin/auth");
 const { getRoom } = require("./rooms");
+const { uniqueByText } = require("./questions");
 
 const DIR = process.env.EXAM_DIR || path.join(__dirname, "data", "exams");
 const MAX_STUDENTS = 80;
@@ -310,7 +311,7 @@ function finish(exam, why) {
 function create({ categoryId, count, timeLimitMin, showReview, title, players }) {
   const cat = store.getCategory(categoryId);
   if (!cat) return { error: "Категорію не знайдено." };
-  const pool = store.getPlayableQuestions(categoryId).filter((q) => q.answers.length >= 2 && q.answers.some((a) => a.isCorrect));
+  const pool = uniqueByText(store.getPlayableQuestions(categoryId)).filter((q) => q.answers.length >= 2 && q.answers.some((a) => a.isCorrect));
   if (!pool.length) return { error: "У цій категорії немає питань." };
   const n = Math.max(1, Math.min(pool.length, Math.floor(Number(count) || 20)));
   const chosen = shuffle(pool).slice(0, n);

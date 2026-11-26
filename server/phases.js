@@ -39,7 +39,7 @@ const {
   ROUND1_ANSWER_DELAY_MS,
   FINAL,
 } = require("./config");
-const { getRounds, getFinalDeck } = require("./questions");
+const { getRounds, getFinalDeck, markPlayed } = require("./questions");
 const finalBattle = require("./finalBattle");
 const clock = require("./clock");
 const media = require("./media");
@@ -342,6 +342,8 @@ module.exports = function createPhases(io) {
     if (race.stage === "question") return;
 
     const q = room.finalDeck[race.step % room.finalDeck.length];
+    // a final question seen today is not new in the next game either
+    if (q?.id && room.categoryId) markPlayed(room.categoryId, [q.id]);
     finalBattle.beginStep(race, q.correctIndex);
     race.stage = "question";
     const now = clock.now(room);

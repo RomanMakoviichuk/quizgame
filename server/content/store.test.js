@@ -352,3 +352,34 @@ test("persistence: data survives a reload of the same file", () => {
     cleanup();
   }
 });
+
+test("import: a question already in the category is not added again", () => {
+  const { store, cleanup } = freshStore();
+  try {
+    const row = { category: "Географія", question: "Столиця України?", answer1: "Київ", answer2: "Львів", answer3: "Одеса", answer4: "Харків", correctAnswer: "Київ" };
+    assert.equal(store.importRows([row]).inserted, 1);
+    const again = store.importRows([row, { ...row, question: "  столиця   УКРАЇНИ " }, { ...row, question: "Столиця Польщі?", correctAnswer: "Київ" }]);
+    assert.equal(again.inserted, 1);
+    assert.equal(again.duplicates, 2);
+  } finally {
+    cleanup();
+  }
+});
+
+test("removeDuplicateQuestions keeps the oldest copy of a word-for-word repeat", () => {
+  const { store, cleanup } = freshStore();
+  try {
+    const c = makeCategory(store);
+    const a = store.createQuestion({ categoryId: c.id, text: "Столиця України?", answers: fourAnswers(0) });
+    const b = store.createQuestion({ categoryId: c.id, text: "Столиця України?", answers: fourAnswers(0) });
+    const other = store.createQuestion({ categoryId: c.id, text: "Столиця України?", answers: fourAnswers(1) }); // other right answer: not a copy
+    assert.ok(a.question && b.question && other.question);
+    assert.equal(store.removeDuplicateQuestions(), 1);
+    const ids = store.getPlayableQuestions(c.id).map((q) => q.id);
+    assert.ok(ids.includes(a.question.id));
+    assert.ok(!ids.includes(b.question.id));
+    assert.ok(ids.includes(other.question.id));
+  } finally {
+    cleanup();
+  }
+});

@@ -103,7 +103,12 @@ function createUsage(file = FILE, { log = IN_TESTS ? () => {} : console.log } = 
     return picked;
   }
 
-  return { draw, mark, usedSet, shuffle, file };
+  /** Has this kind any log yet? (a new kind can then be seeded from older logs) */
+  function has(kind) {
+    return !!load()[kind];
+  }
+
+  return { draw, mark, usedSet, has, shuffle, file };
 }
 
 const defaultUsage = createUsage();
